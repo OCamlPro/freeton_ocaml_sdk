@@ -16,7 +16,10 @@ open EZCMD.TYPES
 let main () =
   let commands =
     [
-      CommandGenkey.cmd;
+      CommandSwitch.cmd;
+      CommandGenaddr.cmd;
+      CommandList.cmd;
+      CommandAccount.cmd;
     ]
   in
   let common_args =
@@ -27,13 +30,24 @@ let main () =
       [ "q"; "quiet" ],
       Arg.Unit (fun () -> Globals.verbosity := 0),
       EZCMD.info "Set verbosity level to 0";
+      [ "switch" ],
+      Arg.String (fun s ->
+          Error.raise
+            "Argument --switch %S must be used before subcommand" s),
+      EZCMD.info "Set switch" ;
     ]
   in
   Printexc.record_backtrace true;
   let args = Array.to_list Sys.argv in
   let rec iter_initial_args args =
     match args with
-    | [] -> []
+    | [] ->
+        Printf.eprintf "Use 'ft --help' for help on commands\n%!";
+        Config.print ();
+        exit 0
+    | "--switch" :: switch :: args ->
+        Config.set_config := Some switch;
+        iter_initial_args args
     | [ "--version" ] ->
         Printf.printf "%s\n%!" Version.version;
         exit 0
@@ -59,7 +73,10 @@ let main () =
   try
     EZCMD.main_with_subcommands ~name:Globals.command ~version:Version.version
       ~doc:"Create and manage an OCaml project" ~man:[] ~argv commands
-      ~common_args
+      ~common_args;
+    let config = Config.config () in
+    if config.modified then
+      Config.save_config config
   with
   | Error.Error s ->
       Printf.eprintf "Error: %s\n%!" s;

@@ -10,7 +10,12 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open EzFile.OP
+open Types
+
 let verbose i = !Globals.verbosity >= i
+
+let tmpfile () = Filename.temp_file ~temp_dir:Globals.ft_dir "tmpfile" ".tmp"
 
 let call ?(stdout = Unix.stdout) args =
   if verbose 1 then
@@ -32,15 +37,13 @@ let call ?(stdout = Unix.stdout) args =
   in
   iter ()
 
-let tmpfile = "/tmp/stdout.txt"
-
 let call_stdout_file args =
-  let file = tmpfile in
-  let stdout = Unix.openfile file
+  let tmpfile = tmpfile () in
+  let stdout = Unix.openfile tmpfile
       [ Unix.O_CREAT ; Unix.O_WRONLY ; Unix.O_TRUNC ] 0o644 in
   call ~stdout args;
   Unix.close stdout;
-  file
+  tmpfile
 
 let call_stdout args =
   let file = call_stdout_file args in
@@ -52,4 +55,46 @@ let call_stdout_lines args =
   let file = call_stdout_file args in
   let stdout = EzFile.read_lines file in
   Sys.remove file;
-  stdout
+  Array.to_list stdout
+
+let net_dir config = Globals.ft_dir // config.current_network
+let tonoscli_binary config = net_dir config // "bin" // "tonos-cli"
+let tonoscli_config config = net_dir config // "tonos-cli.config"
+
+let tonoscli config args =
+  Array.of_list
+    ( tonoscli_binary config ::
+      "--config" ::
+      tonoscli_config config ::
+      args )
+
+let tonoscli config args =
+  if not ( Sys.file_exists ( tonoscli_config config ) ) then begin
+    let binary = tonoscli_binary config in
+    if not ( Sys.file_exists binary ) then begin
+      EzFile.make_dir ~p:true ( Filename.dirname binary );
+      Error.raise "You must put a copy of tonos-cli binary in %s\n%!" binary
+    end;
+    call (tonoscli config ["config" ;]);
+    Sys.rename "tonlabs-cli.conf.json" ( tonoscli_config config );
+  end;
+  tonoscli config args
+
+let read_json_file encoding filename =
+  let json = EzFile.read_file filename in
+  EzEncoding.destruct encoding json
+
+let write_file file content =
+  EzFile.make_dir ~p:true (Filename.dirname file);
+  EzFile.write_file file content
+
+let write_json_file encoding filename value =
+  let json = EzEncoding.construct ~compact:false encoding value in
+  write_file filename json
+
+
+let check_new_key net name =
+  List.iter (fun key ->
+      if key.key_name = name then
+        Error.raise "Key %S already exists" name
+    ) net.net_keys

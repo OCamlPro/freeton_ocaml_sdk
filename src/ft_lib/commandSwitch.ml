@@ -10,6 +10,25 @@
 (*                                                                        *)
 (**************************************************************************)
 
-let keypair = Types.keypair_enc
-let config = Types.config_enc
-let key = Types.key_enc
+open Ezcmd.V2
+open EZCMD.TYPES
+
+let action switch =
+  match switch with
+  | None -> Config.print ()
+  | Some s ->
+      Config.set_config := Some s;
+      let config = Config.config () in
+      config.modified <- true
+
+let cmd =
+  let switch = ref None in
+  EZCMD.sub
+    "switch"
+    (fun () -> action !switch)
+    ~args: (
+      [ ( [],
+          Arg.Anon (0, fun s -> switch := Some s),
+          EZCMD.info "New switch config" )
+      ] )
+    ~doc: "Change current switch"
