@@ -1,7 +1,6 @@
 
 # name of package
 name = "freeton-ocaml-sdk"
-# skeleton = ...
 skeleton = "virtual"
 
 # version if different from project version
@@ -14,7 +13,7 @@ skeleton = "virtual"
 # description = ...
 
 # kind is either "library", "program" or "virtual"
-kind = "library"
+kind = "virtual"
 
 # authors if different from project authors
 # authors = [ "Me <me@metoo.org>" ]

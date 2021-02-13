@@ -8,6 +8,7 @@ synopsis: "The freeton-ocaml-sdk project"
 description: """
 
 
+
 This is the description
 of the freeton-ocaml-sdk OCaml project
 """
@@ -38,7 +39,7 @@ install: [
   ["sh" "-c" "./scripts/before.sh install '%{name}%'"]
 ]
 depends: [
-  "ocaml" {>= "4.07.0"}
+  "ocaml" {>= "4.08.0"}
   "dune" {>= "2.6.0"}
   "ft" {= version}
   "ppx_inline_test" {with-test}

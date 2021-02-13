@@ -10,9 +10,14 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open EzFile.OP
+
 let verbosity = ref 1
 let command = "ft"
 let about = "ft COMMAND COMMAND-OPTIONS"
 
 
 let homedir = Sys.getenv "HOME"
+
+let ft_dir = homedir // ".ft"
+let config_file = ft_dir // "config.json"

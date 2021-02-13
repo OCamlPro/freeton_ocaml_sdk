@@ -9,9 +9,9 @@
 (package
  (name freeton-ocaml-sdk)
  (synopsis "The freeton-ocaml-sdk project")
- (description "\n\nThis is the description\nof the freeton-ocaml-sdk OCaml project\n")
+ (description "\n\n\nThis is the description\nof the freeton-ocaml-sdk OCaml project\n")
  (depends
-   (ocaml (>= 4.07.0))
+   (ocaml (>= 4.08.0))
    (ft (= version))
    ppx_inline_test
    ppx_expect
@@ -22,14 +22,17 @@
 (package
  (name ft_lib)
  (synopsis "The freeton-ocaml-sdk project")
- (description "\n\nThis is the description\nof the freeton-ocaml-sdk OCaml project\n")
+ (description "\n\n\nThis is the description\nof the freeton-ocaml-sdk OCaml project\n")
  (depends
-   (ocaml (>= 4.07.0))
+   (ocaml (>= 4.08.0))
    ton
    (ez_subst ( >= 0.1 ))
    (ez_file (and (>= 0.2.0) (< 1.0.0)))
    (ez_config (and (>= 0.1.0) (< 1.0.0)))
    (ez_cmdliner (and (>= 0.2.0) (< 1.0.0)))
+   ez-api
+   ppx_deriving_encoding
+   crunch
    ppx_inline_test
    ppx_expect
    odoc
@@ -39,9 +42,9 @@
 (package
  (name ft)
  (synopsis "The freeton-ocaml-sdk project")
- (description "\n\nThis is the description\nof the freeton-ocaml-sdk OCaml project\n")
+ (description "\n\n\nThis is the description\nof the freeton-ocaml-sdk OCaml project\n")
  (depends
-   (ocaml (>= 4.07.0))
+   (ocaml (>= 4.08.0))
    (ft_lib (= version))
    ppx_inline_test
    ppx_expect

@@ -4,7 +4,7 @@
   (name ft_lib)
   (public_name ft_lib)
   (wrapped true)
-  (libraries ton ez_subst ez_file ez_config ez_cmdliner )
+  (libraries ton ez_subst ez_file ez_config ez_cmdliner ez-api.encoding )
   
   (preprocess (pps ppx_deriving_encoding))
   )
@@ -18,4 +18,12 @@
 (documentation
   (package ft_lib))
 
+(rule
+  (targets files.ml)
+  (deps
+   (:data
+     (source_tree files)))
+  (action
+      (run %{bin:ocaml-crunch} -m plain -o files.ml files/))
+)
 

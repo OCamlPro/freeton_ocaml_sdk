@@ -2,7 +2,7 @@
 
 # hash of toml configuration files
 # used for generation of all files
-ca35c9c822857aa31a5c8b93cf8a9209:.
+239fe147995a8fc4d55af926626e5677:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -12,7 +12,7 @@ ca35c9c822857aa31a5c8b93cf8a9209:.
 
 # begin context for .github/workflows/workflow.yml
 # file .github/workflows/workflow.yml
-456317feadaf602c232d9a0ca4dd411f:.github/workflows/workflow.yml
+939a3ed86b24d2d57fb4e2442f142ae4:.github/workflows/workflow.yml
 # end context for .github/workflows/workflow.yml
 
 # begin context for .gitignore
@@ -37,7 +37,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for CHANGES.md
 # file CHANGES.md
-5be3de0fcf45e191a7117c2041261fc9:CHANGES.md
+2876630c1dd1c72b301ed5974dd18fff:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
@@ -52,7 +52,7 @@ d091b81b6155e5fd5d6556fc8bba0094:LICENSE.md
 
 # begin context for README.md
 # file README.md
-68133981104b21effc6d94080b280c6e:README.md
+515429ad5b60b6e1b995b432cb10164d:README.md
 # end context for README.md
 
 # begin context for docs/README.txt
@@ -72,7 +72,7 @@ e739f3026aa997af4026bc428f4c9ef6:docs/favicon.png
 
 # begin context for docs/index.html
 # file docs/index.html
-2bceeaff060ba31dc62e6b8cc0b0b357:docs/index.html
+e649257cbd8f6f13092d61c254137f02:docs/index.html
 # end context for docs/index.html
 
 # begin context for docs/sphinx/index.html
@@ -87,7 +87,7 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for drom.toml
 # file drom.toml
-89baded9b26172897742363bf75e5591:drom.toml
+9ef699e1da73110b5425a23e0a994e06:drom.toml
 # end context for drom.toml
 
 # begin context for dune
@@ -97,22 +97,22 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-5917d6b2b76a05c2d58a49dd7bac6d38:dune-project
+cac79141e424afb79f98e6e5ff295ad2:dune-project
 # end context for dune-project
 
 # begin context for freeton-ocaml-sdk.opam
 # file freeton-ocaml-sdk.opam
-b830ff0b7fc5a31a2184ec99a412af90:freeton-ocaml-sdk.opam
+bf2d61cc670131a2d96f1bf896700577:freeton-ocaml-sdk.opam
 # end context for freeton-ocaml-sdk.opam
 
 # begin context for ft.opam
 # file ft.opam
-ed31bcae6b782ec5b386d60d96767509:ft.opam
+7a58fd3bfca826a63948019b1e06d320:ft.opam
 # end context for ft.opam
 
 # begin context for ft_lib.opam
 # file ft_lib.opam
-1045a93640f21f2650459ab6430c695c:ft_lib.opam
+26d7e6a1fe512a076c19c2c1f6f54a6d:ft_lib.opam
 # end context for ft_lib.opam
 
 # begin context for scripts/after.sh
@@ -137,7 +137,7 @@ bb3a9d286f0dc64021db4194427263ee:scripts/copy-bin.sh
 
 # begin context for sphinx/about.rst
 # file sphinx/about.rst
-a907802e49ba10b67244d2accfb52bcc:sphinx/about.rst
+efc5276a89b4af309d26c9fc552c7de9:sphinx/about.rst
 # end context for sphinx/about.rst
 
 # begin context for sphinx/conf.py
@@ -152,7 +152,7 @@ d034deb6026bb202abefd98d0f5d6e35:sphinx/index.rst
 
 # begin context for sphinx/install.rst
 # file sphinx/install.rst
-f28c36ec2d6d6bdf3560136437a988b4:sphinx/install.rst
+982f8453cfd5fc540225bb222af75751:sphinx/install.rst
 # end context for sphinx/install.rst
 
 # begin context for sphinx/license.rst
@@ -162,7 +162,7 @@ cdf74f69fd392ea9a545b06789762a13:sphinx/license.rst
 
 # begin context for src/freeton-ocaml-sdk/package.toml
 # file src/freeton-ocaml-sdk/package.toml
-13ba55a2215658141d393107d1984d8f:src/freeton-ocaml-sdk/package.toml
+f400aaa989ea91637f4962238f1756d9:src/freeton-ocaml-sdk/package.toml
 # end context for src/freeton-ocaml-sdk/package.toml
 
 # begin context for src/ft/dune
@@ -172,7 +172,7 @@ c2da58bf2c3918b51f9a85340280d5c3:src/ft/dune
 
 # begin context for src/ft/index.mld
 # file src/ft/index.mld
-e98d34eaab4b1939344f3f3ba85f7203:src/ft/index.mld
+d7bd8dfad88cf868fa86dc6637a76648:src/ft/index.mld
 # end context for src/ft/index.mld
 
 # begin context for src/ft/package.toml
@@ -182,12 +182,12 @@ e98d34eaab4b1939344f3f3ba85f7203:src/ft/index.mld
 
 # begin context for src/ft_lib/dune
 # file src/ft_lib/dune
-6d98bdec9235fefc118f05941718c8dd:src/ft_lib/dune
+99d144f89ebd70992b696f2f510a65f5:src/ft_lib/dune
 # end context for src/ft_lib/dune
 
 # begin context for src/ft_lib/index.mld
 # file src/ft_lib/index.mld
-59aa6ff9d3d99759e372306ad080ffc6:src/ft_lib/index.mld
+1898cd6cbab3997b943e6d2fc1d9cf11:src/ft_lib/index.mld
 # end context for src/ft_lib/index.mld
 
 # begin context for src/ft_lib/main.ml
@@ -197,12 +197,12 @@ e98d34eaab4b1939344f3f3ba85f7203:src/ft/index.mld
 
 # begin context for src/ft_lib/package.toml
 # file src/ft_lib/package.toml
-0ffaaa19c32795dd32f1fcc1bad152d9:src/ft_lib/package.toml
+af87439f13bf22732ef7a6175b253d6e:src/ft_lib/package.toml
 # end context for src/ft_lib/package.toml
 
 # begin context for test/expect-tests/dune
 # file test/expect-tests/dune
-8a6dfc005561771a2f25284b00437996:test/expect-tests/dune
+0b34e34b2f80e04b7efe014ebd467e58:test/expect-tests/dune
 # end context for test/expect-tests/dune
 
 # begin context for test/expect-tests/test.ml
@@ -212,7 +212,7 @@ e98d34eaab4b1939344f3f3ba85f7203:src/ft/index.mld
 
 # begin context for test/inline-tests/dune
 # file test/inline-tests/dune
-d37098e6d8bbea369b5574a2e7f20b14:test/inline-tests/dune
+156f806bbc579b24376dc1a90f2c3c30:test/inline-tests/dune
 # end context for test/inline-tests/dune
 
 # begin context for test/inline-tests/test.ml
@@ -222,7 +222,7 @@ d37098e6d8bbea369b5574a2e7f20b14:test/inline-tests/dune
 
 # begin context for test/output-tests/dune
 # file test/output-tests/dune
-b73244274b948017dfdc8bc8f79ac31b:test/output-tests/dune
+e515c725e52c96670851d5838245cb79:test/output-tests/dune
 # end context for test/output-tests/dune
 
 # begin context for test/output-tests/test1.expected
