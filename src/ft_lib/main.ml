@@ -20,6 +20,8 @@ let main () =
       CommandGenaddr.cmd;
       CommandList.cmd;
       CommandAccount.cmd;
+      CommandClient.cmd;
+      CommandMultisig.cmd;
     ]
   in
   let common_args =

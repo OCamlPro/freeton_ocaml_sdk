@@ -56,35 +56,6 @@ let save_config config =
   end;
   Misc.write_json_file Encoding.config Globals.config_file config
 
-let find_network config name =
-  let rec iter networks =
-    match networks with
-    | [] -> Error.raise "Network %S does not exist" name
-    | net :: tail ->
-        if net.net_name = name then net else iter tail
-  in
-  iter config.networks
-
-let find_node net name =
-  let rec iter nodes =
-    match nodes with
-    | [] -> None
-    | node :: tail ->
-        if node.node_name = name then Some node else iter tail
-  in
-  iter net.net_nodes
-
-let find_key net name =
-  let rec iter keys =
-    match keys with
-    | [] -> None
-    | key :: tail ->
-        if key.key_name = name then Some key else iter tail
-  in
-  iter net.net_keys
-
-
-
 let load_config () =
   let config =
     if Sys.file_exists Globals.config_file then
@@ -105,7 +76,7 @@ let load_config () =
         | [] -> ()
         | name :: tail ->
             begin
-              match find_node net name, find_key net name with
+              match Misc.find_node net name, Misc.find_key net name with
               | Some _, Some _ -> assert false
               | Some _node, _ ->
                   net.current_node <- name
@@ -120,12 +91,13 @@ let load_config () =
         match list with
         | [] -> ()
         | name :: tail ->
-            match find_network config name with
-            | net ->
+            match Misc.find_network config name with
+            | Some net ->
                 config.current_network <- name;
                 set_node net tail
-            | exception ( Error.Error _ ) ->
-                let net = find_network config config.current_network in
+            | None ->
+                let net =
+                  Misc.find_network_exn config config.current_network in
                 set_node net list
       in
       set_network list ;
@@ -152,11 +124,11 @@ let print () =
     ) config.networks
 
 let current_network config =
-  find_network config config.current_network
+  Misc.find_network_exn config config.current_network
 
 let current_node config =
-  let net = find_network config config.current_network in
-  match find_node net net.current_node with
+  let net = Misc.find_network_exn config config.current_network in
+  match Misc.find_node net net.current_node with
   | None ->
       Error.raise "Unknown node %S in network %S"
         net.current_node net.net_name
