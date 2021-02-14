@@ -129,7 +129,7 @@ let shorten_addr s =
 let get_account_info accounts ~list ~info =
 
   let config = Config.config () in
-  let net = Config.current_network config in
+  let net = Misc.current_network config in
   if list then
     List.iter (fun key ->
         Printf.printf "* %S%s%s%s\n"
@@ -192,7 +192,7 @@ let gen_keypair config passphrase =
   keypair
 
 let genkey config maybe_name =
-  let net = Config.current_network config in
+  let net = Misc.current_network config in
   begin
     match maybe_name with
     | None -> ()
@@ -224,7 +224,7 @@ let genkey config maybe_name =
   match maybe_name with
   | None -> ()
   | Some name ->
-      let net = Config.current_network config in
+      let net = Misc.current_network config in
       net.net_keys <- {
         key_name = name ;
         key_pair = Some keypair;
@@ -234,7 +234,7 @@ let genkey config maybe_name =
       config.modified <- true;
       Printf.eprintf "Key for user %S generated\n%!" name
 
-let gen_address config key_pair contract =
+let gen_address config key_pair contract ~wc =
   Utils.with_contract contract
     (fun ~contract_tvc ~contract_abi ->
 
@@ -245,14 +245,14 @@ let gen_address config key_pair contract =
                                    contract_tvc ;
                                    contract_abi ;
                                    "--setkey" ; keypair_file ;
-                                   "--wc" ; "0"
+                                   "--wc" ; Misc.string_of_workchain wc
                                   ] in
            Misc.find_line_ok (function
                | [ "Raw" ; "address:" ; s ] -> Some s
                | _ -> None) stdout
          ))
 
-let genaddr config contract key =
+let genaddr config contract key ~wc =
 
   let key_pair =
     match key.key_pair with
@@ -260,48 +260,47 @@ let genaddr config contract key =
         Error.raise "Cannot genaddr without  keypair for %S" key.key_name
     | Some key_pair -> key_pair
   in
-  let addr = gen_address config key_pair contract in
+  let addr = gen_address config key_pair contract ~wc in
   Printf.eprintf "Address (%s for %s=%s...): %s\n%!"
     contract key.key_name
     (String.sub key_pair.public 0 10) addr;
   key.key_account <- Some {
       acc_address = addr ;
       acc_contract = Some contract ;
+      acc_workchain = wc ;
     };
   config.modified <- true
 
 let add_account config
-    ~name ~passphrase ~address ~contract ~pubkey ~seckey ~keyfile =
-  let net = Config.current_network config in
+    ~name ~passphrase ~address ~contract ~wc ~keyfile =
+  let net = Misc.current_network config in
   let key_name = name in
   Misc.check_new_key_exn net name;
   let key_passphrase = passphrase in
   let key_pair =
-    match keyfile with
-    | Some file -> Some ( Misc.read_json_file Encoding.keypair file )
-    | None ->
-        match pubkey, seckey, passphrase with
-        | Some public, Some _, _ ->
-            Some { public ; secret = seckey }
-        | _, _, Some passphrase ->
-            Some ( gen_keypair config passphrase )
-        | Some public, None, None ->
-            Some { public; secret = None }
-        | None, Some _, None ->
-            Printf.eprintf "Warnign: unused --seckey SECKEY argument, because pubkey is missing\n%!";
-            None
-        | None, None, None -> None
+    match keyfile, passphrase with
+    | Some _, Some _ ->
+        Error.raise "--passphrase and --keyfile are incompatible"
+    | None, None -> None
+    | None, Some passphrase ->
+        Some ( gen_keypair config passphrase )
+    | Some file, None -> Some ( Misc.read_json_file Encoding.keypair file )
   in
 
   let key_account = match address, contract, key_pair with
+    | Some _, Some _, Some _ ->
+        Error.raise "--address is incompatible with combining --contract and --keyfile/--passphrase"
     | Some acc_address, _ , _ ->
-        Some { acc_address ; acc_contract = contract }
+        Some { acc_address ;
+               acc_contract = contract ;
+               acc_workchain = wc ; }
     | None, Some contract, Some keypair ->
-        let acc_address = gen_address config keypair contract in
-        Some { acc_address ; acc_contract = Some contract }
+        let acc_address = gen_address config keypair contract ~wc in
+        Some { acc_address ;
+               acc_contract = Some contract ;
+               acc_workchain = wc ;}
     | None, Some _, None ->
-        Printf.eprintf "Warning: unused --contract CONTRACT argument, because keypair is missing\n%!";
-        None
+        Error.raise "--contract CONTRACT requires either --address, --keyfile or --passphrase"
     | None, None, None -> None
     | None, None, Some _ -> None
   in
@@ -313,78 +312,236 @@ let add_account config
   ()
 
 let change_account config
-    ~name ~passphrase ~address ~contract ~pubkey ~seckey ~keyfile =
-  let net = Config.current_network config in
+    ~name ~passphrase ~address ~contract ~keyfile ~wc  =
+  let net = Misc.current_network config in
   let key = match Misc.find_key net name with
     | None -> Error.raise "Unknown account %S cannot be modified\n%!" name
     | Some key -> key
   in
 
   begin
-    match passphrase, key.key_passphrase with
-    | None, _ -> ()
-    | Some s, None -> key.key_passphrase <- Some s; config.modified <- true
-    | Some _, Some _ ->
-        Printf.eprintf "Warning: unused --passphrase PASSPHRASE argument, because passphrase already known\n%!"
-  end;
+    let passphrase = match passphrase with
+      | Some "" | Some "none" ->
+          if key.key_passphrase <> None then begin
+            key.key_passphrase <- None;
+            config.modified <- true
+          end;
+          None
+      | _ -> passphrase
+    in
 
-  begin
-    match key.key_pair with
-    | Some { secret = Some _ ; _ } ->
+    let keyfile = match keyfile with
+      | Some "" | Some "none" ->
+          if key.key_passphrase <> None then
+            Error.raise "Cannot clear keyfile without clearing first passphrase";
+          if key.key_pair <> None then begin
+            key.key_pair <- None;
+            config.modified <- true;
+          end;
+          None
+      | _ -> keyfile
+    in
+
+    let contract = match contract with
+      | Some ""  | Some "none" ->
+          begin
+            match key.key_account with
+            | None -> ()
+            | Some acc ->
+                acc.acc_contract <- None ;
+                if key.key_pair <> None then
+                  key.key_account <- None ;
+                config.modified <- true
+          end;
+          None
+      | _ -> contract
+    in
+
+    let address, contract = match address with
+      | Some "" | Some "none" ->
+          begin
+            match key.key_account with
+            | None -> None, contract
+            | Some acc ->
+                key.key_account <- None;
+                config.modified <- true;
+                match contract with
+                | None -> None, acc.acc_contract
+                | Some _ -> None, contract
+          end
+      | _ -> address, contract
+    in
+
+    begin
+      match address, passphrase, keyfile with
+      | Some _, Some _, _ ->
+          Error.raise "--address and --passphrase are incomptible"
+      | Some _, None, Some _ ->
+          Error.raise "--address and --keyfile are incomptible"
+      | _ -> ()
+    end;
+
+    match passphrase with
+
+    | Some passphrase ->
+
+        if key.key_passphrase <> None then
+          Error.raise
+            "You cannot change the passphrase of an account. You must delete it and recreate it.";
+
         if keyfile <> None then
-          Printf.eprintf
-            "Warning: unused --keyfile FILE argument, because seckey already known\n%!";
-        if seckey <> None then
-          Printf.eprintf
-            "Warning: unused --seckey SECKEY argument, because seckey already known\n%!";
-    | _ ->
-        let key_pair =
-          match keyfile with
-          | Some file -> Some ( Misc.read_json_file Encoding.keypair file )
-          | None ->
-              match pubkey, seckey, passphrase with
-              | Some public, Some _, _ ->
-                  Some { public ; secret = seckey }
-              | _, _, Some passphrase ->
-                  Some ( gen_keypair config passphrase )
-              | Some public, None, None ->
-                  Some { public; secret = None }
-              | None, Some _, None ->
-                  Printf.eprintf "Warning: unused --seckey SECKEY argument, because pubkey is missing\n%!";
-                  None
-              | None, None, None -> None
+          Error.raise "--passphrase and --keyfile are incompatible";
+
+        let key_pair = gen_keypair config passphrase in
+
+        begin
+          match key.key_pair with
+          | None -> ()
+          | Some { public ; _ } ->
+              if public <> key_pair.public then
+                Error.raise
+                  "Public key %s with new passphrase does not match former one %s." key_pair.public public;
+        end;
+
+        let acc_contract = match contract, key.key_account with
+          | Some contract, _ -> Some contract
+          | None, None -> None
+          | None, Some { acc_contract ; _ } -> acc_contract
         in
 
-        match key_pair with
-        | None -> ()
-        | Some p -> key.key_pair <- Some p; config.modified <- true
-  end;
+        let wc = match wc with
+          | Some _ -> wc
+          | None ->
+              match key.key_account with
+              | None -> None
+              | Some { acc_workchain ; _ } -> acc_workchain
+        in
 
-  let acc_contract, contract = match contract with
-    | Some contract -> Some contract, Some contract
+        let key_account =
+          match acc_contract with
+          | None -> None
+          | Some contract ->
+              let acc_address = gen_address config key_pair contract ~wc in
+              Some { acc_address ;
+                     acc_contract = Some contract ;
+                     acc_workchain = wc
+                   }
+        in
+
+        begin
+          match key_account, key.key_account with
+          | Some _, None -> ()
+          | None, None -> ()
+          | None, Some _ ->
+              Error.raise "Since account address was known, you must specify the contract to use or delete the address first.";
+          | Some { acc_address = new_address ; _ },
+            Some { acc_address = former_address ; _ }
+            ->
+              if new_address <> former_address then
+                Error.raise "New address %s is different from former address %s. You must delete it first."
+                  new_address former_address;
+        end;
+
+        key.key_passphrase <- Some passphrase;
+        key.key_pair <- Some key_pair;
+        key.key_account <- key_account;
+        config.modified <- true;
+
     | None ->
-        match key.key_account with
-        | Some { acc_contract ; _ } -> acc_contract, None
-        | _ -> None, None
-  in
-  let key_account = match address, contract, key.key_pair with
-    | Some acc_address, _ , _ ->
-        Some { acc_address ; acc_contract }
-    | None, Some contract, Some keypair ->
-        let acc_address = gen_address config keypair contract in
-        Some { acc_address ; acc_contract }
-    | None, Some _, None ->
-        Printf.eprintf
-          "Warning: unused --contract CONTRACT argument, because keypair is missing\n%!";
-        None
-    | None, None, None -> None
-    | None, None, Some _ -> None
-  in
 
-  begin
-    match key_account with
-    | None -> ()
-    | Some a -> key.key_account <- Some a; config.modified <- true
+        match keyfile with
+
+        | Some keyfile ->
+
+            let key_pair = Misc.read_json_file Encoding.keypair keyfile in
+
+            if key.key_pair <> None then
+              Error.raise
+                "You cannot change the keyfile of an account whose keyfile is already set. You must delete it and recreate it.";
+
+            let acc_contract = match contract, key.key_account with
+              | Some contract, _ -> Some contract
+              | None, None -> None
+              | None, Some { acc_contract ; _ } -> acc_contract
+            in
+
+            let wc = match wc with
+              | Some _ -> wc
+              | None ->
+                  match key.key_account with
+                  | None -> None
+                  | Some { acc_workchain ; _ } -> acc_workchain
+            in
+
+            let key_account =
+              match acc_contract with
+              | None -> None
+              | Some contract ->
+                  let acc_address = gen_address config key_pair contract ~wc in
+                  Some { acc_address ;
+                         acc_contract = Some contract ;
+                         acc_workchain = wc }
+            in
+
+            begin
+              match key_account, key.key_account with
+              | Some _, None -> ()
+              | None, None -> ()
+              | None, Some _ ->
+                  Error.raise "Since account address was known, you must specify the contract to use or delete the address first.";
+              | Some { acc_address = new_address ; _ },
+                Some { acc_address = former_address ; _ }
+                ->
+                  if new_address <> former_address then
+                    Error.raise "New address %s is different from former address %s. You must delete it first."
+                      new_address former_address;
+            end;
+
+            key.key_pair <- Some key_pair;
+            key.key_account <- key_account;
+            config.modified <- true;
+
+        | None ->
+
+            let acc_contract = match contract, key.key_account with
+              | Some contract, _ -> Some contract
+              | None, None -> None
+              | None, Some { acc_contract ; _ } -> acc_contract
+            in
+
+            let wc = match wc with
+              | Some _ -> wc
+              | None ->
+                  match key.key_account with
+                  | None -> None
+                  | Some { acc_workchain ; _ } -> acc_workchain
+            in
+
+            match address, acc_contract, key.key_pair with
+            | Some _, Some _, Some _ ->
+                Error.raise "--address is incompatible with known keyfile and contract";
+            | Some acc_address, acc_contract, _ ->
+
+                key.key_account <- Some { acc_address ;
+                                          acc_contract ;
+                                          acc_workchain = wc };
+                config.modified <- true
+
+            | None, Some _, None ->
+                Error.raise "You cannot set the contract without keys or address"
+            | None, None, _ -> ()
+            | None, Some contract, Some key_pair ->
+
+                if key.key_account <> None then
+                  Error.raise "You must clear address before changing contract";
+
+                let acc_address = gen_address config key_pair contract ~wc in
+                key.key_account <-
+                  Some { acc_address ;
+                         acc_contract = Some contract ;
+                         acc_workchain = wc };
+                config.modified <- true
+
   end;
 
   if config.modified then begin
@@ -404,11 +561,27 @@ let delete_account config net name =
   else
     Error.raise "No account %S to delete. Aborting.\n%!" name
 
-let action accounts ~list ~info
-    ~create ~delete ~passphrase ~address ~contract ~pubkey ~seckey ~keyfile =
+let get_live accounts =
   let config = Config.config () in
-  match passphrase, address, contract, pubkey, seckey, keyfile with
-  | None, None, None, None, None, None ->
+  let net = Misc.current_network config in
+  let host = match net.net_name with
+    | "mainnet" -> "ton.live"
+    | "testnet" -> "net.ton.live"
+    | _ -> assert false
+  in
+  List.iter (fun account ->
+      let key = Misc.find_key_exn net account in
+      let address = Misc.get_key_address_exn key in
+      let url = Printf.sprintf
+          "https://%s/accounts/accountDetails?id=%s" host address in
+      Misc.call [ "xdg-open" ; url ]
+    ) accounts
+
+let action accounts ~list ~info
+    ~create ~delete ~passphrase ~address ~contract ~keyfile ~live ~wc =
+  let config = Config.config () in
+  match passphrase, address, contract, keyfile, wc with
+  | None, None, None, None, None ->
       if create then
         match accounts with
           [] -> genkey config None
@@ -418,11 +591,14 @@ let action accounts ~list ~info
               ) accounts;
       else
       if delete then
-        let net = Config.current_network config in
+        let net = Misc.current_network config in
         List.iter (fun name ->
             delete_account config net name
           ) accounts;
         Printf.eprintf "All provided accounts deleted.\n%!"
+      else
+      if live then
+        get_live accounts
       else
         get_account_info accounts ~list ~info
   | _ ->
@@ -434,23 +610,23 @@ let action accounts ~list ~info
       | [ name ] ->
           if create then
             add_account config
-              ~name ~passphrase ~address ~contract ~pubkey ~seckey ~keyfile
+              ~name ~passphrase ~address ~contract ~keyfile ~wc
           else
             change_account config
-              ~name ~passphrase ~address ~contract ~pubkey ~seckey ~keyfile
+              ~name ~passphrase ~address ~contract ~keyfile ~wc
 
 let cmd =
   let passphrase = ref None in
   let address = ref None in
   let contract = ref None in
-  let pubkey = ref None in
-  let seckey = ref None in
   let keyfile = ref None in
   let accounts = ref [] in
   let list = ref false in
   let info = ref false in
   let create = ref false in
   let delete = ref false in
+  let live = ref false in
+  let wc = ref None in
   EZCMD.sub
     "account"
     (fun () -> action
@@ -462,9 +638,9 @@ let cmd =
         ~passphrase:!passphrase
         ~address:!address
         ~contract:!contract
-        ~pubkey:!pubkey
-        ~seckey:!seckey
         ~keyfile:!keyfile
+        ~live:!live
+        ~wc:!wc
     )
     ~args:
       [ [],
@@ -499,17 +675,24 @@ let cmd =
         Arg.String (fun s -> contract := Some s),
         EZCMD.info "Contract for account";
 
-        [ "pubkey"],
-        Arg.String (fun s -> pubkey := Some s),
-        EZCMD.info "Public Key for account";
+        [ "surf" ],
+        Arg.Unit (fun () -> contract := Some "SetcodeMultisigWallet2"),
+        EZCMD.info "Contract should be TON Surf contract" ;
 
-        [ "seckey"],
-        Arg.String (fun s -> seckey := Some s),
-        EZCMD.info "Secret Key for account";
+        [ "multisig" ],
+        Arg.Unit (fun () -> contract := Some "SafeMultisigWallet"),
+        EZCMD.info "Contract should be multisig" ;
 
         [ "keyfile"],
-        Arg.String (fun s -> pubkey := Some s),
+        Arg.String (fun s -> keyfile := Some s),
         EZCMD.info "Key file for account";
+
+        [ "live" ],
+        Arg.Set live,
+        EZCMD.info "Open block explorer on address";
+
+        [ "wc" ], Arg.Int (fun s -> wc := Some s),
+        EZCMD.info "WORKCHAIN The workchain (default is 0)";
 
       ]
     ~man:[

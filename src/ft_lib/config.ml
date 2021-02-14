@@ -17,36 +17,66 @@ let set_config = ref
        Some ( Sys.getenv "FT_SWITCH")
      with _ -> None)
 
-let ton_mainnet_node = {
-  node_name = "ton" ;
+let mainnet_node = {
+  node_name = "tonlabs" ;
   node_url = "https://main.ton.dev";
 }
 
-let ton_testnet_node = {
-  node_name = "ton" ;
+let testnet_node = {
+  node_name = "tonlabs" ;
   node_url = "https://net.ton.dev";
+}
+
+let rustnet_node = {
+  node_name = "tonlabs" ;
+  node_url = "https://rustnet.ton.dev";
+}
+
+let fldnet_node = {
+  node_name = "tonlabs" ;
+  node_url = "https://fld.ton.dev";
 }
 
 let mainnet_network = {
   net_name = "mainnet" ;
-  current_node = "ton" ;
+  current_node = "tonlabs" ;
   current_account = None ;
-  net_nodes = [ ton_mainnet_node ] ;
+  net_nodes = [ mainnet_node ] ;
   net_keys = [ ];
 }
 
 let testnet_network = {
   net_name = "testnet" ;
-  current_node = "ton" ;
+  current_node = "tonlabs" ;
   current_account = None ;
-  net_nodes = [ ton_testnet_node ] ;
+  net_nodes = [ testnet_node ] ;
+  net_keys = [ ];
+}
+
+let fldnet_network = {
+  net_name = "fldnet" ;
+  current_node = "tonlabs" ;
+  current_account = None ;
+  net_nodes = [ fldnet_node ] ;
+  net_keys = [ ];
+}
+
+let rustnet_network = {
+  net_name = "rustnet" ;
+  current_node = "tonlabs" ;
+  current_account = None ;
+  net_nodes = [ rustnet_node ] ;
   net_keys = [ ];
 }
 
 let default_config = {
   modified = true ;
   current_network = "testnet" ;
-  networks = [ testnet_network ; mainnet_network ] ;
+  networks = [ testnet_network ;
+               mainnet_network ;
+               rustnet_network ;
+               fldnet_network ;
+             ] ;
 }
 
 let save_config config =
@@ -122,14 +152,3 @@ let print () =
           Printf.eprintf "    url: %s\n%!" node.node_url
         ) net.net_nodes
     ) config.networks
-
-let current_network config =
-  Misc.find_network_exn config config.current_network
-
-let current_node config =
-  let net = Misc.find_network_exn config config.current_network in
-  match Misc.find_node net net.current_node with
-  | None ->
-      Error.raise "Unknown node %S in network %S"
-        net.current_node net.net_name
-  | Some node -> node

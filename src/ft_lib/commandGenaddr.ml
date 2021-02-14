@@ -14,9 +14,9 @@ open Ezcmd.V2
 open EZCMD.TYPES
 open Types
 
-let action name contract create =
+let action name contract create wc =
   let config = Config.config () in
-  let net = Config.current_network config in
+  let net = Misc.current_network config in
   match name with
   | None -> Error.raise "Name of key must be provided"
   | Some name ->
@@ -32,7 +32,7 @@ let action name contract create =
         | Some key ->
             if create then
               Error.raise "Key %S alreay exists and cannot be created" name;
-            CommandAccount.genaddr config contract key
+            CommandAccount.genaddr config contract key ~wc
 
       in
       iter create
@@ -41,17 +41,28 @@ let cmd =
   let name = ref None in
   let contract = ref "SafeMultisigWallet" in
   let create = ref false in
+  let wc = ref None in
   EZCMD.sub
     "genaddr"
-    (fun () -> action !name !contract !create)
+    (fun () -> action !name !contract !create !wc)
     ~args:
-      [ [],
+      [
+        [],
         Arg.Anon (0, fun s -> name := Some s),
         EZCMD.info "Name of key" ;
-        [ "--contract" ],
+
+        [ "contract" ],
         Arg.String (fun s -> contract := s),
         EZCMD.info "Name of contract" ;
-        [ "--create" ],
+
+        [ "surf" ],
+        Arg.Unit (fun () -> contract := "SetcodeMultisigWallet2"),
+        EZCMD.info "Use TON Surf contract" ;
+
+        [ "wc" ], Arg.Int (fun s -> wc := Some s),
+        EZCMD.info "WORKCHAIN The workchain (default is 0)";
+
+        [ "create" ],
         Arg.Set create,
         EZCMD.info "Create new key";
       ]
