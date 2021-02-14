@@ -13,7 +13,6 @@
 open Ezcmd.V2
 open EZCMD.TYPES
 open Types
-open EzFile.OP
 
 (*
 Input arguments:
@@ -119,24 +118,37 @@ let get_key_info config key ~info =
            | Some n ->
                Printf.sprintf "%s TONs" (string_of_nanoton n))
 
+let shorten_key s =
+  let len = String.length s in
+  Printf.sprintf "%s/%s" (String.sub s 0 4) (String.sub s (len-4) 4)
+
+let shorten_addr s =
+  let len = String.length s in
+  Printf.sprintf "%s/%s" (String.sub s 0 6) (String.sub s (len-4) 4)
+
 let get_account_info accounts ~list ~info =
 
   let config = Config.config () in
   let net = Config.current_network config in
   if list then
     List.iter (fun key ->
-        Printf.printf "* %S%s%s\n"
+        Printf.printf "* %S%s%s%s\n"
           key.key_name
           (match key.key_passphrase with
            | Some _ -> " P"
-           | None ->
-               match key.key_pair with
+           | None -> "")
+          (match key.key_pair with
                | None -> ""
-               | Some _ -> " S")
+               | Some pair ->
+                   Printf.sprintf " %s%s"
+                     (shorten_key pair.public)
+                     (match pair.secret with
+                      | None -> ""
+                      | Some _ -> " P"))
           (match key.key_account with
            | None -> ""
            | Some acc ->
-               Printf.sprintf " %s%s" acc.acc_address
+               Printf.sprintf " %s%s" (shorten_addr acc.acc_address)
                  (match acc.acc_contract with
                   | None -> ""
                   | Some s -> Printf.sprintf " (%s)" s)
@@ -151,7 +163,7 @@ let get_account_info accounts ~list ~info =
             get_key_info config key ~info) net.net_keys
     | names ->
         List.iter (fun name ->
-            match Config.find_key net name with
+            match Misc.find_key net name with
             | None ->
                 Error.raise "No key %S in network %S" name net.net_name
             | Some key ->
@@ -185,7 +197,7 @@ let genkey config maybe_name =
     match maybe_name with
     | None -> ()
     | Some name ->
-        Misc.check_new_key net name
+        Misc.check_new_key_exn net name
   end;
   let seed_phrase = gen_passphrase config in
 
@@ -222,48 +234,23 @@ let genkey config maybe_name =
       config.modified <- true;
       Printf.eprintf "Key for user %S generated\n%!" name
 
-
 let gen_address config key_pair contract =
+  Utils.with_contract contract
+    (fun ~contract_tvc ~contract_abi ->
 
-  let tvc_name = Printf.sprintf "contracts/%s.tvc" contract in
-  let tvc_content =
-    match Files.read tvc_name with
-    | None ->
-        Error.raise "Unknown contract %S" contract
-    | Some tvc_content -> tvc_content
-  in
-  let contract_tvc = Globals.ft_dir // tvc_name in
-  Misc.write_file contract_tvc tvc_content;
+       Utils.with_keypair key_pair (fun ~keypair_file ->
 
-  let abi_name = Printf.sprintf "contracts/%s.abi.json" contract in
-  let abi_content = match Files.read abi_name with
-    | None -> assert false
-    | Some abi_content -> abi_content
-  in
-  let contract_abi = Globals.ft_dir // abi_name in
-  Misc.write_file contract_abi abi_content;
-
-  let keypair_file = Misc.tmpfile () in
-  Misc.write_json_file Encoding.keypair keypair_file key_pair;
-
-  let stdout = Misc.call_stdout_lines @@
-    Misc.tonoscli config ["genaddr" ;
-                          contract_tvc ;
-                          contract_abi ;
-                          "--setkey" ; keypair_file ;
-                          "--wc" ; "0"
-                         ] in
-  let raw_address = ref None in
-  List.iter (fun s ->
-      match EzString.split s ' ' with
-      | [ "Raw" ; "address:" ; s ] -> raw_address := Some s
-      | _ -> ()
-    ) stdout;
-  match !raw_address with
-  | None -> Error.raise "Could not parse output of tonos-cli: %s"
-              (String.concat "\n" stdout )
-  | Some addr ->
-      addr
+           let stdout = Misc.call_stdout_lines @@
+             Misc.tonoscli config ["genaddr" ;
+                                   contract_tvc ;
+                                   contract_abi ;
+                                   "--setkey" ; keypair_file ;
+                                   "--wc" ; "0"
+                                  ] in
+           Misc.find_line_ok (function
+               | [ "Raw" ; "address:" ; s ] -> Some s
+               | _ -> None) stdout
+         ))
 
 let genaddr config contract key =
 
@@ -287,7 +274,7 @@ let add_account config
     ~name ~passphrase ~address ~contract ~pubkey ~seckey ~keyfile =
   let net = Config.current_network config in
   let key_name = name in
-  Misc.check_new_key net name;
+  Misc.check_new_key_exn net name;
   let key_passphrase = passphrase in
   let key_pair =
     match keyfile with
@@ -328,7 +315,7 @@ let add_account config
 let change_account config
     ~name ~passphrase ~address ~contract ~pubkey ~seckey ~keyfile =
   let net = Config.current_network config in
-  let key = match Config.find_key net name with
+  let key = match Misc.find_key net name with
     | None -> Error.raise "Unknown account %S cannot be modified\n%!" name
     | Some key -> key
   in

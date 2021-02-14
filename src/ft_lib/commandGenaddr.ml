@@ -21,7 +21,7 @@ let action name contract create =
   | None -> Error.raise "Name of key must be provided"
   | Some name ->
       let rec iter create =
-        match Config.find_key net name with
+        match Misc.find_key net name with
         | None ->
             if create then begin
               CommandAccount.genkey config ( Some name );
