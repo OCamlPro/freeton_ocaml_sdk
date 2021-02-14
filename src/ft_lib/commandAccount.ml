@@ -234,7 +234,7 @@ let genkey config maybe_name =
       config.modified <- true;
       Printf.eprintf "Key for user %S generated\n%!" name
 
-let gen_address config key_pair contract =
+let gen_address config key_pair contract ~wc =
   Utils.with_contract contract
     (fun ~contract_tvc ~contract_abi ->
 
@@ -245,14 +245,14 @@ let gen_address config key_pair contract =
                                    contract_tvc ;
                                    contract_abi ;
                                    "--setkey" ; keypair_file ;
-                                   "--wc" ; "0"
+                                   "--wc" ; Misc.string_of_workchain wc
                                   ] in
            Misc.find_line_ok (function
                | [ "Raw" ; "address:" ; s ] -> Some s
                | _ -> None) stdout
          ))
 
-let genaddr config contract key =
+let genaddr config contract key ~wc =
 
   let key_pair =
     match key.key_pair with
@@ -260,18 +260,19 @@ let genaddr config contract key =
         Error.raise "Cannot genaddr without  keypair for %S" key.key_name
     | Some key_pair -> key_pair
   in
-  let addr = gen_address config key_pair contract in
+  let addr = gen_address config key_pair contract ~wc in
   Printf.eprintf "Address (%s for %s=%s...): %s\n%!"
     contract key.key_name
     (String.sub key_pair.public 0 10) addr;
   key.key_account <- Some {
       acc_address = addr ;
       acc_contract = Some contract ;
+      acc_workchain = wc ;
     };
   config.modified <- true
 
 let add_account config
-    ~name ~passphrase ~address ~contract ~keyfile =
+    ~name ~passphrase ~address ~contract ~wc ~keyfile =
   let net = Misc.current_network config in
   let key_name = name in
   Misc.check_new_key_exn net name;
@@ -290,10 +291,14 @@ let add_account config
     | Some _, Some _, Some _ ->
         Error.raise "--address is incompatible with combining --contract and --keyfile/--passphrase"
     | Some acc_address, _ , _ ->
-        Some { acc_address ; acc_contract = contract }
+        Some { acc_address ;
+               acc_contract = contract ;
+               acc_workchain = wc ; }
     | None, Some contract, Some keypair ->
-        let acc_address = gen_address config keypair contract in
-        Some { acc_address ; acc_contract = Some contract }
+        let acc_address = gen_address config keypair contract ~wc in
+        Some { acc_address ;
+               acc_contract = Some contract ;
+               acc_workchain = wc ;}
     | None, Some _, None ->
         Error.raise "--contract CONTRACT requires either --address, --keyfile or --passphrase"
     | None, None, None -> None
@@ -307,7 +312,7 @@ let add_account config
   ()
 
 let change_account config
-    ~name ~passphrase ~address ~contract ~keyfile =
+    ~name ~passphrase ~address ~contract ~keyfile ~wc  =
   let net = Misc.current_network config in
   let key = match Misc.find_key net name with
     | None -> Error.raise "Unknown account %S cannot be modified\n%!" name
@@ -343,7 +348,9 @@ let change_account config
             match key.key_account with
             | None -> ()
             | Some acc ->
-                acc.acc_contract <- None;
+                acc.acc_contract <- None ;
+                if key.key_pair <> None then
+                  key.key_account <- None ;
                 config.modified <- true
           end;
           None
@@ -358,7 +365,9 @@ let change_account config
             | Some acc ->
                 key.key_account <- None;
                 config.modified <- true;
-                None, acc.acc_contract
+                match contract with
+                | None -> None, acc.acc_contract
+                | Some _ -> None, contract
           end
       | _ -> address, contract
     in
@@ -400,12 +409,23 @@ let change_account config
           | None, Some { acc_contract ; _ } -> acc_contract
         in
 
+        let wc = match wc with
+          | Some _ -> wc
+          | None ->
+              match key.key_account with
+              | None -> None
+              | Some { acc_workchain ; _ } -> acc_workchain
+        in
+
         let key_account =
           match acc_contract with
           | None -> None
           | Some contract ->
-              let acc_address = gen_address config key_pair contract in
-              Some { acc_address ; acc_contract = Some contract }
+              let acc_address = gen_address config key_pair contract ~wc in
+              Some { acc_address ;
+                     acc_contract = Some contract ;
+                     acc_workchain = wc
+                   }
         in
 
         begin
@@ -445,12 +465,22 @@ let change_account config
               | None, Some { acc_contract ; _ } -> acc_contract
             in
 
+            let wc = match wc with
+              | Some _ -> wc
+              | None ->
+                  match key.key_account with
+                  | None -> None
+                  | Some { acc_workchain ; _ } -> acc_workchain
+            in
+
             let key_account =
               match acc_contract with
               | None -> None
               | Some contract ->
-                  let acc_address = gen_address config key_pair contract in
-                  Some { acc_address ; acc_contract = Some contract }
+                  let acc_address = gen_address config key_pair contract ~wc in
+                  Some { acc_address ;
+                         acc_contract = Some contract ;
+                         acc_workchain = wc }
             in
 
             begin
@@ -479,12 +509,22 @@ let change_account config
               | None, Some { acc_contract ; _ } -> acc_contract
             in
 
+            let wc = match wc with
+              | Some _ -> wc
+              | None ->
+                  match key.key_account with
+                  | None -> None
+                  | Some { acc_workchain ; _ } -> acc_workchain
+            in
+
             match address, acc_contract, key.key_pair with
             | Some _, Some _, Some _ ->
                 Error.raise "--address is incompatible with known keyfile and contract";
             | Some acc_address, acc_contract, _ ->
 
-                key.key_account <- Some { acc_address ; acc_contract };
+                key.key_account <- Some { acc_address ;
+                                          acc_contract ;
+                                          acc_workchain = wc };
                 config.modified <- true
 
             | None, Some _, None ->
@@ -495,9 +535,11 @@ let change_account config
                 if key.key_account <> None then
                   Error.raise "You must clear address before changing contract";
 
-                let acc_address = gen_address config key_pair contract in
+                let acc_address = gen_address config key_pair contract ~wc in
                 key.key_account <-
-                  Some { acc_address ; acc_contract = Some contract };
+                  Some { acc_address ;
+                         acc_contract = Some contract ;
+                         acc_workchain = wc };
                 config.modified <- true
 
   end;
@@ -536,10 +578,10 @@ let get_live accounts =
     ) accounts
 
 let action accounts ~list ~info
-    ~create ~delete ~passphrase ~address ~contract ~keyfile ~live =
+    ~create ~delete ~passphrase ~address ~contract ~keyfile ~live ~wc =
   let config = Config.config () in
-  match passphrase, address, contract, keyfile with
-  | None, None, None, None ->
+  match passphrase, address, contract, keyfile, wc with
+  | None, None, None, None, None ->
       if create then
         match accounts with
           [] -> genkey config None
@@ -568,10 +610,10 @@ let action accounts ~list ~info
       | [ name ] ->
           if create then
             add_account config
-              ~name ~passphrase ~address ~contract ~keyfile
+              ~name ~passphrase ~address ~contract ~keyfile ~wc
           else
             change_account config
-              ~name ~passphrase ~address ~contract ~keyfile
+              ~name ~passphrase ~address ~contract ~keyfile ~wc
 
 let cmd =
   let passphrase = ref None in
@@ -584,6 +626,7 @@ let cmd =
   let create = ref false in
   let delete = ref false in
   let live = ref false in
+  let wc = ref None in
   EZCMD.sub
     "account"
     (fun () -> action
@@ -597,6 +640,7 @@ let cmd =
         ~contract:!contract
         ~keyfile:!keyfile
         ~live:!live
+        ~wc:!wc
     )
     ~args:
       [ [],
@@ -646,6 +690,9 @@ let cmd =
         [ "live" ],
         Arg.Set live,
         EZCMD.info "Open block explorer on address";
+
+        [ "wc" ], Arg.Int (fun s -> wc := Some s),
+        EZCMD.info "WORKCHAIN The workchain (default is 0)";
 
       ]
     ~man:[

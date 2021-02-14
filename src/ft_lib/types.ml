@@ -18,6 +18,7 @@ type keypair = {
 type account = {
   acc_address : string ;                 [@key "address"]
   mutable acc_contract : string option ; [@key "contract"]
+  mutable acc_workchain : int option ;   [@key "workchain"]
 } [@@deriving json_encoding]
 
 type key = {

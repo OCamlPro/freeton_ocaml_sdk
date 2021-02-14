@@ -206,3 +206,8 @@ let tonoscli config args =
 
   end;
   tonoscli config args
+
+let string_of_workchain wc =
+  match wc with
+  | None -> "0"
+  | Some n -> string_of_int n

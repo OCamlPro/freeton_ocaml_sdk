@@ -71,7 +71,7 @@ let get_waiting account =
            "--abi" ; contract_abi ]
     )
 
-let create_multisig account accounts ~not_owner ~req =
+let create_multisig account accounts ~not_owner ~req ~wc =
   let config = Config.config () in
   let net = Misc.current_network config in
   let owners = StringSet.of_list accounts in
@@ -118,7 +118,7 @@ let create_multisig account accounts ~not_owner ~req =
                   argument ;
                   "--abi" ; contract_abi ;
                   "--sign" ; keypair_file ;
-                  "--wc" ; "0"
+                  "--wc" ; Misc.string_of_workchain wc
                 ]
             in
             Printf.eprintf "output:\n %s\n%!"
@@ -127,7 +127,9 @@ let create_multisig account accounts ~not_owner ~req =
                 | [ "Contract" ; "deployed" ; "at" ; "address:"; address ] -> Some address
                 | _ -> None) lines in
             key.key_account <- Some { acc_address ;
-                                      acc_contract = Some contract };
+                                      acc_contract = Some contract ;
+                                      acc_workchain = wc ;
+                                    };
             config.modified <- true
          ))
 
@@ -221,10 +223,10 @@ let send_confirm account ~tx_id =
          ))
 
 let action account accounts ~create ~req ~not_owner ~custodians ~waiting
-    ~transfer ~dst ~bounce ~confirm
+    ~transfer ~dst ~bounce ~confirm ~wc
   =
   if create then
-    create_multisig account accounts ~not_owner ~req ;
+    create_multisig account accounts ~not_owner ~req ~wc  ;
   if custodians then
     get_custodians account ;
   begin
@@ -257,6 +259,8 @@ let cmd =
   let custodians = ref false in
   let waiting = ref false in
 
+  let wc = ref None in
+
   let transfer = ref None in
   let dst = ref None in
   let bounce = ref true in
@@ -277,6 +281,7 @@ let cmd =
              ~dst:!dst
              ~bounce:!bounce
              ~confirm:!confirm
+             ~wc:!wc
     )
     ~args:
       [
@@ -285,6 +290,9 @@ let cmd =
 
         [ "a" ; "account" ], Arg.String (fun s -> account := Some s),
         EZCMD.info "ACCOUNT The multisig account";
+
+        [ "wc" ], Arg.Int (fun s -> wc := Some s),
+        EZCMD.info "WORKCHAIN The workchain (default is 0)";
 
         [ "create" ], Arg.Set create,
         EZCMD.info "Deploy multisig wallet on account";
