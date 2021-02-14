@@ -48,21 +48,11 @@ let with_contract contract f =
   in
   let contract_tvc = Globals.ft_dir // tvc_name in
   Misc.write_file contract_tvc tvc_content;
-  match
-    let abi_name = Printf.sprintf "contracts/%s.abi.json" contract in
-    let abi_content = match Files.read abi_name with
-      | None -> assert false
-      | Some abi_content -> abi_content
-    in
-    let contract_abi = Globals.ft_dir // abi_name in
-    Misc.write_file contract_abi abi_content;
-    match f ~contract_tvc ~contract_abi with
-    | exception exn ->
-        Sys.remove contract_abi; raise exn
-    | v ->
-        Sys.remove contract_abi; v
-  with
-  | exception exn ->
-      Sys.remove contract_tvc; raise exn
-  | v ->
-      Sys.remove contract_tvc; v
+  let abi_name = Printf.sprintf "contracts/%s.abi.json" contract in
+  let abi_content = match Files.read abi_name with
+    | None -> assert false
+    | Some abi_content -> abi_content
+  in
+  let contract_abi = Globals.ft_dir // abi_name in
+  Misc.write_file contract_abi abi_content;
+  f ~contract_tvc ~contract_abi

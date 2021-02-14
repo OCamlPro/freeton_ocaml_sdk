@@ -45,10 +45,10 @@ let check_key_contract key contract =
 
 let get_custodians account =
   let config = Config.config () in
-  let net = Config.current_network config in
+  let net = Misc.current_network config in
   let key = Misc.find_key_exn net account in
   check_key_contract key contract ;
-  let address = Misc.get_address_exn key in
+  let address = Misc.get_key_address_exn key in
   Utils.with_contract contract
     (fun ~contract_tvc:_ ~contract_abi ->
        Misc.call @@
@@ -59,10 +59,10 @@ let get_custodians account =
 
 let get_waiting account =
  let config = Config.config () in
-  let net = Config.current_network config in
+  let net = Misc.current_network config in
   let key = Misc.find_key_exn net account in
   check_key_contract key contract ;
-  let address = Misc.get_address_exn key in
+  let address = Misc.get_key_address_exn key in
   Utils.with_contract contract
     (fun ~contract_tvc:_ ~contract_abi ->
        Misc.call @@
@@ -73,7 +73,7 @@ let get_waiting account =
 
 let create_multisig account accounts ~not_owner ~req =
   let config = Config.config () in
-  let net = Config.current_network config in
+  let net = Misc.current_network config in
   let owners = StringSet.of_list accounts in
   let owners =
     if not_owner then owners else
@@ -158,12 +158,12 @@ let () =
 
 let send_transfer ~src ~dst ~bounce ~amount =
   let config = Config.config () in
-  let net = Config.current_network config in
+  let net = Misc.current_network config in
   let src_key = Misc.find_key_exn net src in
-  let src_addr = Misc.get_address_exn src_key in
+  let src_addr = Misc.get_key_address_exn src_key in
   check_key_contract src_key contract ;
   let dst_key = Misc.find_key_exn net dst in
-  let dst_addr = Misc.get_address_exn dst_key in
+  let dst_addr = Misc.get_key_address_exn dst_key in
 
 
   let argument =
@@ -197,9 +197,9 @@ let send_transfer ~src ~dst ~bounce ~amount =
 
 let send_confirm account ~tx_id =
   let config = Config.config () in
-  let net = Config.current_network config in
+  let net = Misc.current_network config in
   let src_key = Misc.find_key_exn net account in
-  let src_addr = Misc.get_address_exn src_key in
+  let src_addr = Misc.get_key_address_exn src_key in
   check_key_contract src_key contract ;
 
   let argument =

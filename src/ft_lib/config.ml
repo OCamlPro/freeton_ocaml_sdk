@@ -122,14 +122,3 @@ let print () =
           Printf.eprintf "    url: %s\n%!" node.node_url
         ) net.net_nodes
     ) config.networks
-
-let current_network config =
-  Misc.find_network_exn config config.current_network
-
-let current_node config =
-  let net = Misc.find_network_exn config config.current_network in
-  match Misc.find_node net net.current_node with
-  | None ->
-      Error.raise "Unknown node %S in network %S"
-        net.current_node net.net_name
-  | Some node -> node

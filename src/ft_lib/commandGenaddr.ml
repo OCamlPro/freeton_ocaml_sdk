@@ -16,7 +16,7 @@ open Types
 
 let action name contract create =
   let config = Config.config () in
-  let net = Config.current_network config in
+  let net = Misc.current_network config in
   match name with
   | None -> Error.raise "Name of key must be provided"
   | Some name ->
@@ -45,13 +45,20 @@ let cmd =
     "genaddr"
     (fun () -> action !name !contract !create)
     ~args:
-      [ [],
+      [
+        [],
         Arg.Anon (0, fun s -> name := Some s),
         EZCMD.info "Name of key" ;
-        [ "--contract" ],
+
+        [ "contract" ],
         Arg.String (fun s -> contract := s),
         EZCMD.info "Name of contract" ;
-        [ "--create" ],
+
+        [ "surf" ],
+        Arg.Unit (fun () -> contract := "SetcodeMultisigWallet2"),
+        EZCMD.info "Use TON Surf contract" ;
+
+        [ "create" ],
         Arg.Set create,
         EZCMD.info "Create new key";
       ]

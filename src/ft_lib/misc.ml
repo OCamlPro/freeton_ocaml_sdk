@@ -70,27 +70,8 @@ let call_stdout_lines args =
       (String.concat "\n" lines);
   lines
 
-let net_dir config = Globals.ft_dir // config.current_network
-let tonoscli_binary config = net_dir config // "bin" // "tonos-cli"
-let tonoscli_config config = net_dir config // "tonos-cli.config"
 
-let tonoscli config args =
-    ( tonoscli_binary config ::
-      "--config" ::
-      tonoscli_config config ::
-      args )
 
-let tonoscli config args =
-  if not ( Sys.file_exists ( tonoscli_config config ) ) then begin
-    let binary = tonoscli_binary config in
-    if not ( Sys.file_exists binary ) then begin
-      EzFile.make_dir ~p:true ( Filename.dirname binary );
-      Error.raise "You must put a copy of tonos-cli binary in %s\n%!" binary
-    end;
-    call (tonoscli config ["config" ;]);
-    Sys.rename "tonlabs-cli.conf.json" ( tonoscli_config config );
-  end;
-  tonoscli config args
 
 let read_json_file encoding filename =
   let json = EzFile.read_file filename in
@@ -176,10 +157,52 @@ let find_key_exn net name =
               name net.net_name
   | Some key -> key
 
-let get_address_exn key =
+let get_key_address_exn key =
   match key.key_account with
   | None ->
       Error.raise
         "Key %S has no address. Use 'ft account KEY --contract CONTRACT'"
         key.key_name
   | Some { acc_address ; _ } -> acc_address
+
+
+let current_network config =
+  find_network_exn config config.current_network
+
+let current_node config =
+  let net = find_network_exn config config.current_network in
+  match find_node net net.current_node with
+  | None ->
+      Error.raise "Unknown node %S in network %S"
+        net.current_node net.net_name
+  | Some node -> node
+
+let net_dir config = Globals.ft_dir // config.current_network
+let tonoscli_binary config = net_dir config // "bin" // "tonos-cli"
+let tonoscli_config config = net_dir config // "tonos-cli.config"
+
+let tonoscli config args =
+    ( tonoscli_binary config ::
+      "--config" ::
+      tonoscli_config config ::
+      args )
+
+let tonoscli config args =
+  let config_file = tonoscli_config config in
+  if not ( Sys.file_exists config_file ) then begin
+    let binary = tonoscli_binary config in
+    if not ( Sys.file_exists binary ) then begin
+      EzFile.make_dir ~p:true ( Filename.dirname binary );
+      Error.raise "You must put a copy of tonos-cli binary in %s\n%!" binary
+    end;
+    let node = current_node config in
+    call (tonoscli config ["config" ; "--url"; node.node_url ]);
+
+    let src_file = "tonlabs-cli.conf.json" in
+    Printf.eprintf "mv %s %s\n%!" src_file config_file ;
+    let content = EzFile.read_file src_file in
+    Sys.remove src_file ;
+    EzFile.write_file config_file content
+
+  end;
+  tonoscli config args
