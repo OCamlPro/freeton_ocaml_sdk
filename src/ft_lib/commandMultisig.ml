@@ -162,31 +162,6 @@ let create_multisig account accounts ~not_owner ~req ~wc =
             config.modified <- true
          ))
 
-let nanotokens_of_string s =
-  let s = String.map (function
-      '0'..'9' as c -> c
-      | ',' | '_' -> '_'
-      | '.' -> '.'
-      | _ -> Error.raise "Invalid amount %S" s
-    ) s in
-  let tons, decimals = EzString.cut_at s '.' in
-  let decimals = float_of_string ("0." ^ decimals) in
-  let decimals = decimals *. 1_000_000_000. in
-  let decimals = Int64.of_float decimals in
-  let tons = Int64.of_string tons in
-  let tons = Int64.mul tons 1_000_000_000L in
-  Int64.add tons decimals
-
-let () =
-  assert (nanotokens_of_string "1" = 1_000_000_000L );
-  assert (nanotokens_of_string "1_000" = 1_000_000_000_000L );
-  assert (nanotokens_of_string "1." = 1_000_000_000L );
-  assert (nanotokens_of_string "1.000" = 1_000_000_000L );
-  assert (nanotokens_of_string "1.256" = 1_256_000_000L );
-  assert (nanotokens_of_string "0.000_001" = 1_000L );
-
-  ()
-
 let send_transfer ~src ~dst ~bounce ~amount =
   let config = Config.config () in
   let net = Misc.current_network config in
@@ -203,7 +178,7 @@ let send_transfer ~src ~dst ~bounce ~amount =
       if amount = "all" then
         0L, true
       else
-        nanotokens_of_string amount, false
+        Misc.nanotokens_of_string amount, false
     in
     Printf.sprintf
       {|{"dest":"%s","value":%Ld,"bounce":%b,"allBalance":%b,"payload":""}|}
