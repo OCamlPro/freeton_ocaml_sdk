@@ -25,6 +25,13 @@ let subst_string config =
   let files = ref [] in
   let subst () s =
     match EzString.split s ':' with
+    | [ "env" ; var ] -> begin
+        match Sys.getenv var with
+        | exception Not_found ->
+            Error.raise "Env variable %S is not defined" var
+        | s -> s
+      end
+
     | [ account ; "addr" ] | [ "addr" ; account ] ->
         let key = Misc.find_key_exn net account in
         Misc.get_key_address_exn key
@@ -44,7 +51,7 @@ let subst_string config =
         let key_pair = Misc.get_key_pair_exn key in
         let file = Misc.gen_keyfile key_pair in
         files := file :: !files;
-        key_pair.public
+        file
     | [ account ; "contract"; "tvc" ] | [ "account-tvc" ; account ] ->
         let key = Misc.find_key_exn net account in
         let contract = Misc.get_key_contract_exn key in
