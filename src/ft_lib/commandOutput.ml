@@ -25,42 +25,45 @@ let subst_string config =
   let files = ref [] in
   let subst () s =
     match EzString.split s ':' with
-    | [ account ]
-    | [ account ; "addr" ] ->
+    | [ account ; "addr" ] | [ "addr" ; account ] ->
         let key = Misc.find_key_exn net account in
         Misc.get_key_address_exn key
-    | [ account ; "wc" ] ->
+    | [ account ; "wc" ] | [ "wc" ; account ] ->
         let key = Misc.find_key_exn net account in
         let acc = Misc.get_key_account_exn key in
         Misc.string_of_workchain acc.acc_workchain
-    | [ account ; "pubkey" ] ->
+    | [ account ; "pubkey" ] | [ "pubkey" ; account ]->
         let key = Misc.find_key_exn net account in
         let key_pair = Misc.get_key_pair_exn key in
         key_pair.public
-    | [ account ; "passphrase" ] ->
+    | [ account ; "passphrase" ] | [ "passphrase" ; account ] ->
         let key = Misc.find_key_exn net account in
         Misc.get_key_passphrase_exn key
-    | [ account ; "keyfile" ] ->
+    | [ account ; "keyfile" ] | [ "keyfile" ; account ] ->
         let key = Misc.find_key_exn net account in
         let key_pair = Misc.get_key_pair_exn key in
         let file = Misc.gen_keyfile key_pair in
         files := file :: !files;
         key_pair.public
-    | [ account ; "contract"; "tvc" ] ->
+    | [ account ; "contract"; "tvc" ] | [ "account-tvc" ; account ] ->
         let key = Misc.find_key_exn net account in
         let contract = Misc.get_key_contract_exn key in
         Misc.get_contract_tvcfile contract
-    | [ account ; "contract" ; "abi" ] ->
+    | [ account ; "contract" ; "abi" ] | [ "account-abi" ; account ] ->
         let key = Misc.find_key_exn net account in
         let contract = Misc.get_key_contract_exn key in
         Misc.get_contract_abifile contract
-    | [ contract ; "tvc" ] ->
+    | [ contract ; "tvc" ] | [ "tvc" ; contract ]->
         Misc.get_contract_tvcfile contract
-    | [ contract ; "abi" ] ->
+    | [ contract ; "abi" ] | [ "abi" ; contract ] ->
         Misc.get_contract_abifile contract
     | [ "node" ; "url" ] ->
         let node = Misc.current_node config in
         node.node_url
+    | [ n ; "ton" ] | [ "ton" ; n ] ->
+        Int64.to_string ( Misc.nanotokens_of_string n )
+    | [ "file" ; file ] ->
+        String.trim ( EzFile.read_file file )
     | _ ->
         Error.raise "Cannot substitute %S" s
   in

@@ -9,8 +9,7 @@
 				{"name":"validatorAssurance","type":"uint64"},
 				{"name":"proxyCode","type":"cell"},
 				{"name":"validatorWallet","type":"address"},
-				{"name":"participantRewardFraction","type":"uint8"},
-				{"name":"balanceThreshold","type":"uint64"}
+				{"name":"participantRewardFraction","type":"uint8"}
 			],
 			"outputs": [
 			]
@@ -71,6 +70,22 @@
 		{
 			"name": "cancelWithdrawal",
 			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "setVestingDonor",
+			"inputs": [
+				{"name":"donor","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "setLockDonor",
+			"inputs": [
+				{"name":"donor","type":"address"}
 			],
 			"outputs": [
 			]
@@ -169,6 +184,14 @@
 			]
 		},
 		{
+			"name": "setValidatorRewardFraction",
+			"inputs": [
+				{"name":"fraction","type":"uint8"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "receiveFunds",
 			"inputs": [
 			],
@@ -193,8 +216,10 @@
 				{"name":"reinvest","type":"bool"},
 				{"name":"reward","type":"uint64"},
 				{"name":"stakes","type":"map(uint64,uint64)"},
-				{"components":[{"name":"amount","type":"uint64"},{"name":"lastWithdrawalTime","type":"uint64"},{"name":"withdrawalPeriod","type":"uint32"},{"name":"withdrawalValue","type":"uint64"},{"name":"owner","type":"address"}],"name":"vestings","type":"map(uint64,tuple)"},
-				{"components":[{"name":"amount","type":"uint64"},{"name":"lastWithdrawalTime","type":"uint64"},{"name":"withdrawalPeriod","type":"uint32"},{"name":"withdrawalValue","type":"uint64"},{"name":"owner","type":"address"}],"name":"locks","type":"map(uint64,tuple)"}
+				{"components":[{"name":"remainingAmount","type":"uint64"},{"name":"lastWithdrawalTime","type":"uint64"},{"name":"withdrawalPeriod","type":"uint32"},{"name":"withdrawalValue","type":"uint64"},{"name":"owner","type":"address"}],"name":"vestings","type":"map(uint64,tuple)"},
+				{"components":[{"name":"remainingAmount","type":"uint64"},{"name":"lastWithdrawalTime","type":"uint64"},{"name":"withdrawalPeriod","type":"uint32"},{"name":"withdrawalValue","type":"uint64"},{"name":"owner","type":"address"}],"name":"locks","type":"map(uint64,tuple)"},
+				{"name":"vestingDonor","type":"address"},
+				{"name":"lockDonor","type":"address"}
 			]
 		},
 		{
@@ -224,11 +249,19 @@
 			]
 		},
 		{
+			"name": "getDePoolBalance",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"int256"}
+			]
+		},
+		{
 			"name": "getRounds",
 			"inputs": [
 			],
 			"outputs": [
-				{"components":[{"name":"id","type":"uint64"},{"name":"supposedElectedAt","type":"uint32"},{"name":"unfreeze","type":"uint32"},{"name":"stakeHeldFor","type":"uint32"},{"name":"vsetHashInElectionPhase","type":"uint256"},{"name":"step","type":"uint8"},{"name":"completionReason","type":"uint8"},{"name":"stake","type":"uint64"},{"name":"recoveredStake","type":"uint64"},{"name":"unused","type":"uint64"},{"name":"isValidatorStakeCompleted","type":"bool"},{"name":"rewards","type":"uint64"},{"name":"participantQty","type":"uint32"},{"name":"validatorStake","type":"uint64"},{"name":"validatorRemainingStake","type":"uint64"},{"name":"handledStakesAndRewards","type":"uint64"}],"name":"rounds","type":"map(uint64,tuple)"}
+				{"components":[{"name":"id","type":"uint64"},{"name":"supposedElectedAt","type":"uint32"},{"name":"unfreeze","type":"uint32"},{"name":"stakeHeldFor","type":"uint32"},{"name":"vsetHashInElectionPhase","type":"uint256"},{"name":"step","type":"uint8"},{"name":"completionReason","type":"uint8"},{"name":"stake","type":"uint64"},{"name":"recoveredStake","type":"uint64"},{"name":"unused","type":"uint64"},{"name":"isValidatorStakeCompleted","type":"bool"},{"name":"participantReward","type":"uint64"},{"name":"participantQty","type":"uint32"},{"name":"validatorStake","type":"uint64"},{"name":"validatorRemainingStake","type":"uint64"},{"name":"handledStakesAndRewards","type":"uint64"}],"name":"rounds","type":"map(uint64,tuple)"}
 			]
 		}
 	],
@@ -279,7 +312,7 @@
 		{
 			"name": "RoundCompleted",
 			"inputs": [
-				{"components":[{"name":"id","type":"uint64"},{"name":"supposedElectedAt","type":"uint32"},{"name":"unfreeze","type":"uint32"},{"name":"stakeHeldFor","type":"uint32"},{"name":"vsetHashInElectionPhase","type":"uint256"},{"name":"step","type":"uint8"},{"name":"completionReason","type":"uint8"},{"name":"stake","type":"uint64"},{"name":"recoveredStake","type":"uint64"},{"name":"unused","type":"uint64"},{"name":"isValidatorStakeCompleted","type":"bool"},{"name":"rewards","type":"uint64"},{"name":"participantQty","type":"uint32"},{"name":"validatorStake","type":"uint64"},{"name":"validatorRemainingStake","type":"uint64"},{"name":"handledStakesAndRewards","type":"uint64"}],"name":"round","type":"tuple"}
+				{"components":[{"name":"id","type":"uint64"},{"name":"supposedElectedAt","type":"uint32"},{"name":"unfreeze","type":"uint32"},{"name":"stakeHeldFor","type":"uint32"},{"name":"vsetHashInElectionPhase","type":"uint256"},{"name":"step","type":"uint8"},{"name":"completionReason","type":"uint8"},{"name":"stake","type":"uint64"},{"name":"recoveredStake","type":"uint64"},{"name":"unused","type":"uint64"},{"name":"isValidatorStakeCompleted","type":"bool"},{"name":"participantReward","type":"uint64"},{"name":"participantQty","type":"uint32"},{"name":"validatorStake","type":"uint64"},{"name":"validatorRemainingStake","type":"uint64"},{"name":"handledStakesAndRewards","type":"uint64"}],"name":"round","type":"tuple"}
 			],
 			"outputs": [
 			]
@@ -297,6 +330,23 @@
 			"name": "TooLowDePoolBalance",
 			"inputs": [
 				{"name":"replenishment","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "RewardFractionsChanged",
+			"inputs": [
+				{"name":"validator","type":"uint8"},
+				{"name":"participants","type":"uint8"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "InternalError",
+			"inputs": [
+				{"name":"ec","type":"uint16"}
 			],
 			"outputs": [
 			]
