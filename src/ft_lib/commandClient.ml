@@ -20,7 +20,7 @@ open Ez_subst.V1
    %{contract:tvc}, %{contract:abi}
  *)
 
-let action ~exec args =
+let action ~exec ~stdout args =
   let config = Config.config () in
   let net = Misc.current_network config in
   let files = ref [] in
@@ -71,17 +71,25 @@ let action ~exec args =
   let clean () =
     List.iter Sys.remove !files
   in
-  match Misc.call ( if exec then args else Misc.tonoscli config args ) with
+  let cmd = if exec then args else Misc.tonoscli config args in
+  match
+    match stdout with
+    | None -> Misc.call cmd
+    | Some file ->
+        let ( _ : string ) = Misc.call_stdout_file ~file cmd in
+        ()
+  with
   | exception exn -> clean () ; raise exn
   | v -> v
 
 let cmd =
   let exec = ref false in
   let args = ref [] in
+  let stdout = ref None in
   EZCMD.sub
     "client"
     (fun () ->
-       action !args ~exec:!exec
+       action !args ~exec:!exec ~stdout:!stdout
     )
     ~args:
       [ [],
@@ -90,5 +98,8 @@ let cmd =
 
         [ "exec" ], Arg.Set exec,
         EZCMD.info "Do not call tonos-cli, the command is in the arguments";
+
+        [ "stdout" ], Arg.String (fun s -> stdout := Some s),
+        EZCMD.info "FILE Save command stdout to file";
       ]
     ~doc: "Call tonos-cli, use -- to separate arguments"

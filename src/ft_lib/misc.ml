@@ -39,8 +39,10 @@ let call ?(stdout = Unix.stdout) args =
   in
   iter ()
 
-let call_stdout_file args =
-  let tmpfile = tmpfile () in
+let call_stdout_file ?file args =
+  let tmpfile = match file with
+    | None -> tmpfile ()
+    | Some file -> file in
   let stdout = Unix.openfile tmpfile
       [ Unix.O_CREAT ; Unix.O_WRONLY ; Unix.O_TRUNC ] 0o644 in
   match call ~stdout args with
@@ -222,11 +224,12 @@ let tonoscli config args =
     call (tonoscli config ["config" ; "--url"; node.node_url ]);
 
     let src_file = "tonlabs-cli.conf.json" in
-    Printf.eprintf "mv %s %s\n%!" src_file config_file ;
-    let content = EzFile.read_file src_file in
-    Sys.remove src_file ;
-    EzFile.write_file config_file content
-
+    if Sys.file_exists src_file then begin
+      Printf.eprintf "mv %s %s\n%!" src_file config_file ;
+      let content = EzFile.read_file src_file in
+      Sys.remove src_file ;
+      EzFile.write_file config_file content
+    end
   end;
   tonoscli config args
 
