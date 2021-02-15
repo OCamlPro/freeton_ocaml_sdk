@@ -108,6 +108,35 @@ let create_multisig account accounts ~not_owner ~req ~wc =
   in
   let key = Misc.find_key_exn net account in
   check_key_contract key contract ;
+
+  begin
+    match key.key_account with
+    | None -> ()
+    | Some acc ->
+        begin
+          match acc.acc_contract with
+          | None -> ()
+          | Some c ->
+              if c <> contract then
+                Error.raise {|Account address uses a different contract. Clear it with 'ft account ACCOUNT --contract ""|}
+        end;
+        match wc with
+        | None -> ()
+        | Some _ ->
+            if Misc.string_of_workchain wc <>
+               Misc.string_of_workchain  acc.acc_workchain then
+              Error.raise {|Account addres uses a different workchain. Clear it with  'ft account ACCOUNT --contract ""|}
+  end;
+
+  let wc = match wc with
+    | Some _ -> wc
+    | None ->
+        match key.key_account with
+        | None -> None
+        | Some acc ->
+            acc.acc_workchain
+  in
+
   Utils.with_key_keypair key
     (fun ~keypair_file ->
        Utils.with_contract contract

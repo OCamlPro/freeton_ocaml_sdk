@@ -157,14 +157,37 @@ let find_key_exn net name =
               name net.net_name
   | Some key -> key
 
-let get_key_address_exn key =
+let get_key_pair_exn key =
+  match key.key_pair with
+  | None
+  | Some { secret = None ; _ } ->
+      Error.raise "Account %S does not have a secret key" key.key_name
+  | Some key_pair -> key_pair
+
+let get_key_passphrase_exn key =
+  match key.key_passphrase with
+  | None ->
+      Error.raise "Account %S does not have a passphrase" key.key_name
+  | Some key_passphrase -> key_passphrase
+
+let get_key_account_exn key =
   match key.key_account with
   | None ->
       Error.raise
-        "Key %S has no address. Use 'ft account KEY --contract CONTRACT'"
+        "Key %S has no address yet. Use 'ft account KEY --contract CONTRACT'"
         key.key_name
-  | Some { acc_address ; _ } -> acc_address
+  | Some acc -> acc
 
+let get_key_address_exn key =
+  ( get_key_account_exn key ) . acc_address
+
+let get_key_contract_exn key =
+  match ( get_key_account_exn key ) . acc_contract with
+  | None ->
+      Error.raise
+        "Key %S has no contract yet. Use 'ft account KEY --contract CONTRACT'"
+        key.key_name
+  | Some contract -> contract
 
 let current_network config =
   find_network_exn config config.current_network
@@ -211,3 +234,32 @@ let string_of_workchain wc =
   match wc with
   | None -> "0"
   | Some n -> string_of_int n
+
+
+let gen_keyfile key_pair =
+  let keypair_file = tmpfile () in
+  write_json_file Encoding.keypair keypair_file key_pair;
+  keypair_file
+
+let get_contract_tvcfile contract =
+  let tvc_name = Printf.sprintf "contracts/%s.tvc" contract in
+  let tvc_content =
+    match Files.read tvc_name with
+    | None ->
+        Error.raise "Unknown contract %S" contract
+    | Some tvc_content -> tvc_content
+  in
+  let contract_tvc = Globals.ft_dir // tvc_name in
+  write_file contract_tvc tvc_content;
+  contract_tvc
+
+let get_contract_abifile contract =
+
+  let abi_name = Printf.sprintf "contracts/%s.abi.json" contract in
+  let abi_content = match Files.read abi_name with
+    | None -> assert false
+    | Some abi_content -> abi_content
+  in
+  let contract_abi = Globals.ft_dir // abi_name in
+  write_file contract_abi abi_content;
+  contract_abi
