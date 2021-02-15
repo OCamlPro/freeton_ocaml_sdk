@@ -12,7 +12,6 @@
 
 open Ezcmd.V2
 open EZCMD.TYPES
-open Ez_subst.V1
 
 (* open Types *)
 
@@ -22,51 +21,9 @@ open Ez_subst.V1
 
 let action ~exec ~stdout args =
   let config = Config.config () in
-  let net = Misc.current_network config in
-  let files = ref [] in
-  let subst () s =
-    match EzString.split s ':' with
-    | [ account ]
-    | [ account ; "addr" ] ->
-        let key = Misc.find_key_exn net account in
-        Misc.get_key_address_exn key
-    | [ account ; "wc" ] ->
-        let key = Misc.find_key_exn net account in
-        let acc = Misc.get_key_account_exn key in
-        Misc.string_of_workchain acc.acc_workchain
-    | [ account ; "pubkey" ] ->
-        let key = Misc.find_key_exn net account in
-        let key_pair = Misc.get_key_pair_exn key in
-        key_pair.public
-    | [ account ; "passphrase" ] ->
-        let key = Misc.find_key_exn net account in
-        Misc.get_key_passphrase_exn key
-    | [ account ; "keyfile" ] ->
-        let key = Misc.find_key_exn net account in
-        let key_pair = Misc.get_key_pair_exn key in
-        let file = Misc.gen_keyfile key_pair in
-        files := file :: !files;
-        key_pair.public
-    | [ account ; "contract"; "tvc" ] ->
-        let key = Misc.find_key_exn net account in
-        let contract = Misc.get_key_contract_exn key in
-        Misc.get_contract_tvcfile contract
-    | [ account ; "contract" ; "abi" ] ->
-        let key = Misc.find_key_exn net account in
-        let contract = Misc.get_key_contract_exn key in
-        Misc.get_contract_abifile contract
-    | [ contract ; "tvc" ] ->
-        Misc.get_contract_tvcfile contract
-    | [ contract ; "abi" ] ->
-        Misc.get_contract_abifile contract
-    | [ "node" ; "url" ] ->
-        let node = Misc.current_node config in
-        node.node_url
-    | _ ->
-        Error.raise "Cannot substitute %S" s
-  in
+  let (subst, files) = CommandOutput.subst_string config in
   let args = List.map (fun arg ->
-      EZ_SUBST.string ~sep:'%' ~brace:subst ~ctxt:() arg
+      subst arg
     ) args in
   let clean () =
     List.iter Sys.remove !files
@@ -101,5 +58,6 @@ let cmd =
 
         [ "stdout" ], Arg.String (fun s -> stdout := Some s),
         EZCMD.info "FILE Save command stdout to file";
+
       ]
     ~doc: "Call tonos-cli, use -- to separate arguments"

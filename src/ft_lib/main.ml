@@ -21,6 +21,7 @@ let main () =
       CommandList.cmd;
       CommandAccount.cmd;
       CommandClient.cmd;
+      CommandOutput.cmd;
       CommandMultisig.cmd;
     ]
   in
