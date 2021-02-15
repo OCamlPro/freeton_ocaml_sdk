@@ -97,41 +97,46 @@ let load_config () =
       config
   in
   config.modified <- false;
-  match !set_config with
-  | None -> config
-  | Some switch ->
-      let list = EzString.split switch '.' in
-      let rec set_node net list =
-        match list with
-        | [] -> ()
-        | name :: tail ->
-            begin
-              match Misc.find_node net name, Misc.find_key net name with
-              | Some _, Some _ -> assert false
-              | Some _node, _ ->
-                  net.current_node <- name
-              | None, Some _key ->
-                  net.current_account <- Some name
-              | None, None ->
-                  Error.raise "Unknown node or account %S" name
-            end;
-            set_node net tail
-      in
-      let set_network list =
-        match list with
-        | [] -> ()
-        | name :: tail ->
-            match Misc.find_network config name with
-            | Some net ->
-                config.current_network <- name;
-                set_node net tail
-            | None ->
-                let net =
-                  Misc.find_network_exn config config.current_network in
-                set_node net list
-      in
-      set_network list ;
-      config
+  let config =
+    match !set_config with
+    | None -> config
+    | Some switch ->
+        let list = EzString.split switch '.' in
+        let rec set_node net list =
+          match list with
+          | [] -> ()
+          | name :: tail ->
+              begin
+                match Misc.find_node net name, Misc.find_key net name with
+                | Some _, Some _ -> assert false
+                | Some _node, _ ->
+                    net.current_node <- name
+                | None, Some _key ->
+                    net.current_account <- Some name
+                | None, None ->
+                    Error.raise "Unknown node or account %S" name
+              end;
+              set_node net tail
+        in
+        let set_network list =
+          match list with
+          | [] -> ()
+          | name :: tail ->
+              match Misc.find_network config name with
+              | Some net ->
+                  config.current_network <- name;
+                  set_node net tail
+              | None ->
+                  let net =
+                    Misc.find_network_exn config config.current_network in
+                  set_node net list
+        in
+        set_network list ;
+        config
+  in
+  let net = Misc.current_network config in
+  Printf.eprintf "Network: %s\n%!" net.net_name;
+  config
 
 let config = lazy (load_config ())
 let config () = Lazy.force config
