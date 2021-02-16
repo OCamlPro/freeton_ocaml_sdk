@@ -47,7 +47,7 @@ let main () =
     | [] ->
         Printf.eprintf "Use 'ft --help' for help on commands\n%!";
         Config.print ();
-        exit 0
+        []
     | "--switch" :: switch :: args ->
         Config.set_config := Some switch;
         iter_initial_args args
@@ -74,9 +74,15 @@ let main () =
   (* OpambinMisc.global_log "args: %s"
          (String.concat " " (Array.to_list Sys.argv)); *)
   try
-    EZCMD.main_with_subcommands ~name:Globals.command ~version:Version.version
-      ~doc:"Create and manage an OCaml project" ~man:[] ~argv commands
-      ~common_args;
+    begin
+      match args with
+      | [] -> ()
+      | _ ->
+          EZCMD.main_with_subcommands
+            ~name:Globals.command ~version:Version.version
+            ~doc:"Create and manage an OCaml project" ~man:[] ~argv commands
+            ~common_args;
+    end;
     let config = Config.config () in
     if config.modified then
       Config.save_config config

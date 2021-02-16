@@ -10,6 +10,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open EzFile.OP
+
 open Types
 
 let set_config = ref
@@ -80,11 +82,21 @@ let default_config = {
 }
 
 let save_config config =
-
+  Printf.eprintf "Saving\n%!";
   if Sys.file_exists Globals.config_file then begin
     Sys.rename Globals.config_file (Globals.config_file ^ "~")
   end;
-  Misc.write_json_file Encoding.config Globals.config_file config
+  List.iter (fun net ->
+      match net.net_keys with
+      | [] -> ()
+      | keys ->
+          let wallet_file = Globals.ft_dir // net.net_name // "wallet.json" in
+          Misc.write_json_file Encoding.wallet
+            wallet_file keys;
+          net.net_keys <- []
+    ) config.networks ;
+  Misc.write_json_file Encoding.config Globals.config_file config ;
+  ()
 
 let load_config () =
   let config =
@@ -134,8 +146,25 @@ let load_config () =
         set_network list ;
         config
   in
+  List.iter (fun net ->
+      match net.net_keys with
+      | [] -> ()
+      | _keys ->
+          Printf.eprintf "Need saving\n%!";
+          config.modified <- true (* force save to save keys in wallet *)
+    ) config.networks;
+
   let net = Misc.current_network config in
   Printf.eprintf "Network: %s\n%!" net.net_name;
+  begin
+    match net.net_keys with
+    | [] ->
+          let wallet_file = Globals.ft_dir // net.net_name // "wallet.json" in
+          if Sys.file_exists Globals.config_file then
+            net.net_keys <- Misc.read_json_file Encoding.wallet wallet_file
+    | _ -> ()
+  end;
+  EzFile.make_dir ~p:true Misc.temp_dir;
   config
 
 let config = lazy (load_config ())

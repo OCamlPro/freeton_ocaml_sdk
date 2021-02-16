@@ -13,3 +13,4 @@
 let keypair = Types.keypair_enc
 let config = Types.config_enc
 let key = Types.key_enc
+let wallet = Json_encoding.list key

@@ -38,7 +38,7 @@ type network = {
   mutable current_node : string ;           [@key "node"]
   mutable current_account : string option ; [@key "account"]
   mutable net_nodes : node list ;           [@key "nodes"]
-  mutable net_keys : key list ;             [@key "keys"]
+  mutable net_keys : key list ;   [@dft []] [@key "keys"]
 } [@@deriving json_encoding]
 
 type config = {
