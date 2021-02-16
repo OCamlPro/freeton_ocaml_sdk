@@ -15,7 +15,9 @@ open Types
 
 let verbose i = !Globals.verbosity >= i
 
-let tmpfile () = Filename.temp_file ~temp_dir:Globals.ft_dir "tmpfile" ".tmp"
+
+let temp_dir = Globals.ft_dir // "tmp"
+let tmpfile () = Filename.temp_file ~temp_dir "tmpfile" ".tmp"
 
 let call ?(stdout = Unix.stdout) args =
   if verbose 1 then
@@ -203,7 +205,7 @@ let current_node config =
   | Some node -> node
 
 let net_dir config = Globals.ft_dir // config.current_network
-let tonoscli_binary config = net_dir config // "bin" // "tonos-cli"
+let tonoscli_binary _config = Globals.ft_dir // "bin" // "tonos-cli"
 let tonoscli_config config = net_dir config // "tonos-cli.config"
 
 let tonoscli config args =
@@ -214,12 +216,12 @@ let tonoscli config args =
 
 let tonoscli config args =
   let config_file = tonoscli_config config in
+  let binary = tonoscli_binary config in
+  if not ( Sys.file_exists binary ) then begin
+    EzFile.make_dir ~p:true ( Filename.dirname binary );
+    Error.raise "You must put a copy of tonos-cli binary in %s\n%!" binary
+  end;
   if not ( Sys.file_exists config_file ) then begin
-    let binary = tonoscli_binary config in
-    if not ( Sys.file_exists binary ) then begin
-      EzFile.make_dir ~p:true ( Filename.dirname binary );
-      Error.raise "You must put a copy of tonos-cli binary in %s\n%!" binary
-    end;
     let node = current_node config in
     call (tonoscli config ["config" ; "--url"; node.node_url ]);
 
