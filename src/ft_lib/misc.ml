@@ -13,6 +13,11 @@
 open EzFile.OP
 open Types
 
+(*
+    export TVM_LINKER_LIB_PATH=/path/where/stdlib_sol.tvm
+  (in the lib/ directory of TVM-SOlidity-compiler
+*)
+
 let verbose i = !Globals.verbosity >= i
 
 
