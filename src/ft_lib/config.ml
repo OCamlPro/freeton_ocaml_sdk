@@ -82,7 +82,6 @@ let default_config = {
 }
 
 let save_config config =
-  Printf.eprintf "Saving\n%!";
   if Sys.file_exists Globals.config_file then begin
     Sys.rename Globals.config_file (Globals.config_file ^ "~")
   end;
@@ -150,7 +149,6 @@ let load_config () =
       match net.net_keys with
       | [] -> ()
       | _keys ->
-          Printf.eprintf "Need saving\n%!";
           config.modified <- true (* force save to save keys in wallet *)
     ) config.networks;
 
