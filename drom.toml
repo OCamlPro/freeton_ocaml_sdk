@@ -25,13 +25,15 @@ version = "0.1.0"
 
 [project]
 description = """\n
+
+
 This project implements an OCaml binding to the TON-SDK and a set of tools
 in OCaml to interact with Free TON, in particular the 'ft' command-line 
 wallet.
 """
 
 [project]
-skip = "src/freeton-ocaml-sdk/lib.rs src/ft/main.ml src/ft_lib/main.ml"
+skip = "src/ton_lib/main.ml src/freeton-ocaml-sdk/lib.rs src/ft/main.ml src/ft_lib/main.ml"
 
 # project-wide library dependencies (not for package-specific deps)
 [dependencies]
@@ -67,6 +69,8 @@ share-dirs = ["share"]
 # project-wide fields (depends on project skeleton)
 [fields]
 dot-gitignore-trailer = """\n
+
+
 Cargo.lock
 """
 
@@ -81,4 +85,8 @@ dir = "src/ft_lib"
 [[package]]
 dir = "src/ft"
 # edit 'src/ft/package.toml' for package-specific options
+
+[[package]]
+dir = "src/ton_lib"
+# edit 'src/ton_lib/package.toml' for package-specific options
 

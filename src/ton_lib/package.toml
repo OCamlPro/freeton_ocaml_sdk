@@ -1,6 +1,6 @@
 
 # name of package
-name = "ft_lib"
+name = "ton_lib"
 skeleton = "library"
 
 # version if different from project version
@@ -36,44 +36,12 @@ gen-version = "version.ml"
 #   ez_file = ">=0.1 <1.3"
 #   base-unix = { libname = "unix", version = ">=base" } 
 [dependencies]
-ez_cmdliner = "0.2.0"
-ez_config = "0.1.0"
-ez_file = "0.2.0"
-ez_subst = ">=0.1"
-freeton-ocaml-sdk = "version"
-ton = ""
-ton_lib = "version"
-[dependencies.ez-api]
-libname = "ez-api.encoding"
+# ...
 
 # package tools dependencies
 [tools]
-crunch = ""
 ppx_deriving_encoding = ""
 
 # package fields (depends on package skeleton)
 [fields]
 dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
-dune-trailer = """\n
-
-
-
-
-
-
-
-(rule
-  (targets files.ml)
-  (deps
-   (:data
-     (source_tree files)))
-  (action
-      (run %{bin:ocaml-crunch} -m plain -o files.ml files/))
-)
-"""
-opam-trailer = '''
-pin-depends: [
-  [ "ton.~dev" "git+https://gitlab.com/o-labs/ton-client-ocaml" ]
-  [ "ez-api.~dev" "git+https://github.com/ocamlpro/ez-api.git" ]
-]
-'''
