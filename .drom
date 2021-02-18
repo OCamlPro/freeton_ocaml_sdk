@@ -2,7 +2,7 @@
 
 # hash of toml configuration files
 # used for generation of all files
-239fe147995a8fc4d55af926626e5677:.
+ff7d900ab6887ed510122f4276b3fbf1:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -17,7 +17,7 @@
 
 # begin context for .gitignore
 # file .gitignore
-df992160866d8ba4690233a39148ccf3:.gitignore
+a2b619398fcf9fe1bdb9f4db1e2fe4c0:.gitignore
 # end context for .gitignore
 
 # begin context for .ocamlformat
@@ -37,7 +37,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for CHANGES.md
 # file CHANGES.md
-2876630c1dd1c72b301ed5974dd18fff:CHANGES.md
+8f4b10a44dd9350e333de505c5be9147:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
@@ -52,7 +52,7 @@ d091b81b6155e5fd5d6556fc8bba0094:LICENSE.md
 
 # begin context for README.md
 # file README.md
-515429ad5b60b6e1b995b432cb10164d:README.md
+663ecc5c246dfce79a55b1c51c2ac264:README.md
 # end context for README.md
 
 # begin context for docs/README.txt
@@ -72,7 +72,7 @@ e739f3026aa997af4026bc428f4c9ef6:docs/favicon.png
 
 # begin context for docs/index.html
 # file docs/index.html
-e649257cbd8f6f13092d61c254137f02:docs/index.html
+14a0cc030d73d0998498c11bf3cd5f6e:docs/index.html
 # end context for docs/index.html
 
 # begin context for docs/sphinx/index.html
@@ -87,7 +87,7 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for drom.toml
 # file drom.toml
-9ef699e1da73110b5425a23e0a994e06:drom.toml
+c08fead734489b00f5578cc9087aae55:drom.toml
 # end context for drom.toml
 
 # begin context for dune
@@ -97,22 +97,22 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-cac79141e424afb79f98e6e5ff295ad2:dune-project
+45ed10be4a76dc42250af08cd0456936:dune-project
 # end context for dune-project
 
 # begin context for freeton-ocaml-sdk.opam
 # file freeton-ocaml-sdk.opam
-bf2d61cc670131a2d96f1bf896700577:freeton-ocaml-sdk.opam
+438fb3168e0182acabb8a7f8454c98af:freeton-ocaml-sdk.opam
 # end context for freeton-ocaml-sdk.opam
 
 # begin context for ft.opam
 # file ft.opam
-7a58fd3bfca826a63948019b1e06d320:ft.opam
+677d9b8d982b7e65cc7ce5d297112310:ft.opam
 # end context for ft.opam
 
 # begin context for ft_lib.opam
 # file ft_lib.opam
-26d7e6a1fe512a076c19c2c1f6f54a6d:ft_lib.opam
+5e2995640c87081c1844578c8ccf4328:ft_lib.opam
 # end context for ft_lib.opam
 
 # begin context for scripts/after.sh
@@ -137,7 +137,7 @@ bb3a9d286f0dc64021db4194427263ee:scripts/copy-bin.sh
 
 # begin context for sphinx/about.rst
 # file sphinx/about.rst
-efc5276a89b4af309d26c9fc552c7de9:sphinx/about.rst
+2c2a965b7065d182fd61b919589e81c7:sphinx/about.rst
 # end context for sphinx/about.rst
 
 # begin context for sphinx/conf.py
@@ -160,9 +160,29 @@ d034deb6026bb202abefd98d0f5d6e35:sphinx/index.rst
 cdf74f69fd392ea9a545b06789762a13:sphinx/license.rst
 # end context for sphinx/license.rst
 
+# begin context for src/freeton-ocaml-sdk/dune
+# file src/freeton-ocaml-sdk/dune
+176a1d5a47d8dc6028894b2d94277aa6:src/freeton-ocaml-sdk/dune
+# end context for src/freeton-ocaml-sdk/dune
+
+# begin context for src/freeton-ocaml-sdk/index.mld
+# file src/freeton-ocaml-sdk/index.mld
+0dc788f7016f7e7686568b6b0d719613:src/freeton-ocaml-sdk/index.mld
+# end context for src/freeton-ocaml-sdk/index.mld
+
+# begin context for src/freeton-ocaml-sdk/lib.rs
+# file src/freeton-ocaml-sdk/lib.rs
+43191970bd4633d682d25272281d40fd:src/freeton-ocaml-sdk/lib.rs
+# end context for src/freeton-ocaml-sdk/lib.rs
+
+# begin context for src/freeton-ocaml-sdk/main.ml
+# file src/freeton-ocaml-sdk/main.ml
+072908e3d7aa03b0eeab0ed0c66e66b2:src/freeton-ocaml-sdk/main.ml
+# end context for src/freeton-ocaml-sdk/main.ml
+
 # begin context for src/freeton-ocaml-sdk/package.toml
 # file src/freeton-ocaml-sdk/package.toml
-f400aaa989ea91637f4962238f1756d9:src/freeton-ocaml-sdk/package.toml
+b34df9f54635ef56b3d3d70b0d186f5d:src/freeton-ocaml-sdk/package.toml
 # end context for src/freeton-ocaml-sdk/package.toml
 
 # begin context for src/ft/dune
@@ -172,7 +192,7 @@ c2da58bf2c3918b51f9a85340280d5c3:src/ft/dune
 
 # begin context for src/ft/index.mld
 # file src/ft/index.mld
-d7bd8dfad88cf868fa86dc6637a76648:src/ft/index.mld
+5aab0bfe4bf82193908129ae3016c921:src/ft/index.mld
 # end context for src/ft/index.mld
 
 # begin context for src/ft/package.toml
@@ -182,12 +202,12 @@ d7bd8dfad88cf868fa86dc6637a76648:src/ft/index.mld
 
 # begin context for src/ft_lib/dune
 # file src/ft_lib/dune
-99d144f89ebd70992b696f2f510a65f5:src/ft_lib/dune
+a83bf87dc4740673d430ae6b1bfbf3fb:src/ft_lib/dune
 # end context for src/ft_lib/dune
 
 # begin context for src/ft_lib/index.mld
 # file src/ft_lib/index.mld
-1898cd6cbab3997b943e6d2fc1d9cf11:src/ft_lib/index.mld
+7c0a7a5ca14038656863e16592fd0ba4:src/ft_lib/index.mld
 # end context for src/ft_lib/index.mld
 
 # begin context for src/ft_lib/main.ml
@@ -197,12 +217,12 @@ d7bd8dfad88cf868fa86dc6637a76648:src/ft/index.mld
 
 # begin context for src/ft_lib/package.toml
 # file src/ft_lib/package.toml
-af87439f13bf22732ef7a6175b253d6e:src/ft_lib/package.toml
+e795a8b990ee0bb3fa1b2da310805880:src/ft_lib/package.toml
 # end context for src/ft_lib/package.toml
 
 # begin context for test/expect-tests/dune
 # file test/expect-tests/dune
-0b34e34b2f80e04b7efe014ebd467e58:test/expect-tests/dune
+8a6dfc005561771a2f25284b00437996:test/expect-tests/dune
 # end context for test/expect-tests/dune
 
 # begin context for test/expect-tests/test.ml
@@ -212,7 +232,7 @@ af87439f13bf22732ef7a6175b253d6e:src/ft_lib/package.toml
 
 # begin context for test/inline-tests/dune
 # file test/inline-tests/dune
-156f806bbc579b24376dc1a90f2c3c30:test/inline-tests/dune
+d37098e6d8bbea369b5574a2e7f20b14:test/inline-tests/dune
 # end context for test/inline-tests/dune
 
 # begin context for test/inline-tests/test.ml
@@ -222,7 +242,7 @@ af87439f13bf22732ef7a6175b253d6e:src/ft_lib/package.toml
 
 # begin context for test/output-tests/dune
 # file test/output-tests/dune
-e515c725e52c96670851d5838245cb79:test/output-tests/dune
+b73244274b948017dfdc8bc8f79ac31b:test/output-tests/dune
 # end context for test/output-tests/dune
 
 # begin context for test/output-tests/test1.expected

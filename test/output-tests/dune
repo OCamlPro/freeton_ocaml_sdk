@@ -19,7 +19,7 @@
 
 (executable
  (name test2)
- (libraries ft_lib) ; add your own library here
+ (libraries freeton-ocaml-sdk ft_lib) ; add your own library here
  )
 
 (alias

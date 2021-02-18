@@ -170,7 +170,9 @@ let get_account_info accounts ~list ~info =
                 get_key_info config key ~info
           ) names
 
-let gen_passphrase config =
+let gen_passphrase _config =
+  Ton_sdk.Crypto.Cli.gen_seed_phrase ()
+  (*
   let stdout = Misc.call_stdout_lines @@ Misc.tonoscli config ["genphrase"] in
   match stdout with
   | [ _ ; "Succeeded." ; seed ] ->
@@ -182,6 +184,7 @@ let gen_passphrase config =
       end
   | _ -> Error.raise "Could not parse output of tonos-cli genphrase: [%s]"
            (String.concat "|" stdout)
+*)
 
 let gen_keypair config passphrase =
   let tmpfile = Misc.tmpfile () in
