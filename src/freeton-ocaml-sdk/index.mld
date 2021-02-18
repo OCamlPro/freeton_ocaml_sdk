@@ -1,4 +1,4 @@
-{1 Library ft_lib}
+{1 Library freeton-ocaml-sdk}
 
 
 
@@ -8,5 +8,6 @@ wallet.
 
 
 
-The entry point of this library is the module: {!Ft_lib}.
+This library exposes the following toplevel modules:
+{!modules:Main Ton_crypto Ton_sdk}
 

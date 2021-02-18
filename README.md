@@ -6,9 +6,9 @@
 
 
 
-
-This is the description
-of the freeton-ocaml-sdk OCaml project
+This project implements an OCaml binding to the TON-SDK and a set of tools
+in OCaml to interact with Free TON, in particular the 'ft' command-line 
+wallet.
 
 
 * Website: https://ocamlpro.github.io/freeton-ocaml-sdk

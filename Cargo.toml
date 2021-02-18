@@ -1,0 +1,25 @@
+[package]
+name = "freeton-ocaml-sdk"
+version = "0.1.0"
+edition = "2018"
+authors = ["Fabrice Le Fessant <fabrice.le_fessant@origin-labs.com>"]
+
+[lib]
+crate-type = ["staticlib", "cdylib"]
+path = "src/freeton-ocaml-sdk/lib.rs"
+
+[dependencies]
+ocaml = "*"
+ton_abi = { git = "https://github.com/tonlabs/ton-labs-abi.git" }
+ton_client = { git = 'https://github.com/tonlabs/TON-SDK.git' }
+ton_sdk = { git = 'https://github.com/tonlabs/TON-SDK.git' }
+ton_types = { git = "https://github.com/tonlabs/ton-labs-types.git" }
+ton_block = { git = "https://github.com/tonlabs/ton-labs-block.git" }
+
+
+
+# Or use the development version:
+# ocaml = {git = "git://github.com/zshipko/ocaml-rs"}
+
+
+
