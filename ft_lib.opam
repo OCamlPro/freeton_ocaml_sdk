@@ -8,6 +8,8 @@ synopsis: "The freeton-ocaml-sdk project"
 description: """
 
 
+
+
 This project implements an OCaml binding to the TON-SDK and a set of tools
 in OCaml to interact with Free TON, in particular the 'ft' command-line 
 wallet.
@@ -41,6 +43,7 @@ install: [
 depends: [
   "ocaml" {>= "4.08.0"}
   "dune" {>= "2.6.0"}
+  "ton_lib" {= version}
   "ton" {}
   "freeton-ocaml-sdk" {= version}
   "ez_subst" {>= "0.1"}

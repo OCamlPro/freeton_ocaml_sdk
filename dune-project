@@ -9,7 +9,7 @@
 (package
  (name freeton-ocaml-sdk)
  (synopsis "The freeton-ocaml-sdk project")
- (description "\n\nThis project implements an OCaml binding to the TON-SDK and a set of tools\nin OCaml to interact with Free TON, in particular the 'ft' command-line \nwallet.\n")
+ (description "\n\n\n\nThis project implements an OCaml binding to the TON-SDK and a set of tools\nin OCaml to interact with Free TON, in particular the 'ft' command-line \nwallet.\n")
  (depends
    (ocaml (>= 4.08.0))
    conf-rust-2018
@@ -22,9 +22,10 @@
 (package
  (name ft_lib)
  (synopsis "The freeton-ocaml-sdk project")
- (description "\n\nThis project implements an OCaml binding to the TON-SDK and a set of tools\nin OCaml to interact with Free TON, in particular the 'ft' command-line \nwallet.\n")
+ (description "\n\n\n\nThis project implements an OCaml binding to the TON-SDK and a set of tools\nin OCaml to interact with Free TON, in particular the 'ft' command-line \nwallet.\n")
  (depends
    (ocaml (>= 4.08.0))
+   (ton_lib (= version))
    ton
    (freeton-ocaml-sdk (= version))
    (ez_subst ( >= 0.1 ))
@@ -43,10 +44,23 @@
 (package
  (name ft)
  (synopsis "The freeton-ocaml-sdk project")
- (description "\n\nThis project implements an OCaml binding to the TON-SDK and a set of tools\nin OCaml to interact with Free TON, in particular the 'ft' command-line \nwallet.\n")
+ (description "\n\n\n\nThis project implements an OCaml binding to the TON-SDK and a set of tools\nin OCaml to interact with Free TON, in particular the 'ft' command-line \nwallet.\n")
  (depends
    (ocaml (>= 4.08.0))
    (ft_lib (= version))
+   ppx_inline_test
+   ppx_expect
+   odoc
+   ocamlformat
+ ))
+
+(package
+ (name ton_lib)
+ (synopsis "The freeton-ocaml-sdk project")
+ (description "\n\n\n\nThis project implements an OCaml binding to the TON-SDK and a set of tools\nin OCaml to interact with Free TON, in particular the 'ft' command-line \nwallet.\n")
+ (depends
+   (ocaml (>= 4.08.0))
+   ppx_deriving_encoding
    ppx_inline_test
    ppx_expect
    odoc
