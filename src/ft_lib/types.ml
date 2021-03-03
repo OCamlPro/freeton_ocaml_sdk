@@ -42,7 +42,8 @@ type network = {
 } [@@deriving json_encoding]
 
 type config = {
-  mutable modified : bool ;           [@default true]
+  mutable version : int ;             [@dft 0]
+  mutable modified : bool ;           [@dft true]
   mutable current_network : string ;  [@key "network"]
   networks : network list ;
 } [@@deriving json_encoding]

@@ -227,30 +227,40 @@ let send_confirm account ~tx_id =
          ))
 
 let action account accounts ~create ~req ~not_owner ~custodians ~waiting
-    ~transfer ~dst ~bounce ~confirm ~wc
-  =
-  if create then
-    create_multisig account accounts ~not_owner ~req ~wc  ;
-  if custodians then
-    get_custodians account ;
-  begin
-    match transfer, dst with
-    | Some amount, Some dst ->
-        send_transfer ~src:account ~dst ~bounce ~amount
-    | None, None ->
-        ()
-    | _ ->
-        Error.raise "--transfer AMOUNT --to DEST"
-  end;
-  if waiting then
-    get_waiting account ;
-  begin
-    match confirm with
-    | None -> ()
-    | Some tx_id ->
-        send_confirm account ~tx_id
-  end;
-  ()
+    ~transfer ~dst ~bounce ~confirm ~wc ~debot =
+
+  match account with
+  | None ->
+      if debot then
+        CommandClient.action
+          ~exec:false
+          ~stdout:None
+          [ "debot" ; "fetch" ; "%{addr:debot-multisig}" ]
+      else
+        Error.raise "The argument --account ACCOUNT is mandatory"
+  | Some account ->
+      if create then
+        create_multisig account accounts ~not_owner ~req ~wc  ;
+      if custodians then
+        get_custodians account ;
+      begin
+        match transfer, dst with
+        | Some amount, Some dst ->
+            send_transfer ~src:account ~dst ~bounce ~amount
+        | None, None ->
+            ()
+        | _ ->
+            Error.raise "--transfer AMOUNT --to DEST"
+      end;
+      if waiting then
+        get_waiting account ;
+      begin
+        match confirm with
+        | None -> ()
+        | Some tx_id ->
+            send_confirm account ~tx_id
+      end;
+      ()
 
 let cmd =
   let accounts = ref [] in
@@ -269,23 +279,22 @@ let cmd =
   let dst = ref None in
   let bounce = ref true in
   let confirm = ref None in
+  let debot = ref false in
   EZCMD.sub
     "multisig"
     (fun () ->
-       match !account with
-       | None -> Error.raise "The argument --account ACCOUNT is mandatory"
-       | Some account ->
-           action account !accounts
-             ~create:!create
-             ~req:!req
-             ~not_owner:!not_owner
-             ~custodians:!custodians
-             ~waiting:!waiting
-             ~transfer:!transfer
-             ~dst:!dst
-             ~bounce:!bounce
-             ~confirm:!confirm
-             ~wc:!wc
+       action !account !accounts
+         ~create:!create
+         ~req:!req
+         ~not_owner:!not_owner
+         ~custodians:!custodians
+         ~waiting:!waiting
+         ~transfer:!transfer
+         ~dst:!dst
+         ~bounce:!bounce
+         ~confirm:!confirm
+         ~wc:!wc
+         ~debot:!debot
     )
     ~args:
       [
@@ -325,6 +334,8 @@ let cmd =
         [ "to" ], Arg.String (fun s -> dst := Some s),
         EZCMD.info "ACCOUNT Target of a transfer";
 
+        [ "debot" ], Arg.Set debot,
+        EZCMD.info "Start the multisig debot";
 
       ]
     ~doc: "Manage a multisig-wallet (create, confirm, send)"
