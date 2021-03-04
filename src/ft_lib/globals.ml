@@ -21,3 +21,5 @@ let homedir = Sys.getenv "HOME"
 
 let ft_dir = homedir // ".ft"
 let config_file = ft_dir // "config.json"
+
+let contracts_dir = ft_dir // "contracts"

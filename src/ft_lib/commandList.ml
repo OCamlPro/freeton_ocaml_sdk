@@ -12,23 +12,32 @@
 
 open EzCompat
 open Ezcmd.V2
+open EzFile.OP
 
 let known_contracts () =
-  let contracts = ref StringSet.empty in
+  let contracts = ref StringMap.empty in
   List.iter (fun file ->
       if Filename.dirname file = "contracts" then
         match EzString.split (Filename.basename file) '.' with
         | [ name ; "abi" ; "json" ] ->
-            contracts := StringSet.add name !contracts
+            contracts := StringMap.add name "(embedded)" !contracts
         | _ -> ()
     ) Files.file_list;
+
+  Array.iter (fun file ->
+      match EzString.split (Filename.basename file) '.' with
+      | [ name ; "tvm" ] ->
+          contracts := StringMap.add name
+              ( Globals.contracts_dir // file ) !contracts
+      | _ -> ()
+    ) (try Sys.readdir Globals.contracts_dir with _ -> [||]);
   !contracts
 
 let list_contracts () =
   let set = known_contracts () in
   Printf.printf "Known contracts:\n";
-  StringSet.iter  (fun s ->
-      Printf.printf "* %s\n" s) set;
+  StringMap.iter  (fun name s ->
+      Printf.printf "* %s %s\n" name s) set;
   Printf.printf "%!"
 
 let action () =

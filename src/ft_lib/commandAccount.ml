@@ -702,10 +702,10 @@ let cmd =
       `S "DESCRIPTION";
       `Blocks [
         `P "This command can perform the following actions:";
-        `I ("-", "Display information on given accounts, either locally or from the blockchain");
-        `I ("-.", "Create new accounts");
-        `I ("-.", "Add information to existing accounts");
-        `I ("-.", "Delete existing accounts");
+        `I ("1.", "Display information on given accounts, either locally or from the blockchain");
+        `I ("2.", "Create new accounts");
+        `I ("3.", "Add information to existing accounts");
+        `I ("4.", "Delete existing accounts");
       ];
       `S "DISPLAY LOCAL INFORMATION";
       `Blocks [
@@ -717,7 +717,8 @@ let cmd =
       `Blocks [
         `P "Accounts must have an address on the blockchain.";
         `P "Examples:";
-        `Pre {|ft account my-account|}
+        `Pre {|ft account my-account|};
+        `Pre {|ft account|};
       ];
       `S "CREATE NEW ACCOUNTS";
       `Blocks [
@@ -725,6 +726,7 @@ let cmd =
         `Pre {|ft account --create account1 account2 account3|};
         `Pre {|ft account --create new-account --passphrase "some known passphrase"|};
         `Pre {|ft account --create new-account --contract SafeMultisigWallet|};
+        `Pre {|ft account --create new-address --address 0:1234...|};
         `P "Only the last one will compute an address on the blockchain, since the contract must be known.";
       ];
       `S "COMPLETE EXISTING ACCOUNTS";

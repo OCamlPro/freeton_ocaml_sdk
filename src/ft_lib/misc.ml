@@ -210,25 +210,28 @@ let current_node config =
   | Some node -> node
 
 let net_dir config = Globals.ft_dir // config.current_network
-let tonoscli_binary _config = Globals.ft_dir // "bin" // "tonos-cli"
 let tonoscli_config config = net_dir config // "tonos-cli.config"
 
-let tonoscli config args =
-    ( tonoscli_binary config ::
+let binary_file exe =
+  let binary = Globals.ft_dir // "bin" // exe in
+  if not ( Sys.file_exists binary ) then begin
+    EzFile.make_dir ~p:true ( Filename.dirname binary );
+    Error.raise "You must put a copy of %s binary in %s\n%!" exe binary
+  end;
+  binary
+
+let tonoscli binary config args =
+    ( binary ::
       "--config" ::
       tonoscli_config config ::
       args )
 
 let tonoscli config args =
   let config_file = tonoscli_config config in
-  let binary = tonoscli_binary config in
-  if not ( Sys.file_exists binary ) then begin
-    EzFile.make_dir ~p:true ( Filename.dirname binary );
-    Error.raise "You must put a copy of tonos-cli binary in %s\n%!" binary
-  end;
+  let binary = binary_file "tonos-cli" in
   if not ( Sys.file_exists config_file ) then begin
     let node = current_node config in
-    call (tonoscli config ["config" ; "--url"; node.node_url ]);
+    call (tonoscli binary config ["config" ; "--url"; node.node_url ]);
 
     let src_file = "tonlabs-cli.conf.json" in
     if Sys.file_exists src_file then begin
@@ -238,7 +241,7 @@ let tonoscli config args =
       EzFile.write_file config_file content
     end
   end;
-  tonoscli config args
+  tonoscli binary config args
 
 let string_of_workchain wc =
   match wc with
@@ -251,28 +254,22 @@ let gen_keyfile key_pair =
   write_json_file Encoding.keypair keypair_file key_pair;
   keypair_file
 
-let get_contract_tvcfile contract =
-  let tvc_name = Printf.sprintf "contracts/%s.tvc" contract in
-  let tvc_content =
-    match Files.read tvc_name with
-    | None ->
-        Error.raise "Unknown contract %S" contract
-    | Some tvc_content -> tvc_content
-  in
-  let contract_tvc = Globals.ft_dir // tvc_name in
-  write_file contract_tvc tvc_content;
-  contract_tvc
+let get_contract_file ext contract =
+  let file_name = Printf.sprintf "contracts/%s%s" contract ext in
+  let contract_file = Globals.ft_dir // file_name in
+  if not ( Sys.file_exists contract_file ) then begin
+    let file_content =
+      match Files.read file_name with
+      | None ->
+          Error.raise "Unknown contract %S" contract
+      | Some file_content -> file_content
+    in
+    write_file contract_file file_content;
+  end;
+  contract_file
 
-let get_contract_abifile contract =
-
-  let abi_name = Printf.sprintf "contracts/%s.abi.json" contract in
-  let abi_content = match Files.read abi_name with
-    | None -> assert false
-    | Some abi_content -> abi_content
-  in
-  let contract_abi = Globals.ft_dir // abi_name in
-  write_file contract_abi abi_content;
-  contract_abi
+let get_contract_tvcfile = get_contract_file ".tvc"
+let get_contract_abifile = get_contract_file ".abi.json"
 
 let nanotokens_of_string s =
   let s = String.map (function
@@ -298,3 +295,19 @@ let () =
   assert (nanotokens_of_string "0.000_001" = 1_000L );
 
   ()
+
+let todo_arg () =
+  let todo = ref None in
+  let set_todo arg2 action =
+    match !todo with
+    | Some (arg1, _ ) ->
+        Error.raise "You cannot provide two actions %s and %s" arg1 arg2
+    | None ->
+        todo := Some (arg2, action)
+  in
+  let with_todo f =
+    match !todo with
+    | None -> Error.raise "You must provide an action to perform"
+    | Some (_, todo) -> f todo
+  in
+  set_todo, with_todo
