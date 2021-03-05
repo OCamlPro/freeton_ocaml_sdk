@@ -68,8 +68,9 @@ let action ~todo ~force =
                 ];
       let tvm_file = check_exists dirname tvm_file in
 
-      Misc.call [ "cp" ; "-f" ; filename ; tvm_file ; abi_file ;
-                  Globals.contracts_dir ];
+      Misc.call [ "cp" ; "-f" ; filename ; abi_file ; Globals.contracts_dir ];
+      let tvc_file = Globals.contracts_dir // name ^ ".tvc" in
+      Misc.call [ "cp" ; "-f" ; tvm_file ; tvc_file ];
 
       ()
 

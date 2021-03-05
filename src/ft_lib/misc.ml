@@ -261,6 +261,7 @@ let get_contract_file ext contract =
     let file_content =
       match Files.read file_name with
       | None ->
+          Printf.eprintf "File %s does not exist\n%!" contract_file;
           Error.raise "Unknown contract %S" contract
       | Some file_content -> file_content
     in
