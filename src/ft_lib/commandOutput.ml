@@ -65,7 +65,8 @@ let subst_string config =
     | [ contract ; "abi" ] | [ "abi" ; contract ] ->
         Misc.get_contract_abifile contract
     | [ "node" ; "url" ] ->
-        let node = Misc.current_node config in
+        let net = Misc.current_network config in
+        let node = Misc.current_node net in
         node.node_url
     | [ n ; "ton" ] | [ "ton" ; n ] ->
         Int64.to_string ( Misc.nanotokens_of_string n )

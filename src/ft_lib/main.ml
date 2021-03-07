@@ -26,6 +26,7 @@ let main () =
       CommandContract.cmd;
       CommandTest.cmd;
       CommandInit.cmd;
+      CommandNode.cmd;
     ]
   in
   let common_args =

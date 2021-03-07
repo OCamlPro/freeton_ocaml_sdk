@@ -201,8 +201,7 @@ let get_key_contract_exn key =
 let current_network config =
   find_network_exn config config.current_network
 
-let current_node config =
-  let net = find_network_exn config config.current_network in
+let current_node net =
   match find_node net net.current_node with
   | None ->
       Error.raise "Unknown node %S in network %S"
@@ -230,7 +229,8 @@ let tonoscli config args =
   let config_file = tonoscli_config config in
   let binary = binary_file "tonos-cli" in
   if not ( Sys.file_exists config_file ) then begin
-    let node = current_node config in
+    let net = current_network config in
+    let node = current_node net in
     call (tonoscli binary config ["config" ; "--url"; node.node_url ]);
 
     let src_file = "tonlabs-cli.conf.json" in

@@ -38,6 +38,15 @@ type account_info = {
   mutable acc_data : string option ;
 }
 
+(*
+content-type: application/json
+accept: */*
+host: net.ton.dev
+content-length: 396
+
+{ "query": "query accounts ($filter: AccountFilter, $orderBy: [QueryOrderBy], $limit: Int, $timeout: Float) { accounts(filter: $filter, orderBy: $orderBy, limit: $limit, timeout: $timeout) { acc_type_name balance last_paid last_trans_lt data } }", "variables": {"filter":{"id":{"eq":"0:29cf011c21af372d8da18ac696c7a8787979c9b2acc65461fa8c8a374d24c8d4"}},"limit":null,"orderBy":null,"timeout":0} }
+                *)
+
 let get_account_info config address =
 
   let stdout = Misc.call_stdout_lines @@

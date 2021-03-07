@@ -10,5 +10,4 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module Crypto = Ton_crypto
-module Rpc = Ton_rpc
+external sync : string -> string -> string -> string = "ton_client_request"
