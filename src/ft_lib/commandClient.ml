@@ -19,7 +19,7 @@ open EZCMD.TYPES
    %{contract:tvc}, %{contract:abi}
  *)
 
-let action ~exec ~stdout args =
+let action ?(exec=false) ?stdout args =
   let config = Config.config () in
   let (subst, files) = CommandOutput.subst_string config in
   let args = List.map (fun arg ->
@@ -46,7 +46,7 @@ let cmd =
   EZCMD.sub
     "client"
     (fun () ->
-       action !args ~exec:!exec ~stdout:!stdout
+       action !args ~exec:!exec ?stdout:!stdout
     )
     ~args:
       [ [],

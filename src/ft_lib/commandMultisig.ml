@@ -234,7 +234,6 @@ let action account accounts ~create ~req ~not_owner ~custodians ~waiting
       if debot then
         CommandClient.action
           ~exec:false
-          ~stdout:None
           [ "debot" ; "fetch" ; "%{addr:debot-multisig}" ]
       else
         Error.raise "The argument --account ACCOUNT is mandatory"

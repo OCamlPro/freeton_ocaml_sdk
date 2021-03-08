@@ -19,6 +19,7 @@ type todo =
     NodeStart
   | NodeStop
   | NodeWeb
+  | NodeGive
 
 let container_of_node local_node =
   Printf.sprintf "local-node-%d" local_node.local_port
@@ -40,6 +41,19 @@ let action ~todo =
           Misc.call [ "xdg-open";
                       Printf.sprintf "http://0.0.0.0:%d/graphql"
                         local_node.local_port ]
+      | NodeGive ->
+          for user = 0 to 9 do
+            CommandClient.action
+              ~exec:false
+              [
+                "call" ; "%{account:addr:giver}"; "sendGrams" ;
+                Printf.sprintf
+                  {|{ "dest": "%%{account:addr:user%d}", "amount": "%%{1000:ton}" }|}
+                  user;
+                "--abi"; "%{abi:Giver}" ;
+                "--sign" ; Printf.sprintf "%%{account:keyfile:user%d}" user
+              ]
+          done
 
 let cmd =
   let set_todo, with_todo = Misc.todo_arg () in
@@ -60,6 +74,11 @@ let cmd =
 
       [ "web" ], Arg.Unit (fun () -> set_todo "--web" NodeWeb ),
       EZCMD.info "Open Node GraphQL webpage";
+
+      [ "give" ], Arg.Unit (fun () -> set_todo "--give" NodeGive ),
+      EZCMD.info "Give 1000 TON to user0-user9 from giver";
+
+
 
     ]
     ~doc: "Manage local nodes"
