@@ -12,3 +12,12 @@
 
 module Crypto = Ton_crypto
 module Rpc = Ton_rpc
+
+external deploy :
+  string array ->
+  wc : int ->
+  string (* address *) = "deploy_contract_ml"
+
+
+let deploy ~server_url ~tvc_file ~abi_file ~params ~keys_file ~wc =
+  deploy [| server_url ; tvc_file ; abi_file ; params ; keys_file |] ~wc

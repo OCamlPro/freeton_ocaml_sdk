@@ -68,7 +68,7 @@ let action ~switch ~create ~url ~remove =
             add_network ~net_keys:Config.sandbox_keys
               {
                 node_name = "node" ;
-                node_url = Printf.sprintf "https://0.0.0.0:%d"  local_port ;
+                node_url = Printf.sprintf "http://0.0.0.0:%d"  local_port ;
                 node_local = Some node_local;
               }
       end else

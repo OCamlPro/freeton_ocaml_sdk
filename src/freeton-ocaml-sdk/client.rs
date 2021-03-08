@@ -12,7 +12,10 @@ use ton_client::abi::{
     DeploySet, ParamsOfDecodeMessageBody,
     ParamsOfEncodeMessage, Signer,
 };
-*/
+ */
+use ton_client::abi::{AbiConfig};
+use ton_client::crypto::{CryptoConfig};
+
 use ton_client::crypto::{
     mnemonic_from_random,ParamsOfMnemonicFromRandom,
     // CryptoConfig, KeyPair
@@ -32,20 +35,55 @@ pub fn failwith(s: &'static str) -> ocaml::Error {
     }
 // END ocaml utils
 
-pub fn create_client_local() -> Result<TonClient, ocaml::Error> {
+pub fn create_client_local() -> Result<TonClient, String> {
     let cli = ClientContext::new(ClientConfig::default())
         .map_err(|_e|
-                 failwith(
-                     "failed to create tonclient"))?;
+                 "failed to create tonclient")?;
     Ok(Arc::new(cli))
 }
 
-// pub const HD_PATH: &str = "m/44'/396'/0'/0/0";
+pub const HD_PATH: &str = "m/44'/396'/0'/0/0";
 pub const WORD_COUNT: u8 = 12;
+
+pub fn create_client(server_url: String) -> Result<TonClient, String> {
+    let cli_conf = ClientConfig {
+        abi: AbiConfig {
+            workchain: 0,
+            message_expiration_timeout: 60000,
+            message_expiration_timeout_grow_factor: 1.3,
+        },
+        crypto: CryptoConfig {
+            mnemonic_dictionary: 1,
+            mnemonic_word_count: WORD_COUNT,
+            hdkey_derivation_path: HD_PATH.to_string(),
+        },
+        network: ton_client::net::NetworkConfig {
+            server_address: Some(server_url.to_owned()),
+            network_retries_count: 3,
+            message_retries_count: 5 as i8,
+            message_processing_timeout: 30000,
+            wait_for_timeout: 30000,
+            out_of_sync_threshold: (60000 / 2), // timeout / 2
+            max_reconnect_timeout: 1000,
+            ..Default::default()
+        },
+        boc: Default::default(),
+    };
+    let cli =
+        ClientContext::new(cli_conf).map_err(|e| format!("failed to create tonclient: {}", e))?;
+    Ok(Arc::new(cli))
+}
+
+pub fn ocaml_error<E>(r : Result<E, String> ) -> Result<E, ocaml::Error> {
+    match r {
+        Ok(x) => Ok(x),
+        Err (_) => Err(failwith("Error"))
+    }
+}
 
 #[ocaml::func]
 pub fn gen_seed_phrase() -> Result<String, ocaml::Error> {
-    let client = create_client_local()?;
+    let client = ocaml_error ( create_client_local() )?;
     mnemonic_from_random(
         client,
         ParamsOfMnemonicFromRandom {
