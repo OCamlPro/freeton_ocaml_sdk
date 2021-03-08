@@ -33,6 +33,7 @@
    (ez_config (and (>= 0.1.0) (< 1.0.0)))
    (ez_cmdliner (and (>= 0.2.0) (< 1.0.0)))
    ez-api
+   cohttp-lwt-unix
    ppx_deriving_encoding
    crunch
    ppx_inline_test
