@@ -12,6 +12,8 @@ Welcome to freeton-ocaml-sdk
 
    Home <https://ocamlpro.github.io/freeton-ocaml-sdk>
    about
+   usage
+   commands
    install
    API doc <https://ocamlpro.github.io/freeton-ocaml-sdk/doc>
    license

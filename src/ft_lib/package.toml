@@ -43,8 +43,9 @@ ez_subst = ">=0.1"
 freeton-ocaml-sdk = "version"
 ton = ""
 ton_lib = "version"
+cohttp-lwt-unix = ""
 [dependencies.ez-api]
-libname = "ez-api.encoding"
+libname = "ez-api.encoding ez-api.common ez-api.cohttp-lwt"
 
 # package tools dependencies
 [tools]

@@ -4,7 +4,7 @@
   (name ft_lib)
   (public_name ft_lib)
   (wrapped true)
-  (libraries ton_lib ton freeton-ocaml-sdk ez_subst ez_file ez_config ez_cmdliner ez-api.encoding )
+  (libraries ton_lib ton freeton-ocaml-sdk ez_subst ez_file ez_config ez_cmdliner ez-api.encoding ez-api.common ez-api.cohttp-lwt cohttp-lwt-unix )
   
   (preprocess (pps ppx_deriving_encoding))
   )

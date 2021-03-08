@@ -12,6 +12,7 @@
 
 
 module ABI = struct
+  (* inspired by TON-SDK/ton_client/src/abi/types.rs *)
 
   type param = {
     param_name : string ; [@key "name"]

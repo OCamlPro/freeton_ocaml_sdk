@@ -15,8 +15,12 @@ ton_client = { git = 'https://github.com/tonlabs/TON-SDK.git' }
 ton_sdk = { git = 'https://github.com/tonlabs/TON-SDK.git' }
 ton_types = { git = "https://github.com/tonlabs/ton-labs-types.git" }
 ton_block = { git = "https://github.com/tonlabs/ton-labs-block.git" }
-
-
+#ton-client-rs = { git = "https://github.com/tonlabs/ton-client-rs.git" }
+serde_json = ""
+#serde_derive = "1.0.116"
+serde = ""
+base64 = "0.10.1"
+futures = ""
 
 # Or use the development version:
 # ocaml = {git = "git://github.com/zshipko/ocaml-rs"}

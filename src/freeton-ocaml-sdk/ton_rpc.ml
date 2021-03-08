@@ -10,16 +10,4 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open EzFile.OP
-
-let verbosity = ref 1
-let command = "ft"
-let about = "ft COMMAND COMMAND-OPTIONS"
-
-
-let homedir = Sys.getenv "HOME"
-
-let ft_dir = homedir // ".ft"
-let config_file = ft_dir // "config.json"
-
-let contracts_dir = ft_dir // "contracts"
+external sync : string -> string -> string -> string = "ton_client_request"

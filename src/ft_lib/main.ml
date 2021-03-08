@@ -23,7 +23,10 @@ let main () =
       CommandClient.cmd;
       CommandOutput.cmd;
       CommandMultisig.cmd;
+      CommandContract.cmd;
       CommandTest.cmd;
+      CommandInit.cmd;
+      CommandNode.cmd;
     ]
   in
   let common_args =
