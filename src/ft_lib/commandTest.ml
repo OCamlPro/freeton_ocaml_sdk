@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*  Copyright (c) 2021 OCamlPro SAS & Origin Labs SAS                     *)
+(*  Copyright (c) 2021 OCamlPro SAS                                       *)
 (*                                                                        *)
 (*  All rights reserved.                                                  *)
 (*  This file is distributed under the terms of the GNU Lesser General    *)
@@ -18,7 +18,7 @@ let test1 file =
   Misc.write_json_file Ton_lib.Types.ABI.contract_enc (file ^ ".enc") abi
 
 let test2 () =
-  let s = Ton_sdk.Rpc.sync "net.ton.dev" "contracts.find.shard"
+  let s = Ton_sdk.RPC.sync "net.ton.dev" "contracts.find.shard"
 {|{
   "address":  "0:2222222222222222222222222222222222222222222222222222222222222222",
   "shards":
@@ -98,24 +98,17 @@ List last 10 transactions:
 *)
 
 let test3 () =
-  let open Ton in
-  let open Lwt.Infix in
-  let network = "http://localhost:80" in
-  let request () =
-    let input = Request.transactions ~limit:10 [] in
-    Printf.eprintf "input: %s\n%!" ( Graphql.string_of_query input);
-    let output = Encoding.transactions_enc in
-    EzCohttp_lwt.post0 (EzAPI.TYPES.BASE network) (Request.service output)
-      ~input >|= function
-    | Error e ->
-        Format.printf "%s@."
-          (EzRequest_lwt.string_of_error (fun exn -> Some (Printexc.to_string exn)) e)
-    | Ok l ->
-        Format.printf "%s@."(EzEncoding.construct ~compact:false output l)
-  in
-  (* Cohttp_lwt_unix.Debug.activate_debug (); *)
-  Lwt_main.run (request ())
-
+  let open Ton_sdk in
+  let config = Config.config () in
+  let accounts = Misc.post config
+      (REQUEST.accounts ~level:3 []) ENCODING.accounts_enc in
+  List.iter (fun acc ->
+      Printf.eprintf "%s -> %s\n%!"
+        acc.ENCODING.acc_id
+        (match acc.acc_balance with
+         | None -> "-"
+         | Some z -> Z.to_string z)
+    ) accounts
 
 let action test files =
   match test with

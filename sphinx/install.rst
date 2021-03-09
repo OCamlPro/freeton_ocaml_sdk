@@ -40,10 +40,3 @@ targets:
 * :code:`doc`: build documentation with :code:`odoc`
 * :code:`fmt`: format the code using :code:`ocamlformat`
 * :code:`test`: run tests
-
-Post-Installation Steps
------------------------
-
-Use :code:`ft init` to finish the installation of :code:`ft`: this
-command will download and compile some binaries from TON Labs that are
-needed to interact with the blockchain.

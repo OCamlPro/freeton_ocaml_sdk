@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*  Copyright (c) 2021 OCamlPro SAS & Origin Labs SAS                     *)
+(*  Copyright (c) 2021 OCamlPro SAS                                       *)
 (*                                                                        *)
 (*  All rights reserved.                                                  *)
 (*  This file is distributed under the terms of the GNU Lesser General    *)
@@ -33,6 +33,9 @@ let subst_string config =
       end
 
     (* Accounts substitutions: *)
+    | [ "addr" ; "zero" ] ->
+        "0:0000000000000000000000000000000000000000000000000000000000000000"
+
     | [ account ; "addr" ]
     | [ "account" ; "addr" ; account ]
     | [ "addr" ; account ] ->

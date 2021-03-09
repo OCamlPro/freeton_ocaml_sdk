@@ -15,12 +15,12 @@
  (name freeton_ocaml_sdk)
  (public_name freeton-ocaml-sdk)
  (wrapped false)
- (libraries  )
+ (libraries zarith ez-api.encoding ez-api.common ez-api.cohttp-lwt cohttp-lwt-unix )
  (foreign_archives freeton_ocaml_sdk)
  (c_library_flags
   (-lpthread -lc -lm -lssl -lcrypto))
   
-  
+  (preprocess (pps ppx_deriving_encoding))
   )
 
 

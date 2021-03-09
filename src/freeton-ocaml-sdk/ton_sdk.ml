@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*  Copyright (c) 2021 OCamlPro SAS & Origin Labs SAS                     *)
+(*  Copyright (c) 2021 OCamlPro SAS                                       *)
 (*                                                                        *)
 (*  All rights reserved.                                                  *)
 (*  This file is distributed under the terms of the GNU Lesser General    *)
@@ -10,14 +10,25 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module Crypto = Ton_crypto
-module Rpc = Ton_rpc
+module TYPES = Ton_types
+
+module CRYPTO = Ton_crypto
+module RPC = Ton_rpc
 
 external deploy :
   string array ->
   wc : int ->
-  string (* address *) = "deploy_contract_ml"
+  string TYPES.reply (* address *) = "deploy_contract_ml"
 
 
-let deploy ~server_url ~tvc_file ~abi_file ~params ~keys_file ~wc =
-  deploy [| server_url ; tvc_file ; abi_file ; params ; keys_file |] ~wc
+let deploy ~server_url ~tvc_file ~abi_file ~params ~keys_file
+    ?(initial_data="") ?(initial_pubkey="") ?(wc=0) () =
+  TYPES.reply
+    (
+      deploy [| server_url ; tvc_file ; abi_file ; params ;
+                keys_file; initial_data; initial_pubkey |] ~wc
+    )
+
+
+module REQUEST = Ton_request
+module ENCODING = Ton_encoding

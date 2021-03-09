@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*  Copyright (c) 2021 OCamlPro SAS & Origin Labs SAS                     *)
+(*  Copyright (c) 2021 OCamlPro SAS                                       *)
 (*                                                                        *)
 (*  All rights reserved.                                                  *)
 (*  This file is distributed under the terms of the GNU Lesser General    *)
@@ -13,6 +13,8 @@
 
 module Cli = struct (* fonctions from tonos-cli *)
 
-  external gen_seed_phrase: unit -> string = "gen_seed_phrase"
+  external gen_seed_phrase_ml: unit -> string Ton_types.reply =
+    "gen_seed_phrase_ml"
+  let gen_seed_phrase () = Ton_types.reply (gen_seed_phrase_ml ())
 
 end

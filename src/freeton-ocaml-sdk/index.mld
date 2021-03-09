@@ -11,5 +11,5 @@ wallet.
 
 
 This library exposes the following toplevel modules:
-{!modules:Main Ton_crypto Ton_rpc Ton_sdk}
+{!modules:Graphql Main Ton_crypto Ton_encoding Ton_request Ton_rpc Ton_sdk Ton_types}
 

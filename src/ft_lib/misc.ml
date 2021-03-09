@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*  Copyright (c) 2021 OCamlPro SAS & Origin Labs SAS                     *)
+(*  Copyright (c) 2021 OCamlPro SAS                                       *)
 (*                                                                        *)
 (*  All rights reserved.                                                  *)
 (*  This file is distributed under the terms of the GNU Lesser General    *)
@@ -312,3 +312,10 @@ let todo_arg () =
     | Some (_, todo) -> f todo
   in
   set_todo, with_todo
+
+let post config input output =
+  let net = current_network config in
+  let node = current_node net in
+  let url = node.node_url in
+  let open Ton_sdk in
+  REQUEST.post url input output

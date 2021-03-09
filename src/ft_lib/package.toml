@@ -41,11 +41,7 @@ ez_config = "0.1.0"
 ez_file = "0.2.0"
 ez_subst = ">=0.1"
 freeton-ocaml-sdk = "version"
-ton = ""
 ton_lib = "version"
-cohttp-lwt-unix = ""
-[dependencies.ez-api]
-libname = "ez-api.encoding ez-api.common ez-api.cohttp-lwt"
 
 # package tools dependencies
 [tools]
@@ -54,15 +50,7 @@ ppx_deriving_encoding = ""
 
 # package fields (depends on package skeleton)
 [fields]
-dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
 dune-trailer = """\n
-
-
-
-
-
-
-
 (rule
   (targets files.ml)
   (deps
@@ -72,9 +60,4 @@ dune-trailer = """\n
       (run %{bin:ocaml-crunch} -m plain -o files.ml files/))
 )
 """
-opam-trailer = '''
-pin-depends: [
-  [ "ton.~dev" "git+https://gitlab.com/o-labs/ton-client-ocaml" ]
-  [ "ez-api.~dev" "git+https://github.com/ocamlpro/ez-api.git" ]
-]
-'''
+dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"

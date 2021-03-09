@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*  Copyright (c) 2021 OCamlPro SAS & Origin Labs SAS                     *)
+(*  Copyright (c) 2021 OCamlPro SAS                                       *)
 (*                                                                        *)
 (*  All rights reserved.                                                  *)
 (*  This file is distributed under the terms of the GNU Lesser General    *)
@@ -34,20 +34,30 @@ Contract deployed at address: 0:2e87845a4b04137d59931198006e3dd4ef49a63b62299aea
 *)
 
 
-let contract = "SafeMultisigWallet"
+let is_multisig_contract = function
+  | "SafeMultisigWallet"
+  | "SetcodeMultisigWallet"
+  | "SetcodeMultisigWallet2"
+    -> true
+  | _ -> false
 
-let check_key_contract key contract =
+let check_key_contract key =
   match key.key_account with
-  | Some { acc_contract = Some acc_contract ; _ }
-    when acc_contract <> contract ->
-      Error.raise "Account's contract is not %s" contract;
-  | _ -> ()
+  | Some { acc_contract = Some acc_contract ; _ } ->
+      if is_multisig_contract acc_contract then
+        acc_contract
+      else
+        Error.raise "Account's contract %S is not multisig" acc_contract;
+
+      (* Account's contract is not set, let's use the minimal common ABI *)
+  | _ ->
+      "SafeMultisigWallet"
 
 let get_custodians account =
   let config = Config.config () in
   let net = Misc.current_network config in
   let key = Misc.find_key_exn net account in
-  check_key_contract key contract ;
+  let contract = check_key_contract key in
   let address = Misc.get_key_address_exn key in
   Utils.with_contract contract
     (fun ~contract_tvc:_ ~contract_abi ->
@@ -61,7 +71,7 @@ let get_waiting account =
  let config = Config.config () in
   let net = Misc.current_network config in
   let key = Misc.find_key_exn net account in
-  check_key_contract key contract ;
+  let contract = check_key_contract key in
   let address = Misc.get_key_address_exn key in
   Utils.with_contract contract
     (fun ~contract_tvc:_ ~contract_abi ->
@@ -71,7 +81,14 @@ let get_waiting account =
            "--abi" ; contract_abi ]
     )
 
-let create_multisig account accounts ~not_owner ~req ~wc =
+let create_multisig
+    ?(accounts=[])
+    ?(not_owner=false)
+    ?(req=1)
+    ?wc
+    ?(contract="SafeMultisigWallet")
+    account
+  =
   let config = Config.config () in
   let net = Misc.current_network config in
   let owners = StringSet.of_list accounts in
@@ -107,7 +124,7 @@ let create_multisig account accounts ~not_owner ~req ~wc =
       req
   in
   let key = Misc.find_key_exn net account in
-  check_key_contract key contract ;
+  let _contract = check_key_contract key in
 
   begin
     match key.key_account with
@@ -118,14 +135,14 @@ let create_multisig account accounts ~not_owner ~req ~wc =
           | None -> ()
           | Some c ->
               if c <> contract then
-                Error.raise {|Account address uses a different contract. Clear it with 'ft account ACCOUNT --contract ""|}
+                Error.raise {|Account %s uses a different contract %S. Clear it with 'ft account %s --contract ""|} key.key_name c key.key_name
         end;
         match wc with
         | None -> ()
         | Some _ ->
             if Misc.string_of_workchain wc <>
                Misc.string_of_workchain  acc.acc_workchain then
-              Error.raise {|Account addres uses a different workchain. Clear it with  'ft account ACCOUNT --contract ""|}
+              Error.raise {|Account addres uses a different workchain. Clear it with  'ft account %s --contract ""|} key.key_name
   end;
 
   let wc = match wc with
@@ -141,20 +158,40 @@ let create_multisig account accounts ~not_owner ~req ~wc =
     (fun ~keypair_file ->
        Utils.with_contract contract
          (fun ~contract_tvc ~contract_abi ->
-            let lines = Misc.call_stdout_lines
-              @@ Misc.tonoscli config
-                [ "deploy" ; contract_tvc ;
-                  argument ;
-                  "--abi" ; contract_abi ;
-                  "--sign" ; keypair_file ;
-                  "--wc" ; Misc.string_of_workchain wc
-                ]
+
+            let acc_address =
+              match Sys.getenv "FT_USE_CLIENT" with
+              | exception Not_found ->
+
+                  let node = Misc.current_node net in
+                  Printf.eprintf "node url: %s\n%!" node.node_url;
+                  let addr = Ton_sdk.deploy
+                      ~server_url: node.node_url
+                      ~tvc_file: contract_tvc
+                      ~abi_file: contract_abi
+                      ~params:argument
+                      ~keys_file: keypair_file
+                      ()
+                  in
+                  Printf.eprintf "Contract deployed at %s\n%!" addr;
+                  addr
+
+              | _ ->
+                  let lines = Misc.call_stdout_lines
+                    @@ Misc.tonoscli config
+                      [ "deploy" ; contract_tvc ;
+                        argument ;
+                        "--abi" ; contract_abi ;
+                        "--sign" ; keypair_file ;
+                        "--wc" ; Misc.string_of_workchain wc
+                      ]
+                  in
+                  Printf.eprintf "output:\n %s\n%!"
+                    (String.concat "\n" lines);
+                  Misc.find_line_exn (function
+                      | [ "Contract" ; "deployed" ; "at" ; "address:"; address ] -> Some address
+                      | _ -> None) lines
             in
-            Printf.eprintf "output:\n %s\n%!"
-              (String.concat "\n" lines);
-            let acc_address = Misc.find_line_exn (function
-                | [ "Contract" ; "deployed" ; "at" ; "address:"; address ] -> Some address
-                | _ -> None) lines in
             key.key_account <- Some { acc_address ;
                                       acc_contract = Some contract ;
                                       acc_workchain = wc ;
@@ -167,7 +204,7 @@ let send_transfer ~src ~dst ~bounce ~amount =
   let net = Misc.current_network config in
   let src_key = Misc.find_key_exn net src in
   let src_addr = Misc.get_key_address_exn src_key in
-  check_key_contract src_key contract ;
+  let contract = check_key_contract src_key in
   let dst_key = Misc.find_key_exn net dst in
   let dst_addr = Misc.get_key_address_exn dst_key in
 
@@ -206,7 +243,7 @@ let send_confirm account ~tx_id =
   let net = Misc.current_network config in
   let src_key = Misc.find_key_exn net account in
   let src_addr = Misc.get_key_address_exn src_key in
-  check_key_contract src_key contract ;
+  let contract = check_key_contract src_key in
 
   let argument =
     Printf.sprintf
@@ -227,7 +264,7 @@ let send_confirm account ~tx_id =
          ))
 
 let action account accounts ~create ~req ~not_owner ~custodians ~waiting
-    ~transfer ~dst ~bounce ~confirm ~wc ~debot =
+    ~transfer ~dst ~bounce ~confirm ?wc ~debot ~contract =
 
   match account with
   | None ->
@@ -239,7 +276,7 @@ let action account accounts ~create ~req ~not_owner ~custodians ~waiting
         Error.raise "The argument --account ACCOUNT is mandatory"
   | Some account ->
       if create then
-        create_multisig account accounts ~not_owner ~req ~wc  ;
+        create_multisig account ~accounts ~not_owner ~req ?wc ~contract ;
       if custodians then
         get_custodians account ;
       begin
@@ -263,7 +300,7 @@ let action account accounts ~create ~req ~not_owner ~custodians ~waiting
 
 let cmd =
   let accounts = ref [] in
-
+  let contract = ref "SafeMultisigWallet" in
   let account = ref None in
 
   let create = ref false in
@@ -292,8 +329,9 @@ let cmd =
          ~dst:!dst
          ~bounce:!bounce
          ~confirm:!confirm
-         ~wc:!wc
+         ?wc:!wc
          ~debot:!debot
+         ~contract:!contract
     )
     ~args:
       [
@@ -323,6 +361,13 @@ let cmd =
 
         [ "confirm" ], Arg.String (fun s -> confirm := Some s),
         EZCMD.info "TX_ID Confirm transaction";
+
+        [ "contract" ], Arg.String (fun s -> contract := s),
+        EZCMD.info "CONTRACT Use this contract";
+
+        [ "surf" ], Arg.Unit (fun () ->
+            contract := "SetcodeMultisigWallet2"),
+        EZCMD.info "Use Surf contract";
 
         [ "req" ], Arg.Int (fun s -> req := s),
         EZCMD.info "REQ Number of confirmations required";

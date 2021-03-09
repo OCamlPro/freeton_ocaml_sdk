@@ -36,12 +36,21 @@ pack-modules = false
 #   ez_file = ">=0.1 <1.3"
 #   base-unix = { libname = "unix", version = ">=base" } 
 [dependencies]
-# ...
+cohttp-lwt-unix = ""
+zarith = ">1"
+ez-api = { libname = "ez-api.encoding ez-api.common ez-api.cohttp-lwt" }
 
 # package tools dependencies
 [tools]
 conf-rust-2018 = ""
+ppx_deriving_encoding = ""
 
 # package fields (depends on package skeleton)
 [fields]
 c-libraries = "-lssl -lcrypto"
+opam-trailer = '''
+pin-depends: [
+  [ "ez-api.~dev" "git+https://github.com/ocamlpro/ez-api.git" ]
+]
+'''
+dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
