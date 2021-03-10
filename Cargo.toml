@@ -21,6 +21,8 @@ serde = ""
 base64 = "0.10.1"
 futures = ""
 tokio = { version = "0.2.13", features = ["sync", "stream"], default-features = false }
+hex = "0.3.2"
+chrono = "0.4"
 
 # Or use the development version:
 # ocaml = {git = "git://github.com/zshipko/ocaml-rs"}

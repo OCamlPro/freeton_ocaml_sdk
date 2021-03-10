@@ -32,3 +32,17 @@ let deploy ~server_url ~tvc_file ~abi_file ~params ~keys_file
 
 module REQUEST = Ton_request
 module ENCODING = Ton_encoding
+
+
+
+external call :
+  string array ->
+  local : bool ->
+  string TYPES.reply = "call_contract_ml"
+
+let call ~server_url ~address ~abi_file ~meth ~params ~keys_file ~boc
+    ~local () =
+  TYPES.reply (
+    call [| server_url ; address ; abi_file ; meth ; params ; keys_file ; boc |]
+      ~local
+  )

@@ -1,6 +1,6 @@
 /**************************************************************************/
 /*                                                                        */
-/*  Copyright (c) 2021 OCamlPro SAS                                       */
+/*  Copyright (c) 2021 OCamlPro SAS & TON Labs                            */
 /*                                                                        */
 /*  All rights reserved.                                                  */
 /*  This file is distributed under the terms of the GNU Lesser General    */
