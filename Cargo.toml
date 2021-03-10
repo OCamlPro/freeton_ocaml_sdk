@@ -9,7 +9,7 @@ crate-type = ["staticlib", "cdylib"]
 path = "src/freeton-ocaml-sdk/lib.rs"
 
 [dependencies]
-ocaml = "0.19"
+ocaml = "0.20"
 ton_abi = { git = "https://github.com/tonlabs/ton-labs-abi.git" }
 ton_client = { git = 'https://github.com/tonlabs/TON-SDK.git' }
 ton_sdk = { git = 'https://github.com/tonlabs/TON-SDK.git' }

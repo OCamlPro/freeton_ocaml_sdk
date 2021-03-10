@@ -24,7 +24,7 @@ pub const ERROR_INVALID_JSON_PARAMS : u16 = 9 ;
 pub const ERROR_DEPLOY_FAILED : u16 = 10 ;
 pub const ERROR_TOKIO_RUNTIME_NEW : u16 = 11 ;
 
-#[derive(ocaml::ToValue, ocaml::FromValue)]
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
 pub struct Error {
     code: u16,
     msg: String,
@@ -38,7 +38,7 @@ pub fn failwith(msg: String) -> Error {
     Error { code: ERROR_FAILWITH, msg: msg }
 }
 
-#[derive(ocaml::ToValue, ocaml::FromValue)]
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
 pub struct Reply<A> {
     result: Option<A>,
     error: Option<Error>
