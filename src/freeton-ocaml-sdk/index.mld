@@ -4,6 +4,7 @@
 
 
 
+
 This project implements an OCaml binding to the TON-SDK and a set of tools
 in OCaml to interact with Free TON, in particular the 'ft' command-line 
 wallet.
@@ -11,5 +12,5 @@ wallet.
 
 
 This library exposes the following toplevel modules:
-{!modules:Graphql Main Ton_crypto Ton_encoding Ton_request Ton_rpc Ton_sdk Ton_types}
+{!modules:Graphql Ton_crypto Ton_encoding Ton_request Ton_rpc Ton_sdk Ton_types}
 

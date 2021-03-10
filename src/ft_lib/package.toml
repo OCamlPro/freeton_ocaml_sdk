@@ -31,6 +31,9 @@ gen-version = "version.ml"
 # module name used to pack modules (if pack-modules is true)
 # pack = "Mylib"
 
+# files to skip while updating at package level
+# skip = []
+
 # package library dependencies
 #   [dependencies]
 #   ez_file = ">=0.1 <1.3"
@@ -50,7 +53,9 @@ ppx_deriving_encoding = ""
 
 # package fields (depends on package skeleton)
 [fields]
+dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
 dune-trailer = """\n
+
 (rule
   (targets files.ml)
   (deps
@@ -60,4 +65,3 @@ dune-trailer = """\n
       (run %{bin:ocaml-crunch} -m plain -o files.ml files/))
 )
 """
-dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
