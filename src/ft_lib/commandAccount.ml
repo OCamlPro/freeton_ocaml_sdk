@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*  Copyright (c) 2021 OCamlPro SAS & Origin Labs SAS                     *)
+(*  Copyright (c) 2021 OCamlPro SAS                                       *)
 (*                                                                        *)
 (*  All rights reserved.                                                  *)
 (*  This file is distributed under the terms of the GNU Lesser General    *)
@@ -30,6 +30,7 @@ data(boc): null
 
 type account_type = Uninit
 
+(*
 type account_info = {
   mutable acc_type : account_type option ;
   mutable acc_balance : int64 option ;
@@ -73,6 +74,19 @@ let get_account_info config address =
     Error.raise "Could not parse output of tonos-cli: %s"
       (String.concat "\n" stdout );
   if !not_found then None else Some account
+*)
+
+let get_account_info config address =
+  let open Ton_sdk in
+  match
+    Misc.post config
+      ( REQUEST.account address )
+      ENCODING.accounts_enc
+  with
+  | [] -> None
+  |  [ account ] -> Some account
+  | _ -> assert false
+  (* Format.printf "%s@."(EzEncoding.construct ~compact:false output l) *)
 
 let cut v =
   let rem = Int64.rem v 1_000L in
@@ -125,7 +139,7 @@ let get_key_info config key ~info =
           (match account.acc_balance with
            | None -> "no balance"
            | Some n ->
-               Printf.sprintf "%s TONs" (string_of_nanoton n))
+               Printf.sprintf "%s TONs" (string_of_nanoton (Z.to_int64 n)))
 
 let shorten_key s =
   let len = String.length s in
@@ -180,7 +194,7 @@ let get_account_info accounts ~list ~info =
           ) names
 
 let gen_passphrase _config =
-  Ton_sdk.Crypto.Cli.gen_seed_phrase ()
+  Ton_sdk.CRYPTO.Cli.gen_seed_phrase ()
   (*
   let stdout = Misc.call_stdout_lines @@ Misc.tonoscli config ["genphrase"] in
   match stdout with

@@ -9,18 +9,20 @@ crate-type = ["staticlib", "cdylib"]
 path = "src/freeton-ocaml-sdk/lib.rs"
 
 [dependencies]
-ocaml = "*"
+ocaml = "0.20"
 ton_abi = { git = "https://github.com/tonlabs/ton-labs-abi.git" }
 ton_client = { git = 'https://github.com/tonlabs/TON-SDK.git' }
 ton_sdk = { git = 'https://github.com/tonlabs/TON-SDK.git' }
 ton_types = { git = "https://github.com/tonlabs/ton-labs-types.git" }
 ton_block = { git = "https://github.com/tonlabs/ton-labs-block.git" }
-#ton-client-rs = { git = "https://github.com/tonlabs/ton-client-rs.git" }
-serde_json = ""
+serde_json = "1.0"
 #serde_derive = "1.0.116"
-serde = ""
+serde = "1.0"
 base64 = "0.10.1"
 futures = ""
+tokio = { version = "0.2.13", features = ["sync", "stream"], default-features = false }
+hex = "0.3.2"
+chrono = "0.4"
 
 # Or use the development version:
 # ocaml = {git = "git://github.com/zshipko/ocaml-rs"}

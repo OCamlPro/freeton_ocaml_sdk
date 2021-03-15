@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*  Copyright (c) 2021 OCamlPro SAS & Origin Labs SAS                     *)
+(*  Copyright (c) 2021 OCamlPro SAS                                       *)
 (*                                                                        *)
 (*  All rights reserved.                                                  *)
 (*  This file is distributed under the terms of the GNU Lesser General    *)
@@ -32,43 +32,71 @@ let subst_string config =
         | s -> s
       end
 
-    | [ account ; "addr" ] | [ "addr" ; account ] ->
+    (* Accounts substitutions: *)
+    | [ "addr" ; "zero" ] ->
+        "0:0000000000000000000000000000000000000000000000000000000000000000"
+
+    | [ account ; "addr" ]
+    | [ "account" ; "addr" ; account ]
+    | [ "addr" ; account ] ->
         let key = Misc.find_key_exn net account in
         Misc.get_key_address_exn key
-    | [ account ; "wc" ] | [ "wc" ; account ] ->
+    | [ account ; "wc" ]
+    | [ "account" ; "wc" ; account ]
+    | [ "wc" ; account ] ->
         let key = Misc.find_key_exn net account in
         let acc = Misc.get_key_account_exn key in
         Misc.string_of_workchain acc.acc_workchain
-    | [ account ; "pubkey" ] | [ "pubkey" ; account ]->
+    | [ account ; "pubkey" ]
+    | [ "account" ; "pubkey" ; account ]
+    | [ "pubkey" ; account ]->
         let key = Misc.find_key_exn net account in
         let key_pair = Misc.get_key_pair_exn key in
         key_pair.public
-    | [ account ; "passphrase" ] | [ "passphrase" ; account ] ->
+    | [ account ; "passphrase" ]
+    | [ "account" ; "passphrase" ; account ]
+    | [ "passphrase" ; account ] ->
         let key = Misc.find_key_exn net account in
         Misc.get_key_passphrase_exn key
-    | [ account ; "keyfile" ] | [ "keyfile" ; account ] ->
+    | [ account ; "keyfile" ]
+    | [ "account" ; "keyfile" ; account ]
+    | [ "keyfile" ; account ] ->
         let key = Misc.find_key_exn net account in
         let key_pair = Misc.get_key_pair_exn key in
         let file = Misc.gen_keyfile key_pair in
         files := file :: !files;
         file
-    | [ account ; "contract"; "tvc" ] | [ "account-tvc" ; account ] ->
+    | [ account ; "contract"; "tvc" ]
+    | [ "account" ; "contract" ; "tvc" ; account ]
+    | [ "account-tvc" ; account ] ->
         let key = Misc.find_key_exn net account in
         let contract = Misc.get_key_contract_exn key in
         Misc.get_contract_tvcfile contract
-    | [ account ; "contract" ; "abi" ] | [ "account-abi" ; account ] ->
+    | [ account ; "contract" ; "abi" ]
+    | [ "account" ; "contract" ; "abi" ; account ]
+    | [ "account-abi" ; account ] ->
         let key = Misc.find_key_exn net account in
         let contract = Misc.get_key_contract_exn key in
         Misc.get_contract_abifile contract
-    | [ contract ; "tvc" ] | [ "tvc" ; contract ]->
+
+    (* Contracts substitutions *)
+    | [ contract ; "tvc" ]
+    | [ "contract" ; "tvc" ; contract ]
+    | [ "tvc" ; contract ]->
         Misc.get_contract_tvcfile contract
-    | [ contract ; "abi" ] | [ "abi" ; contract ] ->
+    | [ contract ; "abi" ]
+    | [ "contract" ; "abi" ; contract ]
+    | [ "abi" ; contract ] ->
         Misc.get_contract_abifile contract
+
+    (* Node substitutions *)
     | [ "node" ; "url" ] ->
         let net = Misc.current_network config in
         let node = Misc.current_node net in
         node.node_url
-    | [ n ; "ton" ] | [ "ton" ; n ] ->
+
+    | [ n ; "ton" ]
+    | [ "ton" ; n ] ->
         Int64.to_string ( Misc.nanotokens_of_string n )
     | [ "file" ; file ] ->
         String.trim ( EzFile.read_file file )

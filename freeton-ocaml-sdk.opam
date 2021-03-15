@@ -10,6 +10,7 @@ description: """
 
 
 
+
 This project implements an OCaml binding to the TON-SDK and a set of tools
 in OCaml to interact with Free TON, in particular the 'ft' command-line 
 wallet.
@@ -43,9 +44,16 @@ install: [
 depends: [
   "ocaml" {>= "4.08.0"}
   "dune" {>= "2.6.0"}
+  "zarith" {> "1"}
+  "ez-api" {}
+  "cohttp-lwt-unix" {}
+  "ppx_deriving_encoding" {}
   "conf-rust-2018" {}
   "ppx_inline_test" {with-test}
   "ppx_expect" {with-test}
   "odoc" {with-doc}
   "ocamlformat" {with-test}
+]
+pin-depends: [
+  [ "ez-api.~dev" "git+https://github.com/ocamlpro/ez-api.git" ]
 ]
