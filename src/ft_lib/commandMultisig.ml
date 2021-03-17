@@ -59,13 +59,14 @@ let get_custodians account =
   let key = Misc.find_key_exn net account in
   let contract = check_key_contract key in
   let address = Misc.get_key_address_exn key in
-  Utils.with_contract contract
-    (fun ~contract_tvc:_ ~contract_abi ->
-       Misc.call @@
-       Misc.tonoscli config
-         [ "run" ; address ; "getCustodians"; "{}" ;
-           "--abi" ; contract_abi ]
-    )
+
+  Misc.call_contract config
+    ~contract
+    ~address
+    ~meth:"getCustodians"
+    ~params:"{}"
+    ~local:true
+    ()
 
 let get_waiting account =
  let config = Config.config () in
@@ -73,13 +74,13 @@ let get_waiting account =
   let key = Misc.find_key_exn net account in
   let contract = check_key_contract key in
   let address = Misc.get_key_address_exn key in
-  Utils.with_contract contract
-    (fun ~contract_tvc:_ ~contract_abi ->
-       Misc.call @@
-       Misc.tonoscli config
-         [ "run" ; address ; "getTransactions"; "{}" ;
-           "--abi" ; contract_abi ]
-    )
+  Misc.call_contract config
+    ~contract
+    ~address
+    ~meth:"getTransactions"
+    ~params:"{}"
+    ~local:true
+    ()
 
 let create_multisig
     ?(accounts=[])
@@ -118,7 +119,7 @@ let create_multisig
     Error.raise "Invalid --req %d, should be 0 < REQ <= %d (nbr owners)"
       req nowners;
 
-  let argument =
+  let params =
     Printf.sprintf "{\"owners\":[ \"0x%s\" ],\"reqConfirms\":%d}"
       ( String.concat "\", \"0x" owners )
       req
@@ -142,7 +143,7 @@ let create_multisig
         | Some _ ->
             if Misc.string_of_workchain wc <>
                Misc.string_of_workchain  acc.acc_workchain then
-              Error.raise {|Account addres uses a different workchain. Clear it with  'ft account %s --contract ""|} key.key_name
+              Error.raise {|Account address uses a different workchain. Clear it with  'ft account %s --contract ""|} key.key_name
   end;
 
   let wc = match wc with
@@ -154,50 +155,7 @@ let create_multisig
             acc.acc_workchain
   in
 
-  Utils.with_key_keypair key
-    (fun ~keypair_file ->
-       Utils.with_contract contract
-         (fun ~contract_tvc ~contract_abi ->
-
-            let acc_address =
-              match Sys.getenv "FT_USE_CLIENT" with
-              | exception Not_found ->
-
-                  let node = Misc.current_node net in
-                  Printf.eprintf "node url: %s\n%!" node.node_url;
-                  let addr = Ton_sdk.deploy
-                      ~server_url: node.node_url
-                      ~tvc_file: contract_tvc
-                      ~abi_file: contract_abi
-                      ~params:argument
-                      ~keys_file: keypair_file
-                      ()
-                  in
-                  Printf.eprintf "Contract deployed at %s\n%!" addr;
-                  addr
-
-              | _ ->
-                  let lines = Misc.call_stdout_lines
-                    @@ Misc.tonoscli config
-                      [ "deploy" ; contract_tvc ;
-                        argument ;
-                        "--abi" ; contract_abi ;
-                        "--sign" ; keypair_file ;
-                        "--wc" ; Misc.string_of_workchain wc
-                      ]
-                  in
-                  Printf.eprintf "output:\n %s\n%!"
-                    (String.concat "\n" lines);
-                  Misc.find_line_exn (function
-                      | [ "Contract" ; "deployed" ; "at" ; "address:"; address ] -> Some address
-                      | _ -> None) lines
-            in
-            key.key_account <- Some { acc_address ;
-                                      acc_contract = Some contract ;
-                                      acc_workchain = wc ;
-                                    };
-            config.modified <- true
-         ))
+  Misc.deploy_contract config ~key ~contract ~params ~wc
 
 let send_transfer ~src ~dst ~bounce ~amount =
   let config = Config.config () in
@@ -209,8 +167,7 @@ let send_transfer ~src ~dst ~bounce ~amount =
   let dst_addr = Misc.get_key_address_exn dst_key in
 
 
-  let argument =
-
+  let params =
     let nanotokens, allBalance =
       if amount = "all" then
         0L, true
@@ -224,19 +181,13 @@ let send_transfer ~src ~dst ~bounce ~amount =
       bounce
       allBalance
   in
-
-  Utils.with_key_keypair src_key
-    (fun ~keypair_file ->
-       Utils.with_contract contract
-         (fun ~contract_tvc:_ ~contract_abi ->
-            Misc.call @@
-            Misc.tonoscli config [
-              "call" ; src_addr ;
-              "submitTransaction" ; argument ;
-              "--abi" ; contract_abi ;
-              "--sign" ; keypair_file
-            ]
-         ))
+  let meth = "submitTransaction" in
+  Misc.call_contract config ~contract
+    ~address:src_addr
+    ~meth ~params
+    ~local:false
+    ~src:src_key
+    ()
 
 let send_confirm account ~tx_id =
   let config = Config.config () in
@@ -245,23 +196,18 @@ let send_confirm account ~tx_id =
   let src_addr = Misc.get_key_address_exn src_key in
   let contract = check_key_contract src_key in
 
-  let argument =
+  let meth = "confirmTransaction" in
+  let params =
     Printf.sprintf
       {|{"transactionId":"%s"}|} tx_id
   in
 
-  Utils.with_key_keypair src_key
-    (fun ~keypair_file ->
-       Utils.with_contract contract
-         (fun ~contract_tvc:_ ~contract_abi ->
-            Misc.call @@
-            Misc.tonoscli config [
-              "call" ; src_addr ;
-              "confirmTransaction" ; argument ;
-              "--abi" ; contract_abi ;
-              "--sign" ; keypair_file
-            ]
-         ))
+  Misc.call_contract config ~contract
+    ~address:src_addr
+    ~meth ~params
+    ~local:false
+    ~src:src_key
+    ()
 
 let action account accounts ~create ~req ~not_owner ~custodians ~waiting
     ~transfer ~dst ~bounce ~confirm ?wc ~debot ~contract =

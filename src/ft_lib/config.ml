@@ -221,6 +221,7 @@ let mainnet_network = {
   current_account = None ;
   net_nodes = [ mainnet_node ] ;
   net_keys = [] ;
+  net_deployer = "deployer" ;
 }
 
 let testnet_network = {
@@ -229,6 +230,7 @@ let testnet_network = {
   current_account = None ;
   net_nodes = [ testnet_node ] ;
   net_keys = [ ];
+  net_deployer = "deployer" ;
 }
 
 let fldnet_network = {
@@ -237,6 +239,7 @@ let fldnet_network = {
   current_account = None ;
   net_nodes = [ fldnet_node ] ;
   net_keys = [ ];
+  net_deployer = "deployer" ;
 }
 
 let rustnet_network = {
@@ -245,6 +248,7 @@ let rustnet_network = {
   current_account = None ;
   net_nodes = [ rustnet_node ] ;
   net_keys = [ ];
+  net_deployer = "deployer" ;
 }
 
 let default_config = {

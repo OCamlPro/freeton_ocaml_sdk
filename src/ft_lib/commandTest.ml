@@ -18,7 +18,9 @@ let test1 file =
   Misc.write_json_file Ton_lib.Types.ABI.contract_enc (file ^ ".enc") abi
 
 let test2 () =
-  let s = Ton_sdk.RPC.sync "net.ton.dev" "contracts.find.shard"
+  let s = Ton_sdk.RPC.sync ~network:"net.ton.dev"
+      ~meth:"contracts.find.shard"
+      ~params:
 {|{
   "address":  "0:2222222222222222222222222222222222222222222222222222222222222222",
   "shards":

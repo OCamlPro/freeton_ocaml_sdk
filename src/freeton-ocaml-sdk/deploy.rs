@@ -18,9 +18,9 @@ use crate::client::{create_client, create_client_local};
 use ton_client::abi::{Abi, AbiContract};
 use ton_client::processing::{ParamsOfProcessMessage};
 use ton_client::abi::{Signer, CallSet, DeploySet, ParamsOfEncodeMessage};
-use ton_client::crypto::KeyPair;
 
 pub fn load_abi(abi: &str) -> Result<Abi, ocp::Error> {
+//    println!("load_abi({})", abi);
     Ok(Abi::Contract(
         serde_json::from_str::<AbiContract>(abi)
             .map_err(|e| ocp::error(
@@ -29,6 +29,7 @@ pub fn load_abi(abi: &str) -> Result<Abi, ocp::Error> {
     ))
 }
 
+/*
 pub fn read_keys(filename: &str) -> Result<KeyPair, ocp::Error> {
     let keys_str = std::fs::read_to_string(filename)
         .map_err(|e|
@@ -38,12 +39,13 @@ pub fn read_keys(filename: &str) -> Result<KeyPair, ocp::Error> {
     let keys: KeyPair = serde_json::from_str(&keys_str).unwrap();
     Ok(keys)
 }
+ */
+
 pub async fn calc_acc_address(
     tvc: &[u8],
     wc: i32,
     pubkey: String,
     init_data_json: Option<serde_json::Value>,
-    initial_pubkey: Option<String>,
     abi: Abi,
 ) -> Result<String, ocp::Error> {
     let ton = create_client_local()?;
@@ -52,8 +54,7 @@ pub async fn calc_acc_address(
         tvc: base64::encode(tvc),
         workchain_id: Some(wc),
         initial_data: init_data_json,
-        initial_pubkey: initial_pubkey,
-        //..Default::default()
+        ..Default::default()
     };
     let result = ton_client::abi::encode_message(
         ton.clone(),
@@ -80,20 +81,13 @@ pub async fn deploy_contract_rs(
     tvc: &str,
     abi: &str,
     params: &str,
-    keys_file: &str,
+    keys: ton_client::crypto::KeyPair,
     initial_data: String,
     initial_pubkey: String,
     wc: i32) -> Result<String, ocp::Error> {
     let ton = create_client(server_url)?;
 
-    let abi = std::fs::read_to_string(abi)
-        .map_err(|e|
-                 ocp::error(
-                     ocp::ERROR_CANNOT_READ_ABI_FILE,
-                     format!("{}", e)))?;
     let abi = load_abi(&abi)?;
-
-    let keys = read_keys(&keys_file)?;
 
     let tvc_bytes = &std::fs::read(tvc)
         .map_err(|e|
@@ -128,7 +122,6 @@ pub async fn deploy_contract_rs(
         wc,
         keys.public.clone(),
         initial_data_json.clone(),
-        initial_pubkey.clone(),
         abi.clone()
     ).await?;
 
@@ -162,19 +155,3 @@ pub async fn deploy_contract_rs(
     Ok(addr)
 }
 
-
-#[ocaml::func]
-pub fn deploy_contract_ml(
-    args: Vec<String>,
-    wc: i16) -> ocp::Reply<String> {
-    
-    ocp::reply_async(
-        deploy_contract_rs(args[0].clone(),
-                        &args[1],
-                        &args[2],
-                        &args[3],
-                        &args[4],
-                        args[5].clone(),
-                        args[6].clone(), wc as i32)
-    )
-}

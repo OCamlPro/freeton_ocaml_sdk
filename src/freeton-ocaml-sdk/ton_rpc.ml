@@ -13,5 +13,5 @@
 external sync_ml : string -> string -> string ->
   string Ton_types.reply = "ton_client_request_ml"
 
-let sync network fonction params =
-  Ton_types.reply ( sync_ml network fonction params )
+let sync ~network ~meth ~params =
+  Ton_types.reply ( sync_ml network meth params )

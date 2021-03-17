@@ -319,3 +319,131 @@ let post config input output =
   let url = node.node_url in
   let open Ton_sdk in
   REQUEST.post url input output
+
+let with_keypair key_pair f =
+  let keypair_file = gen_keyfile key_pair in
+  match f ~keypair_file with
+  | exception exn ->
+      Sys.remove keypair_file; raise exn
+  | v ->
+      Sys.remove keypair_file; v
+
+let with_key_keypair key f =
+  with_keypair (get_key_pair_exn key) f
+
+let with_account_keypair net account f =
+  let key = find_key_exn net account in
+  with_key_keypair key f
+
+let with_contract contract f =
+
+  let contract_tvc = get_contract_tvcfile contract in
+  let contract_abi = get_contract_abifile contract in
+
+  f ~contract_tvc ~contract_abi
+
+let call_contract
+    config ~address ~contract ~meth ~params ?src ?(local=false) () =
+  with_contract contract
+    (fun ~contract_tvc:_ ~contract_abi ->
+       if Globals.use_ton_sdk then
+         let net = current_network config in
+         let node = current_node net in
+         let keypair = match src with
+           | None -> None
+           | Some key -> Some (get_key_pair_exn key)
+         in
+         let abi = EzFile.read_file contract_abi in
+         let res =
+           Ton_sdk.ACTION.call ~server_url:node.node_url
+             ~address
+             ~abi
+             ~meth ~params
+             ~local
+             ?keypair
+             ()
+         in
+         Printf.eprintf "call returned %s\n%!" res
+       else
+         let command = if local then "run" else "call" in
+              let args =
+                [
+                  command ; address ;
+                  meth ; params ;
+                  "--abi" ; contract_abi ;
+                ]
+              in
+              match src with
+              | None ->
+                  call @@ tonoscli config args
+              | Some key ->
+                  with_key_keypair key
+                    (fun ~keypair_file ->
+                    call @@ tonoscli config @@
+                    args @ [
+                      "--sign" ; keypair_file
+                    ]
+                    )
+    )
+
+let deploy_contract config ~key ~contract ~params ~wc =
+  match key.key_pair with
+  | None -> Error.raise "Key has no secret key"
+  | Some keypair ->
+      with_contract contract
+        (fun ~contract_tvc ~contract_abi ->
+
+           let acc_address =
+             if Globals.use_ton_sdk then
+               let contract_abi = EzFile.read_file contract_abi in
+               let net = current_network config in
+               let node = current_node net in
+               Printf.eprintf "node url: %s\n%!" node.node_url;
+               let addr = Ton_sdk.ACTION.deploy
+                   ~server_url: node.node_url
+                   ~tvc_file: contract_tvc
+                   ~abi: contract_abi
+                   ~params
+                   ~keypair
+                   ()
+               in
+               Printf.eprintf "Contract deployed at %s\n%!" addr;
+               addr
+             else
+               let lines =
+                 with_key_keypair key
+                   (fun ~keypair_file ->
+                      call_stdout_lines
+                      @@ tonoscli config
+                        [ "deploy" ; contract_tvc ;
+                          params ;
+                          "--abi" ; contract_abi ;
+                          "--sign" ; keypair_file ;
+                          "--wc" ; string_of_workchain wc
+                        ]
+                   )
+               in
+               Printf.eprintf "output:\n %s\n%!"
+                 (String.concat "\n" lines);
+               find_line_exn (function
+                   | [ "Contract" ; "deployed" ; "at" ; "address:"; address ] -> Some address
+                   | _ -> None) lines
+           in
+           key.key_account <- Some { acc_address ;
+                                     acc_contract = Some contract ;
+                                     acc_workchain = wc ;
+                                   };
+           config.modified <- true
+        )
+
+let delete_account config net name =
+  let found = ref false in
+  net.net_keys <- List.filter (fun key ->
+      if key.key_name = name then begin
+        found := true;
+        false
+      end else true) net.net_keys;
+  if !found then
+    config.modified <- true
+  else
+    Error.raise "No account %S to delete. Aborting.\n%!" name

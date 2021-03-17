@@ -1,4 +1,4 @@
-(**************************************************************************)
+ (**************************************************************************)
 (*                                                                        *)
 (*  Copyright (c) 2021 OCamlPro SAS                                       *)
 (*                                                                        *)
@@ -27,6 +27,9 @@ let main () =
       CommandTest.cmd;
       CommandInit.cmd;
       CommandNode.cmd;
+      CommandConfig.cmd;
+      CommandCall.cmd;
+      CommandUtils.cmd;
     ]
   in
   let common_args =

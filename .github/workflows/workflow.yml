@@ -15,7 +15,6 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
         ocaml-version:
           - 4.10.0
         skip_test:

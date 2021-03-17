@@ -19,7 +19,7 @@ type todo =
     NodeStart
   | NodeStop
   | NodeWeb
-  | NodeGive
+  | NodeGive of string
 
 let container_of_node local_node =
   Printf.sprintf "local-node-%d" local_node.local_port
@@ -52,10 +52,11 @@ let action ~todo =
           Misc.call [ "xdg-open";
                       Printf.sprintf "http://0.0.0.0:%d/graphql"
                         local_node.local_port ]
-      | NodeGive ->
+      | NodeGive account ->
           let to_give = ref [] in
           let to_deploy = ref [] in
-          for_all_users config (fun key ->
+          let check_key key =
+              Printf.eprintf "For key %s\n%!" key.key_name;
               match key.key_account with
               | None -> ()
               | Some { acc_address ; acc_contract ; _ } ->
@@ -66,37 +67,72 @@ let action ~todo =
                         Ton_sdk.ENCODING.accounts_enc
                     with
                       [] -> true, true
-                  | [ acc ] ->
-                      let give =
-                        match acc.acc_balance with
-                        | None -> true
-                        | Some z ->
-                            z < z1000
-                      in
-                      let deploy =
-                        match acc.acc_type with
-                        | 0 -> true
-                        | _ -> false
-                      in
-                      give, deploy
-                  | _ -> assert false
+                    | [ acc ] ->
+                        let give =
+                          match acc.acc_balance with
+                          | None -> true
+                          | Some z ->
+                              z < z1000
+                        in
+                        let deploy =
+                          match acc.acc_type with
+                          | 0 -> true
+                          | _ -> false
+                        in
+                        give, deploy
+                    | _ -> assert false
                   in
                   if give then
                     to_give := (acc_address, key) :: !to_give ;
                   if deploy then
                     to_deploy := (acc_contract, key) :: !to_deploy
-            );
-          List.iter (fun (addr, key) ->
-              CommandClient.action
-                ~exec:false
-                [
-                  "call" ; "%{account:addr:giver}"; "sendGrams" ;
-                  Printf.sprintf
-                    {|{ "dest": "%s", "amount": "%%{1000:ton}" }|} addr;
-                  "--abi"; "%{abi:Giver}" ;
-                  "--sign" ; Printf.sprintf "%%{account:keyfile:%s}"
-                    key.key_name;
-                ]
+          in
+          let config = Config.config () in
+          let net = Misc.current_network config in
+          if account = "all" then
+            for_all_users config check_key
+          else begin
+            let key = Misc.find_key_exn net account in
+            check_key key
+          end;
+          List.iter (fun (address, key) ->
+              let meth = "sendGrams" in
+              let params =
+                Printf.sprintf
+                  {|{ "dest": "%s", "amount": "%Ld" }|} address
+                  1_001_000_000_000L
+              in
+
+              if Globals.use_ton_sdk then
+                let node = Misc.current_node net in
+                let abi_file = Misc.get_contract_abifile "Giver" in
+                let abi = EzFile.read_file abi_file in
+                let giver = Misc.find_key_exn net "giver" in
+                let giver = match giver.key_account with
+                  | None -> assert false
+                  | Some { acc_address ; _ } -> acc_address
+                in
+                match key.key_pair with
+                | None -> ()
+                | Some keypair ->
+                    let res =
+                      Ton_sdk.ACTION.call ~server_url:node.node_url
+                        ~address:giver ~abi
+                        ~meth ~params
+                        ~local:false
+                        ~keypair
+                        ()
+                    in
+                    Printf.eprintf "call returned %s\n%!" res
+              else
+                CommandClient.action
+                  ~exec:false
+                  [
+                    "call" ; "%{account:addr:giver}"; meth ; params ;
+                    "--abi"; "%{abi:Giver}" ;
+                    "--sign" ; Printf.sprintf "%%{account:keyfile:%s}"
+                      key.key_name;
+                  ]
             ) !to_give;
 
           List.iter (fun (contract, key) ->
@@ -125,8 +161,8 @@ let cmd =
       [ "web" ], Arg.Unit (fun () -> set_todo "--web" NodeWeb ),
       EZCMD.info "Open Node GraphQL webpage";
 
-      [ "give" ], Arg.Unit (fun () -> set_todo "--give" NodeGive ),
-      EZCMD.info "Give 1000 TON to all user0-user9 from giver";
+      [ "give" ], Arg.String (fun s -> set_todo "--give" (NodeGive s) ),
+      EZCMD.info "ACCOUNT Give 1000 TON from giver to ACCOUNT ('all' for user*)";
 
 
 

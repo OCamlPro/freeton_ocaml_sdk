@@ -138,13 +138,3 @@ pub fn ton_client_request_rs(
     };
     result
 }
-
-#[ocaml::func]
-pub fn ton_client_request_ml(
-    network: String,
-    function: String,
-    parameters: String)
-    -> ocp::Reply<String>
-{
-    ocp::reply(ton_client_request_rs( network, function, parameters) )
-}

@@ -10,32 +10,30 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* These functions are 'misc' functions, except that they depend on
-   the 'Config' module, so they cannot be in 'Misc'. *)
+val deploy :
+  server_url:string ->
+  tvc_file:string ->
+  abi:string ->
+  params:string ->
+  keypair:Ton_types.keypair ->
+  ?initial_data:string ->
+  ?initial_pubkey:string -> ?wc:int -> unit -> string
 
-(*
-open EzFile.OP
-open Types
+val call :
+  server_url:string ->
+  address:string ->
+  abi:string ->
+  meth:string ->
+  params:string ->
+  ?keypair:Ton_types.keypair -> local:bool -> unit -> string
 
-let with_keypair key_pair f =
-  let keypair_file = Misc.gen_keyfile key_pair in
-  match f ~keypair_file with
-  | exception exn ->
-      Sys.remove keypair_file; raise exn
-  | v ->
-      Sys.remove keypair_file; v
+(* Modify a TVC file *)
+val update_contract_state :
+  tvc_file:string ->
+  pubkey:string -> (* in hex format *)
+  ?data:string -> (* initial_data in JSON format ? *)
+  abi:string -> (* abi in JSON format *)
+  unit ->
+  unit
 
-let with_key_keypair key f =
-  with_keypair (Misc.get_key_pair_exn key) f
-
-let with_account_keypair net account f =
-  let key = Misc.find_key_exn net account in
-  with_key_keypair key f
-
-let with_contract contract f =
-
-  let contract_tvc = Misc.get_contract_tvcfile contract in
-  let contract_abi = Misc.get_contract_abifile contract in
-
-  f ~contract_tvc ~contract_abi
-*)
+val parse_message : string -> string

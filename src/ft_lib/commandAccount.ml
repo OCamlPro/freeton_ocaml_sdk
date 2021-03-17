@@ -78,15 +78,22 @@ let get_account_info config address =
 
 let get_account_info config address =
   let open Ton_sdk in
+  let level = if !Globals.verbosity > 1 then 3 else 1 in
   match
     Misc.post config
-      ( REQUEST.account address )
+      ( REQUEST.account ~level address )
       ENCODING.accounts_enc
   with
   | [] -> None
-  |  [ account ] -> Some account
+  |  [ account ] ->
+      if !Globals.verbosity > 1 then
+        Format.printf "%s@."
+          (EzEncoding.construct ~compact:false ENCODING.accounts_enc [account]
+
+          );
+      Some account
   | _ -> assert false
-  (* Format.printf "%s@."(EzEncoding.construct ~compact:false output l) *)
+
 
 let cut v =
   let rem = Int64.rem v 1_000L in
@@ -193,78 +200,46 @@ let get_account_info accounts ~list ~info =
                 get_key_info config key ~info
           ) names
 
-let gen_passphrase _config =
-  Ton_sdk.CRYPTO.Cli.gen_seed_phrase ()
-  (*
-  let stdout = Misc.call_stdout_lines @@ Misc.tonoscli config ["genphrase"] in
-  match stdout with
-  | [ _ ; "Succeeded." ; seed ] ->
-      begin match EzString.split seed '"' with
-        | [ "Seed phrase: " ; seed_phrase ; "" ] ->
-            seed_phrase
-        | _ ->
-            Error.raise "Could not parse seed phrase of tonos-cli genphrase"
-      end
-  | _ -> Error.raise "Could not parse output of tonos-cli genphrase: [%s]"
-           (String.concat "|" stdout)
-*)
+let gen_passphrase config =
+  if Globals.use_ton_sdk then
+    Ton_sdk.CRYPTO.generate_mnemonic ()
+  else
+    let stdout = Misc.call_stdout_lines @@ Misc.tonoscli config ["genphrase"] in
+    match stdout with
+    | [ _ ; "Succeeded." ; seed ] ->
+        begin match EzString.split seed '"' with
+          | [ "Seed phrase: " ; seed_phrase ; "" ] ->
+              seed_phrase
+          | _ ->
+              Error.raise "Could not parse seed phrase of tonos-cli genphrase"
+        end
+    | _ -> Error.raise "Could not parse output of tonos-cli genphrase: [%s]"
+             (String.concat "|" stdout)
 
 let gen_keypair config passphrase =
-  let tmpfile = Misc.tmpfile () in
-  Misc.call @@ Misc.tonoscli config
-    [ "getkeypair" ; tmpfile; passphrase ];
-  let keypair = Misc.read_json_file Encoding.keypair tmpfile in
-  Sys.remove tmpfile;
-  keypair
+  if Globals.use_ton_sdk then
+    Ton_sdk.CRYPTO.generate_keypair_from_mnemonic passphrase
+  else
+    let tmpfile = Misc.tmpfile () in
+    Misc.call @@ Misc.tonoscli config
+      [ "getkeypair" ; tmpfile; passphrase ];
+    let keypair = Misc.read_json_file Encoding.keypair tmpfile in
+    Sys.remove tmpfile;
+    keypair
 
-let genkey config maybe_name =
-  let net = Misc.current_network config in
-  begin
-    match maybe_name with
-    | None -> ()
-    | Some name ->
-        Misc.check_new_key_exn net name
-  end;
-  let seed_phrase = gen_passphrase config in
-
-  (*
-  let stdout = Misc.call_stdout_lines
-    @@ Misc.tonoscli config [ "genpubkey" ; seed_phrase  ] in
-  let pubkey =
-    match stdout with
-    | _ :: "Succeeded." :: pubkey :: _ ->
-        begin match EzString.split pubkey ' ' with
-          | [ "Public"; "key:" ; pubkey ] -> pubkey
-          | stdout ->
-              Error.raise "Could not parse pubkey of tonos-cli genpubkey: [%s]"
-                (String.concat "|" stdout)
-        end
-    | _ -> Error.raise "Could not parse output of tonos-cli genpubkey: [%s]"
-             (String.concat "|" stdout)
-  in
-*)
-  let keypair = gen_keypair config seed_phrase in
-  Printf.eprintf "{ \"public\": \"%s\",\n%!" keypair.public;
-  Printf.eprintf "  \"secret\": \"%s\" }\n%!"
-    (match keypair.secret with None -> assert false | Some s -> s);
-  match maybe_name with
-  | None -> ()
-  | Some name ->
-      let net = Misc.current_network config in
-      net.net_keys <- {
-        key_name = name ;
-        key_pair = Some keypair;
-        key_passphrase = Some seed_phrase;
-        key_account = None ;
-      } :: net.net_keys;
-      config.modified <- true;
-      Printf.eprintf "Key for user %S generated\n%!" name
-
-let gen_address config key_pair contract ~wc =
-  Utils.with_contract contract
+let gen_address config keypair contract ~wc =
+  Misc.with_contract contract
     (fun ~contract_tvc ~contract_abi ->
 
-       Utils.with_keypair key_pair (fun ~keypair_file ->
+       if Globals.use_ton_sdk then
+         let abi = EzFile.read_file contract_abi in
+         Ton_sdk.CRYPTO.generate_address
+           ~tvc_file:contract_tvc
+           ~abi ~keypair
+           ()
+       else
+
+       Misc.with_keypair keypair (fun ~keypair_file ->
 
            let stdout = Misc.call_stdout_lines @@
              Misc.tonoscli config ["genaddr" ;
@@ -338,7 +313,7 @@ let add_account config
   ()
 
 let change_account config
-    ~name ~passphrase ~address ~contract ~keyfile ~wc  =
+    ~name ?passphrase ?address ?contract ?keyfile ?wc () =
   let net = Misc.current_network config in
   let key = match Misc.find_key net name with
     | None -> Error.raise "Unknown account %S cannot be modified\n%!" name
@@ -557,7 +532,6 @@ let change_account config
                 Error.raise "You cannot set the contract without keys or address"
             | None, None, _ -> ()
             | None, Some contract, Some key_pair ->
-
                 if key.key_account <> None then
                   Error.raise "You must clear address before changing contract";
 
@@ -575,18 +549,6 @@ let change_account config
     get_key_info config key ~info:true
   end
 
-let delete_account config net name =
-  let found = ref false in
-  net.net_keys <- List.filter (fun key ->
-      if key.key_name = name then begin
-        found := true;
-        false
-      end else true) net.net_keys;
-  if !found then
-    config.modified <- true
-  else
-    Error.raise "No account %S to delete. Aborting.\n%!" name
-
 let get_live accounts =
   let config = Config.config () in
   let net = Misc.current_network config in
@@ -603,23 +565,74 @@ let get_live accounts =
       Misc.call [ "xdg-open" ; url ]
     ) accounts
 
+
+let genkey ?name ?contract config =
+  let net = Misc.current_network config in
+  begin
+    match name with
+    | None -> ()
+    | Some name ->
+        Misc.check_new_key_exn net name
+  end;
+  let seed_phrase = gen_passphrase config in
+
+  (*
+  let stdout = Misc.call_stdout_lines
+    @@ Misc.tonoscli config [ "genpubkey" ; seed_phrase  ] in
+  let pubkey =
+    match stdout with
+    | _ :: "Succeeded." :: pubkey :: _ ->
+        begin match EzString.split pubkey ' ' with
+          | [ "Public"; "key:" ; pubkey ] -> pubkey
+          | stdout ->
+              Error.raise "Could not parse pubkey of tonos-cli genpubkey: [%s]"
+                (String.concat "|" stdout)
+        end
+    | _ -> Error.raise "Could not parse output of tonos-cli genpubkey: [%s]"
+             (String.concat "|" stdout)
+  in
+*)
+  let keypair = gen_keypair config seed_phrase in
+  Printf.eprintf "{ \"public\": \"%s\",\n%!" keypair.public;
+  Printf.eprintf "  \"secret\": \"%s\" }\n%!"
+    (match keypair.secret with None -> assert false | Some s -> s);
+  match name with
+  | None -> ()
+  | Some name ->
+      let net = Misc.current_network config in
+      net.net_keys <- {
+        key_name = name ;
+        key_pair = Some keypair;
+        key_passphrase = Some seed_phrase;
+        key_account = None ;
+      } :: net.net_keys;
+      config.modified <- true;
+      Printf.eprintf "Key for user %S generated\n%!" name;
+
+      match contract with
+      | None -> ()
+      | Some contract ->
+          change_account config ~name ~contract ()
+
+
 let action accounts ~list ~info
     ~create ~delete ~passphrase ~address ~contract ~keyfile ~live ~wc =
   let config = Config.config () in
   match passphrase, address, contract, keyfile, wc with
-  | None, None, None, None, None ->
+  | None, None, _, None, None when
+    ( contract = None || create ) ->
       if create then
         match accounts with
-          [] -> genkey config None
+          [] -> genkey config
         | _ ->
-            List.iter (fun arg ->
-                genkey config (Some arg)
+            List.iter (fun name ->
+                genkey ~name config ?contract
               ) accounts;
       else
       if delete then
         let net = Misc.current_network config in
         List.iter (fun name ->
-            delete_account config net name
+            Misc.delete_account config net name
           ) accounts;
         Printf.eprintf "All provided accounts deleted.\n%!"
       else
@@ -639,7 +652,7 @@ let action accounts ~list ~info
               ~name ~passphrase ~address ~contract ~keyfile ~wc
           else
             change_account config
-              ~name ~passphrase ~address ~contract ~keyfile ~wc
+              ~name ?passphrase ?address ?contract ?keyfile ?wc ()
 
 let cmd =
   let passphrase = ref None in

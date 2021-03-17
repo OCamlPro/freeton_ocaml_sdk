@@ -24,7 +24,7 @@ let action name contract create wc =
         match Misc.find_key net name with
         | None ->
             if create then begin
-              CommandAccount.genkey config ( Some name );
+              CommandAccount.genkey ~name config;
               iter false
             end
             else
