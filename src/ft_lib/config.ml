@@ -273,18 +273,27 @@ let save config =
   if Sys.file_exists Globals.config_file then begin
     Sys.rename Globals.config_file (Globals.config_file ^ "~")
   end;
-  List.iter (fun net ->
-      match net.net_keys with
-      | [] -> ()
-      | keys ->
-          let wallet_dir = Globals.ft_dir // net.net_name in
-          let wallet_file = wallet_dir // "wallet.json" in
-          EzFile.make_dir ~p:true wallet_dir ;
-          Misc.write_json_file Encoding.wallet wallet_file keys;
-          Printf.eprintf "Saving wallet file %s\n%!" wallet_file ;
-    ) config.networks ;
-  Printf.eprintf "Saving config file %s\n%!" Globals.config_file ;
-  Misc.write_json_file Encoding.config Globals.config_file config ;
+  begin
+    let config = { config with
+                   networks = List.map (fun net ->
+                       begin
+                         match net.net_keys with
+                         | [] -> ()
+                         | keys ->
+                             let wallet_dir = Globals.ft_dir // net.net_name in
+                             let wallet_file = wallet_dir // "wallet.json" in
+                             EzFile.make_dir ~p:true wallet_dir ;
+                             Misc.write_json_file Encoding.wallet wallet_file keys;
+                             Printf.eprintf "Saving wallet file %s\n%!" wallet_file ;
+                       end ;
+                       { net with net_keys = [] }
+                     ) config.networks
+                 }
+    in
+    Printf.eprintf "Saving config file %s\n%!" Globals.config_file ;
+    Misc.write_json_file Encoding.config Globals.config_file config ;
+  end;
+  config.modified <- false ;
   ()
 
 let load_wallet net =
@@ -453,8 +462,12 @@ let load () =
   end;
   config
 
+let loaded = ref false
 let config = lazy (load ())
-let config () = Lazy.force config
+let config () =
+  loaded := true;
+  Lazy.force config
+let loaded () = !loaded
 
 let print () =
   let config = config () in
