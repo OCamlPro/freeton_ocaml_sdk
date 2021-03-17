@@ -10,36 +10,14 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Ezcmd.V2
-open EZCMD.TYPES
-open Types
+val save : Types.config -> unit
+val config : unit -> Types.config
+val sandbox_keys : Types.key list
 
-let action ~deployer =
-  let config = Config.config () in
-  let net = Config.current_network config in
-  begin
-    match deployer with
-    | None -> ()
-    | Some deployer ->
-        net.net_deployer <- deployer ;
-        Printf.eprintf "Deployer set to %S\n5!" deployer;
-        config.modified <- true
-  end;
-  ()
+val print : unit -> unit
 
-let cmd =
-  let deployer = ref None in
-  EZCMD.sub
-    "config"
-    (fun () ->
-       action
-         ~deployer:!deployer
-    )
-    ~args: (
-      [
-        ( [ "deployer" ], Arg.String ( fun s -> deployer := Some s ),
-          EZCMD.info "ACCOUNT Set deployer to account ACCOUNT" );
+val set_temporary_switch : string -> unit
+val set_switch : Types.config -> string -> unit
 
-
-      ] )
-    ~doc: "Modify configuration"
+val current_network : Types.config -> Types.network
+val current_node : Types.network -> Types.node

@@ -18,7 +18,7 @@ open Types
 let action ~account ~meth ~params ~local ~sign =
 
   let config = Config.config () in
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   let key = Misc.find_key_exn net account in
   let account = Misc.get_key_account_exn key in
   let address = account.acc_address in
@@ -31,7 +31,7 @@ let action ~account ~meth ~params ~local ~sign =
         | None -> key
       in
       CommandOutput.with_substituted config params (fun params ->
-          Misc.call_contract config
+          Utils.call_contract config
             ~address ~contract ~meth ~params ~local ~src () )
 
 let cmd =

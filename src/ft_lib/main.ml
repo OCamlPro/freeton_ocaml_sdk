@@ -56,7 +56,7 @@ let main () =
         Config.print ();
         []
     | "--switch" :: switch :: args ->
-        Config.set_config := Some switch;
+        Config.set_temporary_switch switch;
         iter_initial_args args
     | [ "--version" ] ->
         Printf.printf "%s\n%!" Version.version;
@@ -92,7 +92,7 @@ let main () =
     end;
     let config = Config.config () in
     if config.modified then
-      Config.save_config config
+      Config.save config
   with
   | Error.Error s ->
       Printf.eprintf "Error: %s\n%!" s;

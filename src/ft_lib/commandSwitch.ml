@@ -91,7 +91,7 @@ let action ~switch ~create ~url ~remove =
             Error.raise "Cannot remove current switch %S" net_name;
           List.iter (fun net ->
               if net.net_name = net_name then
-                let node = Misc.current_node net in
+                let node = Config.current_node net in
                 match node.node_local with
                 | None -> ()
                 | Some local_node ->
@@ -104,8 +104,8 @@ let action ~switch ~create ~url ~remove =
           Misc.call [ "rm" ; "-rf" ; Globals.ft_dir // net_name ];
           config.modified <- true
         end else begin
-          Config.set_config := Some net_name;
           let config = Config.config () in
+          config.current_network <- net_name ;
           config.modified <- true
         end
   end

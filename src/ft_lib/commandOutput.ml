@@ -26,7 +26,7 @@ open Ez_subst.V1
  *)
 
 let subst_string config =
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   let files = ref [] in
   let brace () s =
 
@@ -80,8 +80,8 @@ let subst_string config =
 
       (* Node substitutions *)
       | [ "node" ; "url" ] ->
-          let net = Misc.current_network config in
-          let node = Misc.current_node net in
+          let net = Config.current_network config in
+          let node = Config.current_node net in
           node.node_url
 
       | [ "ton" ; n ] ->
@@ -173,14 +173,14 @@ let action ~stdout ~input ~keyfile ~addr =
     | None ->
         match keyfile with
         | Some account ->
-            let net = Misc.current_network config in
+            let net = Config.current_network config in
             let key = Misc.find_key_exn net account in
             let key_pair = Misc.get_key_pair_exn key in
             EzEncoding.construct ~compact:false Encoding.keypair key_pair
         | None ->
             match addr with
             | Some account ->
-                let net = Misc.current_network config in
+                let net = Config.current_network config in
                 let key = Misc.find_key_exn net account in
                 let acc = Misc.get_key_account_exn key in
                 acc.acc_address

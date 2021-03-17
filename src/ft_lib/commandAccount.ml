@@ -80,7 +80,7 @@ let get_account_info config address =
   let open Ton_sdk in
   let level = if !Globals.verbosity > 1 then 3 else 1 in
   match
-    Misc.post config
+    Utils.post config
       ( REQUEST.account ~level address )
       ENCODING.accounts_enc
   with
@@ -159,7 +159,7 @@ let shorten_addr s =
 let get_account_info accounts ~list ~info =
 
   let config = Config.config () in
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   if list then
     List.iter (fun key ->
         Printf.printf "* %S%s%s%s\n"
@@ -204,7 +204,7 @@ let gen_passphrase config =
   if Globals.use_ton_sdk then
     Ton_sdk.CRYPTO.generate_mnemonic ()
   else
-    let stdout = Misc.call_stdout_lines @@ Misc.tonoscli config ["genphrase"] in
+    let stdout = Misc.call_stdout_lines @@ Utils.tonoscli config ["genphrase"] in
     match stdout with
     | [ _ ; "Succeeded." ; seed ] ->
         begin match EzString.split seed '"' with
@@ -221,7 +221,7 @@ let gen_keypair config passphrase =
     Ton_sdk.CRYPTO.generate_keypair_from_mnemonic passphrase
   else
     let tmpfile = Misc.tmpfile () in
-    Misc.call @@ Misc.tonoscli config
+    Misc.call @@ Utils.tonoscli config
       [ "getkeypair" ; tmpfile; passphrase ];
     let keypair = Misc.read_json_file Encoding.keypair tmpfile in
     Sys.remove tmpfile;
@@ -242,7 +242,7 @@ let gen_address config keypair contract ~wc =
        Misc.with_keypair keypair (fun ~keypair_file ->
 
            let stdout = Misc.call_stdout_lines @@
-             Misc.tonoscli config ["genaddr" ;
+             Utils.tonoscli config ["genaddr" ;
                                    contract_tvc ;
                                    contract_abi ;
                                    "--setkey" ; keypair_file ;
@@ -274,7 +274,7 @@ let genaddr config contract key ~wc =
 
 let add_account config
     ~name ~passphrase ~address ~contract ~wc ~keyfile =
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   let key_name = name in
   Misc.check_new_key_exn net name;
   let key_passphrase = passphrase in
@@ -314,7 +314,7 @@ let add_account config
 
 let change_account config
     ~name ?passphrase ?address ?contract ?keyfile ?wc () =
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   let key = match Misc.find_key net name with
     | None -> Error.raise "Unknown account %S cannot be modified\n%!" name
     | Some key -> key
@@ -551,7 +551,7 @@ let change_account config
 
 let get_live accounts =
   let config = Config.config () in
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   let host = match net.net_name with
     | "mainnet" -> "ton.live"
     | "testnet" -> "net.ton.live"
@@ -567,7 +567,7 @@ let get_live accounts =
 
 
 let genkey ?name ?contract config =
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   begin
     match name with
     | None -> ()
@@ -599,7 +599,7 @@ let genkey ?name ?contract config =
   match name with
   | None -> ()
   | Some name ->
-      let net = Misc.current_network config in
+      let net = Config.current_network config in
       net.net_keys <- {
         key_name = name ;
         key_pair = Some keypair;
@@ -630,7 +630,7 @@ let action accounts ~list ~info
               ) accounts;
       else
       if delete then
-        let net = Misc.current_network config in
+        let net = Config.current_network config in
         List.iter (fun name ->
             Misc.delete_account config net name
           ) accounts;

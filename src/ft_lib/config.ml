@@ -14,10 +14,16 @@ open EzFile.OP
 
 open Types
 
+let set_current_network = ref None
+let set_current_node = ref None
+let set_current_account = ref None
+
 let set_config = ref
     (try
        Some ( Sys.getenv "FT_SWITCH")
      with _ -> None)
+
+let set_temporary_switch net = set_config := Some net
 
 let remote_account key_name ?contract:acc_contract acc_address =
   { key_name ;
@@ -262,7 +268,7 @@ let default_config = {
              ] ;
 }
 
-let save_config config =
+let save config =
   EzFile.make_dir ~p:true Globals.ft_dir;
   if Sys.file_exists Globals.config_file then begin
     Sys.rename Globals.config_file (Globals.config_file ^ "~")
@@ -276,7 +282,6 @@ let save_config config =
           EzFile.make_dir ~p:true wallet_dir ;
           Misc.write_json_file Encoding.wallet wallet_file keys;
           Printf.eprintf "Saving wallet file %s\n%!" wallet_file ;
-          net.net_keys <- []
     ) config.networks ;
   Printf.eprintf "Saving config file %s\n%!" Globals.config_file ;
   Misc.write_json_file Encoding.config Globals.config_file config ;
@@ -292,7 +297,60 @@ let load_wallet net =
       end
   | _ -> ()
 
-let load_config () =
+let set_switch config switch =
+  let list = EzString.split switch '.' in
+  let rec set_node net list =
+    match list with
+    | [] -> ()
+    | name :: tail ->
+        begin
+          match Misc.find_node net name, Misc.find_key net name with
+          | Some _, Some _ -> assert false
+          | Some _node, _ ->
+              net.current_node <- name;
+              config.modified <- true
+          | None, Some _key ->
+              net.current_account <- Some name;
+              config.modified <- true
+          | None, None ->
+              Error.raise "Unknown node or account %S" name
+        end;
+        set_node net tail
+  in
+  let set_network list =
+    match list with
+    | [] -> ()
+    | name :: tail ->
+        match Misc.find_network config name with
+        | Some net ->
+            config.current_network <- name;
+            config.modified <- true;
+            set_node net tail
+        | None ->
+            let net =
+              Misc.find_network_exn config config.current_network in
+            set_node net list
+  in
+  set_network list ;
+  ()
+
+let current_network config =
+  match !set_current_network with
+  | None -> assert false
+  | Some network ->
+      Misc.find_network_exn config network
+
+let current_node net =
+  match !set_current_node with
+  | None -> assert false
+  | Some node ->
+      match Misc.find_node net node with
+      | None ->
+          Error.raise "Unknown node %S in network %S"
+            net.current_node net.net_name
+      | Some node -> node
+
+let load () =
   let config =
     if Sys.file_exists Globals.config_file then begin
       let config = Misc.read_json_file Encoding.config Globals.config_file in
@@ -304,43 +362,63 @@ let load_config () =
       default_config
     end
   in
-  let config =
+
+
+  let set_account net list =
+    match list with
+    | [] ->
+        set_current_account := net.current_account
+    |  name :: tail ->
+        begin
+          match Misc.find_key net name with
+          | Some _key ->
+              set_current_account := Some name
+          | None ->
+              Error.raise "Unknown node or account %S" name
+        end;
+        match tail with
+        | [] -> ()
+        | s :: _ ->
+            Error.raise "Don't know what to do with switch tail %S" s
+  in
+  let set_node net list =
+    match list with
+    | [] ->
+        set_current_node := Some net.current_node;
+        set_account net []
+    | name :: tail ->
+        match Misc.find_node net name with
+        | Some _node ->
+            set_current_node := Some name;
+            set_account net tail
+        | None ->
+            set_current_node := Some net.current_node;
+            set_account net list
+  in
+  let set_network list =
+    match list with
+    | [] ->
+        set_current_network := Some config.current_network;
+        let net = Misc.find_network_exn config config.current_network in
+        set_node net []
+    | name :: tail ->
+        match Misc.find_network config name with
+        | Some net ->
+            set_current_network := Some name;
+            set_node net tail
+        | None ->
+            set_current_network := Some config.current_network;
+            let net =
+              Misc.find_network_exn config config.current_network in
+            set_node net list
+  in
+  begin
     match !set_config with
-    | None -> config
+    | None -> set_network []
     | Some switch ->
         let list = EzString.split switch '.' in
-        let rec set_node net list =
-          match list with
-          | [] -> ()
-          | name :: tail ->
-              begin
-                match Misc.find_node net name, Misc.find_key net name with
-                | Some _, Some _ -> assert false
-                | Some _node, _ ->
-                    net.current_node <- name
-                | None, Some _key ->
-                    net.current_account <- Some name
-                | None, None ->
-                    Error.raise "Unknown node or account %S" name
-              end;
-              set_node net tail
-        in
-        let set_network list =
-          match list with
-          | [] -> ()
-          | name :: tail ->
-              match Misc.find_network config name with
-              | Some net ->
-                  config.current_network <- name;
-                  set_node net tail
-              | None ->
-                  let net =
-                    Misc.find_network_exn config config.current_network in
-                  set_node net list
-        in
         set_network list ;
-        config
-  in
+  end;
   List.iter (fun net ->
       match net.net_keys with
       | [] -> ()
@@ -349,7 +427,7 @@ let load_config () =
           config.modified <- true (* force save to save keys in wallet *)
     ) config.networks;
 
-  let net = Misc.current_network config in
+  let net = current_network config in
   Printf.eprintf "Network: %s\n%!" net.net_name;
   load_wallet net ;
 
@@ -370,12 +448,12 @@ let load_config () =
 
   EzFile.make_dir ~p:true Misc.temp_dir;
   if config.modified then begin
-    save_config config;
+    save config;
     config.modified <- false;
   end;
   config
 
-let config = lazy (load_config ())
+let config = lazy (load ())
 let config () = Lazy.force config
 
 let print () =

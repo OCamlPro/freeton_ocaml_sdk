@@ -289,9 +289,9 @@ async fn send_message_and_wait(
                      ocp::failwith(format!("run failed: {:#}", e)))?;
         Ok(result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({})))
     } else {
-        println!("Processing... ");
+  //      println!("Processing... ");
         let callback = |_| {
-            println!("Callback... ");
+            //println!("Callback... ");
             async move {}
         };
 
@@ -307,7 +307,7 @@ async fn send_message_and_wait(
             .map_err(|e|
                      ocp::failwith(format!("Failed: {:#}", e)))?;
 
-        println!("wait for transaction");
+//        println!("wait for transaction");
         
         let result = wait_for_transaction(
             ton.clone(),
@@ -322,7 +322,7 @@ async fn send_message_and_wait(
             .map_err(|e|
                      ocp::failwith(format!("Failed: {:#}", e)))?;
 
-        println!("done");
+        //println!("done");
         Ok(result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({})))
     }
 }

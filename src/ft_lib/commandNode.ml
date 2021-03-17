@@ -25,7 +25,7 @@ let container_of_node local_node =
   Printf.sprintf "local-node-%d" local_node.local_port
 
 let for_all_users config f =
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   List.iter (fun key ->
       match EzString.chop_prefix ~prefix:"user" key.key_name with
       | None -> ()
@@ -37,8 +37,8 @@ let z1000 = Z.of_string "1_000_000_000_000"
 
 let action ~todo =
   let config = Config.config () in
-  let net = Misc.current_network config in
-  let node = Misc.current_node net in
+  let net = Config.current_network config in
+  let node = Config.current_node net in
   match node.node_local with
   | None ->
       Error.raise "cannot manage remote node %S" node.node_name
@@ -62,7 +62,7 @@ let action ~todo =
               | Some { acc_address ; acc_contract ; _ } ->
                   let give, deploy =
                     match
-                      Misc.post config
+                      Utils.post config
                         (Ton_sdk.REQUEST.account acc_address)
                         Ton_sdk.ENCODING.accounts_enc
                     with
@@ -88,7 +88,7 @@ let action ~todo =
                     to_deploy := (acc_contract, key) :: !to_deploy
           in
           let config = Config.config () in
-          let net = Misc.current_network config in
+          let net = Config.current_network config in
           if account = "all" then
             for_all_users config check_key
           else begin
@@ -104,7 +104,7 @@ let action ~todo =
               in
 
               if Globals.use_ton_sdk then
-                let node = Misc.current_node net in
+                let node = Config.current_node net in
                 let abi_file = Misc.get_contract_abifile "Giver" in
                 let abi = EzFile.read_file abi_file in
                 let giver = Misc.find_key_exn net "giver" in
