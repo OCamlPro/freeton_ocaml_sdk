@@ -15,7 +15,7 @@ open EZCMD.TYPES
 open Types
 
 
-let action ~account ~meth ~params ~local ~sign =
+let action ~account ~meth ~params ~local ~sign ~output =
 
   let config = Config.config () in
   let net = Config.current_network config in
@@ -32,11 +32,12 @@ let action ~account ~meth ~params ~local ~sign =
       in
       CommandOutput.with_substituted config params (fun params ->
           Utils.call_contract config
-            ~address ~contract ~meth ~params ~local ~src () )
+            ~address ~contract ~meth ~params ~local ~src ?output () )
 
 let cmd =
   let args = ref [] in
   let local = ref false in
+  let output = ref None in
   let sign = ref None in
    EZCMD.sub
     "call"
@@ -53,6 +54,7 @@ let cmd =
        action ~account ~meth ~params
          ~local:!local
          ~sign:!sign
+         ~output:!output
     )
     ~args:
       [
@@ -65,5 +67,8 @@ let cmd =
 
         [ "sign"], Arg.String (fun s -> sign := Some s),
         EZCMD.info "ACCOUNT Sign message with account";
+
+        [ "o" ; "output"], Arg.String (fun s -> output := Some s),
+        EZCMD.info "FILE Save result to FILE (use - for stdout)";
       ]
     ~doc: "Manage contracts"

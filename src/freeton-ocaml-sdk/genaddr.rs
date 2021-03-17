@@ -61,12 +61,12 @@ pub async fn generate_address_rs(
     Ok(result)
 
     /*
-    println!();
+    eprintln!();
     if let Some(phr) = phrase {
-        println!(r#"Seed phrase: "{}""#, phr);
-        println!();
+        eprintln!(r#"Seed phrase: "{}""#, phr);
+        eprintln!();
     }
-    println!("Raw address: {}", addr);
+    eprintln!("Raw address: {}", addr);
     if update_tvc {
         let initial_data = initial_data.map(|s| s.to_string());
         let key_bytes = hex::decode(&keys.public).unwrap();
@@ -79,14 +79,14 @@ pub async fn generate_address_rs(
     }
     
     
-    println!("testnet:");
-    println!("Non-bounceable address (for init): {}", calc_userfriendly_address(&addr, false, true)?);
-    println!("Bounceable address (for later access): {}", calc_userfriendly_address(&addr, true, true)?);
-    println!("mainnet:");
-    println!("Non-bounceable address (for init): {}", calc_userfriendly_address(&addr, false, false)?);
-    println!("Bounceable address (for later access): {}", calc_userfriendly_address(&addr, true, false)?);
+    eprintln!("testnet:");
+    eprintln!("Non-bounceable address (for init): {}", calc_userfriendly_address(&addr, false, true)?);
+    eprintln!("Bounceable address (for later access): {}", calc_userfriendly_address(&addr, true, true)?);
+    eprintln!("mainnet:");
+    eprintln!("Non-bounceable address (for init): {}", calc_userfriendly_address(&addr, false, false)?);
+    eprintln!("Bounceable address (for later access): {}", calc_userfriendly_address(&addr, true, false)?);
 
-    println!("Succeeded");
+    eprintln!("Succeeded");
     Ok(())
       */  
 }
@@ -145,7 +145,7 @@ pub fn update_contract_state_rs(tvc_file: &str,
 
     state_init.seek(std::io::SeekFrom::Start(0)).unwrap();
     state_init.write_all(&vec_bytes).unwrap();
-    println!("TVC file updated");
+    eprintln!("TVC file updated");
 
     Ok(())
 }

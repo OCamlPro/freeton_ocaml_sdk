@@ -47,7 +47,7 @@ let tonoscli config args =
 
 
 let call_contract
-    config ~address ~contract ~meth ~params ?src ?(local=false) () =
+    config ~address ~contract ~meth ~params ?src ?(local=false) ?output () =
   Misc.with_contract contract
     (fun ~contract_tvc:_ ~contract_abi ->
        if Globals.use_ton_sdk then
@@ -67,27 +67,39 @@ let call_contract
              ?keypair
              ()
          in
-         Printf.eprintf "call returned %s\n%!" res
+         match output with
+         | Some "-" ->
+             Printf.eprintf "call returned, saved to stdout\n%!";
+             Printf.printf "%s\n%!" res
+         | None ->
+             Printf.eprintf "call returned:\n%s\n%!" res
+         | Some file ->
+             Printf.eprintf "call returned, saved to %s\n%!" file;
+             EzFile.write_file file res
        else
-         let command = if local then "run" else "call" in
-              let args =
-                [
-                  command ; address ;
-                  meth ; params ;
-                  "--abi" ; contract_abi ;
-                ]
-              in
-              match src with
-              | None ->
-                  Misc.call @@ tonoscli config args
-              | Some key ->
-                  Misc.with_key_keypair key
-                    (fun ~keypair_file ->
-                    Misc.call @@ tonoscli config @@
-                    args @ [
-                      "--sign" ; keypair_file
-                    ]
-                    )
+         match output with
+         | Some _ ->
+             Error.raise "--output FILE cannot be used with FT_USE_TONOS"
+         | None ->
+             let command = if local then "run" else "call" in
+             let args =
+               [
+                 command ; address ;
+                 meth ; params ;
+                 "--abi" ; contract_abi ;
+               ]
+             in
+             match src with
+             | None ->
+                 Misc.call @@ tonoscli config args
+             | Some key ->
+                 Misc.with_key_keypair key
+                   (fun ~keypair_file ->
+                      Misc.call @@ tonoscli config @@
+                      args @ [
+                        "--sign" ; keypair_file
+                      ]
+                   )
     )
 
 let deploy_contract config ~key ~contract ~params ~wc =

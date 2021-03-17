@@ -63,7 +63,7 @@ async fn prepare_message(
     header: Option<FunctionHeader>,
     keys: Option<KeyPair>,
 ) -> Result<EncodedMessage, ocp::Error> {
-    println!("Generating external inbound message...");
+    // eprintln!("Generating external inbound message...");
 
     let params = serde_json::from_str(&params)
         .map_err(|e|
@@ -105,14 +105,11 @@ async fn prepare_message(
 }
 
 fn print_encoded_message(msg: &EncodedMessage) {
-    println!();
-    println!("MessageId: {}", msg.message_id);
-    print!("Expire at: ");
+    eprintln!("MessageId: {}", msg.message_id);
     if msg.expire.is_some() {
         let expire_at = Local.timestamp(msg.expire.unwrap() as i64 , 0);
-        println!("{}", expire_at.to_rfc2822());
+        eprintln!("Expire at: {}", expire_at.to_rfc2822());
     } else {
-        println!("unknown");
     }
 }
 
@@ -271,7 +268,7 @@ async fn send_message_and_wait(
     local: bool,
 ) -> Result<serde_json::Value, ocp::Error> {
     if local {
-        println!("Running get-method...");
+        eprintln!("Running get-method...");
 //        let acc_boc = query_account_boc(ton.clone(), addr).await?;
 
         let result = run_tvm(
@@ -289,7 +286,7 @@ async fn send_message_and_wait(
                      ocp::failwith(format!("run failed: {:#}", e)))?;
         Ok(result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({})))
     } else {
-  //      println!("Processing... ");
+  //      eprintln!("Processing... ");
         let callback = |_| {
             //println!("Callback... ");
             async move {}
@@ -307,7 +304,7 @@ async fn send_message_and_wait(
             .map_err(|e|
                      ocp::failwith(format!("Failed: {:#}", e)))?;
 
-//        println!("wait for transaction");
+//        eprintln!("wait for transaction");
         
         let result = wait_for_transaction(
             ton.clone(),
@@ -370,7 +367,7 @@ pub async fn call_contract_rs(
     let result = call_contract_with_result(ton, addr, abi,
                                            method, params, keys,
                                            acc_boc, local).await?;
-    println!("Succeeded.");
+    eprintln!("Succeeded.");
     if !result.is_null() {
         Ok(serde_json::to_string_pretty(&result).unwrap())
     } else {
@@ -443,13 +440,13 @@ pub async fn generate_message(
         let out_file = output.unwrap();
         std::fs::write(out_file, msg_bytes)
             .map_err(|e| format!("cannot write message to file: {}", e))?;
-        println!("Message saved to file {}", out_file);
+        eprintln!("Message saved to file {}", out_file);
     } else {
         let msg_hex = hex::encode(&msg_bytes);
-        println!("Message: {}", msg_hex);
-        println!();
+        eprintln!("Message: {}", msg_hex);
+        eprintln!();
         qr2term::print_qr(msg_hex).unwrap();
-        println!();
+        eprintln!();
     }
     Ok(())
 }
@@ -463,15 +460,15 @@ pub async fn call_contract_with_msg(conf: Config, str_msg: String, abi: String) 
 
     let params = decode_call_parameters(ton.clone(), &msg, abi.clone()).await?;
 
-    println!("Calling method {} with parameters:", params.0);
-    println!("{}", params.1);
-    println!("Processing... ");
+    eprintln!("Calling method {} with parameters:", params.0);
+    eprintln!("{}", params.1);
+    eprintln!("Processing... ");
 
     let result = send_message_and_wait(ton, &msg.address, abi, msg.message, false).await?;
 
-    println!("Succeded.");
+    eprintln!("Succeded.");
     if !result.is_null() {
-        println!("Result: {}", serde_json::to_string_pretty(&result).unwrap());
+        eprintln!("Result: {}", serde_json::to_string_pretty(&result).unwrap());
     }
     Ok(())
 }
@@ -497,7 +494,7 @@ pub async fn run_get_method(conf: Config, addr: &str, method: &str, params: Opti
         .transpose()
         .map_err(|e| format!("arguments are not in json format: {}", e))?;
 
-    println!("Running get-method...");
+    eprintln!("Running get-method...");
     let result = run_get(
         ton,
         ParamsOfRunGet {
@@ -510,8 +507,8 @@ pub async fn run_get_method(conf: Config, addr: &str, method: &str, params: Opti
     .map_err(|e| format!("run failed: {}", e.to_string()))?
     .output;
 
-    println!("Succeded.");
-    println!("Result: {}", result);
+    eprintln!("Succeded.");
+    eprintln!("Result: {}", result);
     Ok(())
 }
 
