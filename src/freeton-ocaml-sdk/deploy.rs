@@ -20,7 +20,7 @@ use ton_client::processing::{ParamsOfProcessMessage};
 use ton_client::abi::{Signer, CallSet, DeploySet, ParamsOfEncodeMessage};
 
 pub fn load_abi(abi: &str) -> Result<Abi, ocp::Error> {
-//    println!("load_abi({})", abi);
+//    eprintln!("load_abi({})", abi);
     Ok(Abi::Contract(
         serde_json::from_str::<AbiContract>(abi)
             .map_err(|e| ocp::error(

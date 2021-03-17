@@ -15,7 +15,11 @@ val call_contract :
   address:string ->
   contract:string ->
   meth:string ->
-  params:string -> ?src:Types.key -> ?local:bool -> unit -> unit
+  params:string ->
+  ?src:Types.key ->
+  ?local:bool ->
+  ?output:string ->
+  unit -> unit
 
 val post :
   Types.config -> Graphql.query -> 'a Json_encoding.encoding -> 'a
