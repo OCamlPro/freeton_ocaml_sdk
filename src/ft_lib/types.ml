@@ -10,11 +10,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type keypair = {
-  public : string ;
-  mutable secret : string option ;
-} [@@deriving json_encoding]
-
 type account = {
   acc_address : string ;                 [@key "address"]
   mutable acc_contract : string option ; [@key "contract"]
@@ -24,7 +19,7 @@ type account = {
 type key = {
   key_name : string ;                    [@key "name"]
   mutable key_passphrase : string option ;       [@key "passphrase"]
-  mutable key_pair : keypair option ;    [@key "pair"]
+  mutable key_pair : Ton_types.keypair option ;    [@key "pair"]
   mutable key_account : account option ; [@key "account"]
 } [@@deriving json_encoding]
 
@@ -44,6 +39,7 @@ type network = {
   mutable current_account : string option ; [@key "account"]
   mutable net_nodes : node list ;           [@key "nodes"]
   mutable net_keys : key list ;   [@dft []] [@key "keys"]
+  mutable net_deployer : string ; [@dft "deployer"] [@key "deployer"]
 } [@@deriving json_encoding]
 
 type config = {

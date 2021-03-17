@@ -15,9 +15,9 @@ pub const ERROR_FAILWITH : u16 = 0 ;
 pub const ERROR_TONCLIENT_CREATE : u16 = 1 ;
 pub const ERROR_MNEMONIC_FROM_RANDOM : u16 = 2 ;
 pub const ERROR_INVALID_JSON_ABI : u16 = 3 ;
-pub const ERROR_CANNOT_READ_KEYPAIR_FILE : u16 = 4 ;
+// pub const ERROR_CANNOT_READ_KEYPAIR_FILE : u16 = 4 ;
 pub const ERROR_CANNOT_GENERATE_ADDRESS : u16 = 5 ;
-pub const ERROR_CANNOT_READ_ABI_FILE : u16 = 6 ;
+// pub const ERROR_CANNOT_READ_ABI_FILE : u16 = 6 ;
 pub const ERROR_CANNOT_READ_TVC_FILE : u16 = 7 ;
 pub const ERROR_INVALID_JSON_INITIAL_DATA : u16 = 8 ;
 pub const ERROR_INVALID_JSON_PARAMS : u16 = 9 ;
@@ -44,6 +44,11 @@ pub struct Reply<A> {
     error: Option<Error>
 }
 
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
+pub struct KeyPair {
+    public: String,
+    secret: Option<String>,
+}
 
 pub fn reply<A>(r : Result<A, Error > ) -> Reply<A> {
     match r {
@@ -61,7 +66,6 @@ use tokio::runtime::Runtime;
 pub fn reply_async<A,
                    F: core::future::Future<Output = Result<A, Error>>
                    >(f : F ) -> Reply<A> {
-    
     let rt  = Runtime::new();
     match rt {
         Ok(rt) => {
@@ -77,3 +81,27 @@ pub fn reply_async<A,
                           }
     }
 }
+
+pub fn keypair_of_ocaml(keys: KeyPair) -> ton_client::crypto::KeyPair
+{
+    if let Some(secret) = keys.secret {
+        ton_client::crypto::KeyPair {
+            public : keys.public,
+            secret : secret,
+        }
+    } else {
+        ton_client::crypto::KeyPair {
+            public : keys.public,
+            secret : "".to_string(),
+        }
+    }
+}
+
+pub fn ocaml_of_keypair(keys: ton_client::crypto::KeyPair) -> KeyPair
+{
+    KeyPair {
+        public : keys.public,
+        secret : Some(keys.secret)
+    }
+}
+

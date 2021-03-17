@@ -61,3 +61,8 @@ let reply r =
         raise (Error (error_of_code e.code, e.msg))
   | None, None -> assert false
   | Some _, Some _ -> assert false
+
+type keypair = {
+  public : string ;
+  mutable secret : string option ;
+} [@@deriving json_encoding]

@@ -12,10 +12,11 @@
 
 use crate::ocp;
 use crate::client::{TonClient, create_client};
-use crate::deploy::{load_abi, read_keys};
+use crate::deploy::{load_abi};
+
+use ton_client::crypto::KeyPair;
 /*
 use crate::config::Config;
-use crate::crypto::load_keypair;
 use crate::convert;
 use crate::helpers::{TonClient, now, create_client_verbose, create_client_local, query, load_ton_address, load_abi};
 use ton_abi::{Contract, ParamType};
@@ -60,11 +61,10 @@ async fn prepare_message(
     method: &str,
     params: &str,
     header: Option<FunctionHeader>,
-    keys: Option<String>,
+    keys: Option<KeyPair>,
 ) -> Result<EncodedMessage, ocp::Error> {
     println!("Generating external inbound message...");
 
-    let keys = keys.map(|k| read_keys(&k)).transpose()?;
     let params = serde_json::from_str(&params)
         .map_err(|e|
                  ocp::failwith(
@@ -291,6 +291,7 @@ async fn send_message_and_wait(
     } else {
         println!("Processing... ");
         let callback = |_| {
+            println!("Callback... ");
             async move {}
         };
 
@@ -306,6 +307,8 @@ async fn send_message_and_wait(
             .map_err(|e|
                      ocp::failwith(format!("Failed: {:#}", e)))?;
 
+        println!("wait for transaction");
+        
         let result = wait_for_transaction(
             ton.clone(),
             ParamsOfWaitForTransaction {
@@ -318,6 +321,8 @@ async fn send_message_and_wait(
         ).await
             .map_err(|e|
                      ocp::failwith(format!("Failed: {:#}", e)))?;
+
+        println!("done");
         Ok(result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({})))
     }
 }
@@ -328,7 +333,7 @@ pub async fn call_contract_with_result(
     abi: String,
     method: &str,
     params: &str,
-    keys: Option<String>,
+    keys: Option<KeyPair>,
     acc_boc: String,
     local: bool,
 ) -> Result<serde_json::Value, ocp::Error> {
@@ -356,15 +361,15 @@ pub async fn call_contract_rs(
     abi: String,
     method: &str,
     params: &str,
-    keys: String,
+    keys: Option<KeyPair>,
     acc_boc: String,
     local: bool
 ) -> Result<String, ocp::Error> {
     let ton = create_client(server_url)?;
-    let keys =
-        if keys == "" { None } else { Some (keys) };
-    
-    let result = call_contract_with_result(ton, addr, abi, method, params, keys, acc_boc, local).await?;
+
+    let result = call_contract_with_result(ton, addr, abi,
+                                           method, params, keys,
+                                           acc_boc, local).await?;
     println!("Succeeded.");
     if !result.is_null() {
         Ok(serde_json::to_string_pretty(&result).unwrap())
@@ -377,17 +382,19 @@ pub async fn call_contract_rs(
 #[ocaml::func]
 pub fn call_contract_ml(
     args: Vec<String>,
+    keys: Option<ocp::KeyPair>,
     local: bool) -> ocp::Reply<String> {
-    
+
+    let keys = keys.map(|keys| ocp::keypair_of_ocaml(keys));
     ocp::reply_async(
         call_contract_rs(args[0].clone(), // server_url
-                        &args[1],         // addr
-                        args[2].clone(),         // abi
-                        &args[3],         // method
-                        &args[4],         // params
-                        args[5].clone(),  // keys
-                        args[6].clone(),  // acc_boc
-                        local)
+                         &args[1],         // addr
+                         args[2].clone(),         // abi
+                         &args[3],         // method
+                         &args[4],         // params
+                         keys,
+                         args[5].clone(),  // acc_boc
+                         local)
     )
 }
 

@@ -18,6 +18,10 @@ let about = "ft COMMAND COMMAND-OPTIONS"
 
 
 let homedir = Sys.getenv "HOME"
+let use_ton_sdk = match Sys.getenv "FT_USE_TONOS" with
+  | exception Not_found -> true
+  | "no" -> true
+  | _ -> false
 
 let ft_dir = homedir // ".ft"
 let config_file = ft_dir // "config.json"

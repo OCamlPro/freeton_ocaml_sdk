@@ -10,32 +10,29 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* These functions are 'misc' functions, except that they depend on
-   the 'Config' module, so they cannot be in 'Misc'. *)
+open Ezcmd.V2
+open EZCMD.TYPES
 
-(*
-open EzFile.OP
-open Types
+let of_base64 s =
+  let s = Base64.decode_exn s in
+  Printf.printf "string = %S\n" s;
+  ()
 
-let with_keypair key_pair f =
-  let keypair_file = Misc.gen_keyfile key_pair in
-  match f ~keypair_file with
-  | exception exn ->
-      Sys.remove keypair_file; raise exn
-  | v ->
-      Sys.remove keypair_file; v
+let of_boc s =
+  (*  let s = Base64.decode_exn s in *)
+  let s = Ton_sdk.ACTION.parse_message s in
+  Printf.printf "boc = %S\n" s
 
-let with_key_keypair key f =
-  with_keypair (Misc.get_key_pair_exn key) f
+let cmd =
+   EZCMD.sub
+    "utils"
+    (fun () -> ())
+    ~args:
+      [
+        [ "of-base64" ], Arg.String of_base64,
+        EZCMD.info "STR Translates from base64";
 
-let with_account_keypair net account f =
-  let key = Misc.find_key_exn net account in
-  with_key_keypair key f
-
-let with_contract contract f =
-
-  let contract_tvc = Misc.get_contract_tvcfile contract in
-  let contract_abi = Misc.get_contract_abifile contract in
-
-  f ~contract_tvc ~contract_abi
-*)
+        [ "of-boc" ], Arg.String of_boc,
+        EZCMD.info "STR Parse boc in base64 format";
+      ]
+    ~doc: "Some useful tools"

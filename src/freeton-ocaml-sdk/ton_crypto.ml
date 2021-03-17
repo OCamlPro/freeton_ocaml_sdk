@@ -11,10 +11,27 @@
 (**************************************************************************)
 
 
-module Cli = struct (* fonctions from tonos-cli *)
+external generate_mnemonic_ml: unit -> string Ton_types.reply =
+  "generate_mnemonic_ml"
+let generate_mnemonic () = Ton_types.reply (generate_mnemonic_ml ())
 
-  external gen_seed_phrase_ml: unit -> string Ton_types.reply =
-    "gen_seed_phrase_ml"
-  let gen_seed_phrase () = Ton_types.reply (gen_seed_phrase_ml ())
+external generate_keypair_from_mnemonic :
+  string -> Ton_types.keypair Ton_types.reply =
+  "generate_keypair_from_mnemonic_ml"
 
-end
+let generate_keypair_from_mnemonic m =
+  Ton_types.reply ( generate_keypair_from_mnemonic m )
+
+external generate_address :
+  string array ->
+  Ton_types.keypair ->
+  int ->
+  string Ton_types.reply =
+  "generate_address_ml"
+
+let generate_address ~tvc_file ~abi ~keypair
+    ?(wc = 0)
+    ?(initial_data = "") () =
+  Ton_types.reply ( generate_address
+                      [| tvc_file ; abi ; initial_data |]
+                      keypair wc )
