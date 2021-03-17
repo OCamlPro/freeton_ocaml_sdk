@@ -13,29 +13,137 @@
 (* These functions are 'misc' functions, except that they depend on
    the 'Config' module, so they cannot be in 'Misc'. *)
 
-(*
 open EzFile.OP
 open Types
 
-let with_keypair key_pair f =
-  let keypair_file = Misc.gen_keyfile key_pair in
-  match f ~keypair_file with
-  | exception exn ->
-      Sys.remove keypair_file; raise exn
-  | v ->
-      Sys.remove keypair_file; v
+let net_dir config =
+  let net = Config.current_network config in
+  Globals.ft_dir // net.net_name
+let tonoscli_config config = net_dir config // "tonos-cli.config"
 
-let with_key_keypair key f =
-  with_keypair (Misc.get_key_pair_exn key) f
+let tonoscli binary config args =
+    ( binary ::
+      "--config" ::
+      tonoscli_config config ::
+      args )
 
-let with_account_keypair net account f =
-  let key = Misc.find_key_exn net account in
-  with_key_keypair key f
+let tonoscli config args =
+  let config_file = tonoscli_config config in
+  let binary = Misc.binary_file "tonos-cli" in
+  if not ( Sys.file_exists config_file ) then begin
+    let net = Config.current_network config in
+    let node = Config.current_node net in
+    Misc.call (tonoscli binary config ["config" ; "--url"; node.node_url ]);
 
-let with_contract contract f =
+    let src_file = "tonlabs-cli.conf.json" in
+    if Sys.file_exists src_file then begin
+      Printf.eprintf "mv %s %s\n%!" src_file config_file ;
+      let content = EzFile.read_file src_file in
+      Sys.remove src_file ;
+      EzFile.write_file config_file content
+    end
+  end;
+  tonoscli binary config args
 
-  let contract_tvc = Misc.get_contract_tvcfile contract in
-  let contract_abi = Misc.get_contract_abifile contract in
 
-  f ~contract_tvc ~contract_abi
-*)
+let call_contract
+    config ~address ~contract ~meth ~params ?src ?(local=false) () =
+  Misc.with_contract contract
+    (fun ~contract_tvc:_ ~contract_abi ->
+       if Globals.use_ton_sdk then
+         let net = Config.current_network config in
+         let node = Config.current_node net in
+         let keypair = match src with
+           | None -> None
+           | Some key -> Some (Misc.get_key_pair_exn key)
+         in
+         let abi = EzFile.read_file contract_abi in
+         let res =
+           Ton_sdk.ACTION.call ~server_url:node.node_url
+             ~address
+             ~abi
+             ~meth ~params
+             ~local
+             ?keypair
+             ()
+         in
+         Printf.eprintf "call returned %s\n%!" res
+       else
+         let command = if local then "run" else "call" in
+              let args =
+                [
+                  command ; address ;
+                  meth ; params ;
+                  "--abi" ; contract_abi ;
+                ]
+              in
+              match src with
+              | None ->
+                  Misc.call @@ tonoscli config args
+              | Some key ->
+                  Misc.with_key_keypair key
+                    (fun ~keypair_file ->
+                    Misc.call @@ tonoscli config @@
+                    args @ [
+                      "--sign" ; keypair_file
+                    ]
+                    )
+    )
+
+let deploy_contract config ~key ~contract ~params ~wc =
+  match key.key_pair with
+  | None -> Error.raise "Key has no secret key"
+  | Some keypair ->
+      Misc.with_contract contract
+        (fun ~contract_tvc ~contract_abi ->
+
+           let acc_address =
+             if Globals.use_ton_sdk then
+               let contract_abi = EzFile.read_file contract_abi in
+               let net = Config.current_network config in
+               let node = Config.current_node net in
+               Printf.eprintf "node url: %s\n%!" node.node_url;
+               let addr = Ton_sdk.ACTION.deploy
+                   ~server_url: node.node_url
+                   ~tvc_file: contract_tvc
+                   ~abi: contract_abi
+                   ~params
+                   ~keypair
+                   ()
+               in
+               Printf.eprintf "Contract deployed at %s\n%!" addr;
+               addr
+             else
+               let lines =
+                 Misc.with_key_keypair key
+                   (fun ~keypair_file ->
+                      Misc.call_stdout_lines
+                      @@ tonoscli config
+                        [ "deploy" ; contract_tvc ;
+                          params ;
+                          "--abi" ; contract_abi ;
+                          "--sign" ; keypair_file ;
+                          "--wc" ; Misc.string_of_workchain wc
+                        ]
+                   )
+               in
+               Printf.eprintf "output:\n %s\n%!"
+                 (String.concat "\n" lines);
+               Misc.find_line_exn (function
+                   | [ "Contract" ; "deployed" ; "at" ; "address:"; address ] -> Some address
+                   | _ -> None) lines
+           in
+           key.key_account <- Some { acc_address ;
+                                     acc_contract = Some contract ;
+                                     acc_workchain = wc ;
+                                   };
+           config.modified <- true
+        )
+
+
+let post config input output =
+  let net = Config.current_network config in
+  let node = Config.current_node net in
+  let url = node.node_url in
+  let open Ton_sdk in
+  REQUEST.post url input output

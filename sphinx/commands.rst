@@ -15,8 +15,14 @@ Overview of sub-commands::
   account
     Get account info (local or from blockchain), or create/modify/delete accounts.
   
+  call
+    Manage contracts
+  
   client
     Call tonos-cli, use -- to separate arguments
+  
+  config
+    Modify configuration
   
   contract
     Manage contracts
@@ -33,6 +39,9 @@ Overview of sub-commands::
   multisig
     Manage a multisig-wallet (create, confirm, send)
   
+  node
+    Manage local nodes
+  
   output
     Call tonos-cli, use -- to separate arguments
   
@@ -41,6 +50,9 @@ Overview of sub-commands::
   
   test
     For testing only
+  
+  utils
+    Some useful tools
 
 
 drom account
@@ -166,6 +178,27 @@ Where options are:
 * :code:`--wc INT`   WORKCHAIN The workchain (default is 0)
 
 
+drom call
+~~~~~~~~~~~
+
+Manage contracts
+
+
+**USAGE**
+::
+  
+  drom call ARGUMENTS [OPTIONS]
+
+Where options are:
+
+
+* :code:`ARGUMENTS`   ACCOUNT METH [PARAMS] arguments
+
+* :code:`--run`   Run locally
+
+* :code:`--sign STRING`   ACCOUNT Sign message with account
+
+
 drom client
 ~~~~~~~~~~~~~
 
@@ -187,6 +220,23 @@ Where options are:
 * :code:`--stdout STRING`   FILE Save command stdout to file
 
 
+drom config
+~~~~~~~~~~~~~
+
+Modify configuration
+
+
+**USAGE**
+::
+  
+  drom config [OPTIONS]
+
+Where options are:
+
+
+* :code:`--deployer STRING`   ACCOUNT Set deployer to account ACCOUNT
+
+
 drom contract
 ~~~~~~~~~~~~~~~
 
@@ -203,9 +253,19 @@ Where options are:
 
 * :code:`--build STRING`   Build a contract and remember it
 
+* :code:`--create STRING`   ACCOUNT Create ACCOUNT by deploying contract (with --deploy)
+
+* :code:`--deploy STRING`   CONTRACT Deploy contract CONTRACT
+
 * :code:`--force`   Override existing contracts
 
 * :code:`--list`   List known contracts
+
+* :code:`--params STRING`   PARAMS Constructor/call Arguments ({} by default)
+
+* :code:`--replace STRING`   ACCOUNT Replace ACCOUNT when deploying contract (with --deploy)
+
+* :code:`--sign STRING`   ACCOUNT Sign with account ACCOUNT
 
 
 drom genaddr
@@ -383,6 +443,8 @@ Where options are:
 
 * :code:`--confirm STRING`   TX_ID Confirm transaction
 
+* :code:`--contract STRING`   CONTRACT Use this contract
+
 * :code:`--create`   Deploy multisig wallet on account
 
 * :code:`--custodians`   List custodians
@@ -395,6 +457,8 @@ Where options are:
 
 * :code:`--req INT`   REQ Number of confirmations required
 
+* :code:`--surf`   Use Surf contract
+
 * :code:`--to STRING`   ACCOUNT Target of a transfer
 
 * :code:`--transfer STRING`   AMOUNT Transfer this amount
@@ -402,6 +466,29 @@ Where options are:
 * :code:`--waiting`    List waiting transactions
 
 * :code:`--wc INT`   WORKCHAIN The workchain (default is 0)
+
+
+drom node
+~~~~~~~~~~~
+
+Manage local nodes
+
+
+**USAGE**
+::
+  
+  drom node [OPTIONS]
+
+Where options are:
+
+
+* :code:`--give STRING`   ACCOUNT Give 1000 TON from giver to ACCOUNT ('all' for user*)
+
+* :code:`--start`   Start network node
+
+* :code:`--stop`   Stop network node
+
+* :code:`--web`   Open Node GraphQL webpage
 
 
 drom output
@@ -443,6 +530,12 @@ Where options are:
 
 * :code:`ARGUMENT`   New switch config
 
+* :code:`--create`   Create switch as new
+
+* :code:`--remove`   Remove switch
+
+* :code:`--url STRING`   URL URL of new switch
+
 
 drom test
 ~~~~~~~~~~~
@@ -460,4 +553,23 @@ Where options are:
 
 * :code:`ARGUMENTS`   args
 
-* :code:`--test1`   Run test1
+* :code:`--test INT`   NUM Run test NUM
+
+
+drom utils
+~~~~~~~~~~~~
+
+Some useful tools
+
+
+**USAGE**
+::
+  
+  drom utils [OPTIONS]
+
+Where options are:
+
+
+* :code:`--of-base64 STRING`   STR Translates from base64
+
+* :code:`--of-boc STRING`   STR Parse boc in base64 format

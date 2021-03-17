@@ -10,36 +10,19 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Ezcmd.V2
-open EZCMD.TYPES
-open Types
+val call_contract :
+  Types.config ->
+  address:string ->
+  contract:string ->
+  meth:string ->
+  params:string -> ?src:Types.key -> ?local:bool -> unit -> unit
 
-let action ~deployer =
-  let config = Config.config () in
-  let net = Config.current_network config in
-  begin
-    match deployer with
-    | None -> ()
-    | Some deployer ->
-        net.net_deployer <- deployer ;
-        Printf.eprintf "Deployer set to %S\n5!" deployer;
-        config.modified <- true
-  end;
-  ()
+val post :
+  Types.config -> Graphql.query -> 'a Json_encoding.encoding -> 'a
 
-let cmd =
-  let deployer = ref None in
-  EZCMD.sub
-    "config"
-    (fun () ->
-       action
-         ~deployer:!deployer
-    )
-    ~args: (
-      [
-        ( [ "deployer" ], Arg.String ( fun s -> deployer := Some s ),
-          EZCMD.info "ACCOUNT Set deployer to account ACCOUNT" );
+val deploy_contract :
+  Types.config ->
+  key:Types.key ->
+  contract:string -> params:string -> wc:int option -> unit
 
-
-      ] )
-    ~doc: "Modify configuration"
+val tonoscli : Types.config -> string list -> string list

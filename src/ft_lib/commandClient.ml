@@ -28,7 +28,7 @@ let action ?(exec=false) ?stdout args =
   let clean () =
     List.iter Sys.remove !files
   in
-  let cmd = if exec then args else Misc.tonoscli config args in
+  let cmd = if exec then args else Utils.tonoscli config args in
   match
     match stdout with
     | None -> Misc.call cmd

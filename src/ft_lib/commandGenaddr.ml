@@ -16,7 +16,7 @@ open Types
 
 let action name contract create wc =
   let config = Config.config () in
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   match name with
   | None -> Error.raise "Name of key must be provided"
   | Some name ->

@@ -84,7 +84,7 @@ let action ~todo ~force ~sign ~params ~wc ~create =
   | DeployContract contract ->
 
       let config = Config.config () in
-      let net = Misc.current_network config in
+      let net = Config.current_network config in
       let create =
         match create with
         | ReplaceAccount sign ->
@@ -95,12 +95,16 @@ let action ~todo ~force ~sign ~params ~wc ~create =
       let sign =
         match create with
         | CreateAccount sign ->
+            Printf.eprintf "Generating new key\n%!";
             CommandAccount.genkey ~name:sign ~contract:contract config;
+            Printf.eprintf "Sending 1 TON from deployer %S\n%!"
+              net.net_deployer;
             CommandMultisig.send_transfer
               ~src:net.net_deployer
               ~dst:sign
               ~bounce:false
               ~amount:"1";
+            Config.save config;
             sign
         | ReplaceAccount _ -> assert false
         | UseAccount ->
@@ -117,7 +121,8 @@ let action ~todo ~force ~sign ~params ~wc ~create =
         | _ -> ()
       end;
       CommandOutput.with_substituted config params (fun params ->
-          Misc.deploy_contract config ~key ~contract ~params ~wc)
+          Printf.eprintf "Deploying contract %S to %s\n%!" contract sign;
+          Utils.deploy_contract config ~key ~contract ~params ~wc)
 
 let cmd =
   let set_todo, with_todo = Misc.todo_arg () in

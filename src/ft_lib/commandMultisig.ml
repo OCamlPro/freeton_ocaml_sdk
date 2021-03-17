@@ -55,12 +55,12 @@ let check_key_contract key =
 
 let get_custodians account =
   let config = Config.config () in
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   let key = Misc.find_key_exn net account in
   let contract = check_key_contract key in
   let address = Misc.get_key_address_exn key in
 
-  Misc.call_contract config
+  Utils.call_contract config
     ~contract
     ~address
     ~meth:"getCustodians"
@@ -70,11 +70,11 @@ let get_custodians account =
 
 let get_waiting account =
  let config = Config.config () in
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   let key = Misc.find_key_exn net account in
   let contract = check_key_contract key in
   let address = Misc.get_key_address_exn key in
-  Misc.call_contract config
+  Utils.call_contract config
     ~contract
     ~address
     ~meth:"getTransactions"
@@ -91,7 +91,7 @@ let create_multisig
     account
   =
   let config = Config.config () in
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   let owners = StringSet.of_list accounts in
   let owners =
     if not_owner then owners else
@@ -155,11 +155,11 @@ let create_multisig
             acc.acc_workchain
   in
 
-  Misc.deploy_contract config ~key ~contract ~params ~wc
+  Utils.deploy_contract config ~key ~contract ~params ~wc
 
 let send_transfer ~src ~dst ~bounce ~amount =
   let config = Config.config () in
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   let src_key = Misc.find_key_exn net src in
   let src_addr = Misc.get_key_address_exn src_key in
   let contract = check_key_contract src_key in
@@ -182,7 +182,7 @@ let send_transfer ~src ~dst ~bounce ~amount =
       allBalance
   in
   let meth = "submitTransaction" in
-  Misc.call_contract config ~contract
+  Utils.call_contract config ~contract
     ~address:src_addr
     ~meth ~params
     ~local:false
@@ -191,7 +191,7 @@ let send_transfer ~src ~dst ~bounce ~amount =
 
 let send_confirm account ~tx_id =
   let config = Config.config () in
-  let net = Misc.current_network config in
+  let net = Config.current_network config in
   let src_key = Misc.find_key_exn net account in
   let src_addr = Misc.get_key_address_exn src_key in
   let contract = check_key_contract src_key in
@@ -202,7 +202,7 @@ let send_confirm account ~tx_id =
       {|{"transactionId":"%s"}|} tx_id
   in
 
-  Misc.call_contract config ~contract
+  Utils.call_contract config ~contract
     ~address:src_addr
     ~meth ~params
     ~local:false
