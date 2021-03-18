@@ -21,3 +21,4 @@ val set_switch : Types.config -> string -> unit
 
 val current_network : Types.config -> Types.network
 val current_node : Types.network -> Types.node
+val loaded : unit -> bool

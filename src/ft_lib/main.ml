@@ -90,9 +90,10 @@ let main () =
             ~doc:"Create and manage an OCaml project" ~man:[] ~argv commands
             ~common_args;
     end;
-    let config = Config.config () in
-    if config.modified then
-      Config.save config
+    if Config.loaded () then
+      let config = Config.config () in
+      if config.modified then
+        Config.save config
   with
   | Error.Error s ->
       Printf.eprintf "Error: %s\n%!" s;

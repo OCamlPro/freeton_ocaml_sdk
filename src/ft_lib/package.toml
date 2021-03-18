@@ -54,8 +54,7 @@ ppx_deriving_encoding = ""
 # package fields (depends on package skeleton)
 [fields]
 dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
-dune-trailer = """\n
-
+dune-trailer = """
 (rule
   (targets files.ml)
   (deps
