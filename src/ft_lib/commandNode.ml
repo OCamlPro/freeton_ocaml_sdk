@@ -35,10 +35,19 @@ let for_all_users config f =
 
 let z1000 = Z.of_string "1_000_000_000_000"
 
+(* Currently, the giver creates an account with Contract:
+"code_hash":
+     "207dc560c5956de1a2c1479356f8f3ee70a59767db2bf4788b1d61ad42cdad82",
+for SetcodeMultisigWallet2
+whereas
+"code_hash":
+     "80d6c47c4a25543c9b397b71716f3fae1e2c5d247174c52e2c19bd896442b105",
+for SafeMultisigWallet
+*)
+
 let action ~todo =
   let config = Config.config () in
-  let net = Config.current_network config in
-  let node = Config.current_node net in
+  let node = Config.current_node config in
   match node.node_local with
   | None ->
       Error.raise "cannot manage remote node %S" node.node_name
@@ -53,12 +62,19 @@ let action ~todo =
                       Printf.sprintf "http://0.0.0.0:%d/graphql"
                         local_node.local_port ]
       | NodeGive account ->
+
+          let account, amount = EzString.cut_at account ':' in
+          let account = if account = "all" then None else Some account in
+          let amount = if amount = "" then 1000 else int_of_string amount in
+          let amount = amount * 1_000_000_000 in
           let to_give = ref [] in
           let to_deploy = ref [] in
-          let check_key key =
+          let check_key ?(force=false) key =
               Printf.eprintf "For key %s\n%!" key.key_name;
               match key.key_account with
-              | None -> ()
+              | None ->
+                  if force then
+                    Error.raise "Key %S has no address\n%!" key.key_name
               | Some { acc_address ; acc_contract ; _ } ->
                   let give, deploy =
                     match
@@ -72,7 +88,7 @@ let action ~todo =
                           match acc.acc_balance with
                           | None -> true
                           | Some z ->
-                              z < z1000
+                              z < Z.of_int amount
                         in
                         let deploy =
                           match acc.acc_type with
@@ -89,22 +105,23 @@ let action ~todo =
           in
           let config = Config.config () in
           let net = Config.current_network config in
-          if account = "all" then
-            for_all_users config check_key
-          else begin
-            let key = Misc.find_key_exn net account in
-            check_key key
+          begin match account with
+            | None ->
+                for_all_users config check_key
+            | Some account ->
+                let key = Misc.find_key_exn net account in
+                check_key ~force:true key
           end;
+          let amount = string_of_int amount in
           List.iter (fun (address, key) ->
               let meth = "sendGrams" in
               let params =
                 Printf.sprintf
-                  {|{ "dest": "%s", "amount": "%Ld" }|} address
-                  1_001_000_000_000L
+                  {|{ "dest": "%s", "amount": "%s" }|} address amount
               in
 
               if Globals.use_ton_sdk then
-                let node = Config.current_node net in
+                let node = Config.current_node config in
                 let abi_file = Misc.get_contract_abifile "Giver" in
                 let abi = EzFile.read_file abi_file in
                 let giver = Misc.find_key_exn net "giver" in

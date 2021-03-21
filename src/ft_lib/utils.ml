@@ -31,8 +31,7 @@ let tonoscli config args =
   let config_file = tonoscli_config config in
   let binary = Misc.binary_file "tonos-cli" in
   if not ( Sys.file_exists config_file ) then begin
-    let net = Config.current_network config in
-    let node = Config.current_node net in
+    let node = Config.current_node config in
     Misc.call (tonoscli binary config ["config" ; "--url"; node.node_url ]);
 
     let src_file = "tonlabs-cli.conf.json" in
@@ -51,8 +50,7 @@ let call_contract
   Misc.with_contract contract
     (fun ~contract_tvc:_ ~contract_abi ->
        if Globals.use_ton_sdk then
-         let net = Config.current_network config in
-         let node = Config.current_node net in
+         let node = Config.current_node config in
          let keypair = match src with
            | None -> None
            | Some key -> Some (Misc.get_key_pair_exn key)
@@ -112,8 +110,7 @@ let deploy_contract config ~key ~contract ~params ~wc =
            let acc_address =
              if Globals.use_ton_sdk then
                let contract_abi = EzFile.read_file contract_abi in
-               let net = Config.current_network config in
-               let node = Config.current_node net in
+               let node = Config.current_node config in
                Printf.eprintf "node url: %s\n%!" node.node_url;
                let addr = Ton_sdk.ACTION.deploy
                    ~server_url: node.node_url
@@ -154,8 +151,7 @@ let deploy_contract config ~key ~contract ~params ~wc =
 
 
 let post config input output =
-  let net = Config.current_network config in
-  let node = Config.current_node net in
+  let node = Config.current_node config in
   let url = node.node_url in
   let open Ton_sdk in
   REQUEST.post url input output

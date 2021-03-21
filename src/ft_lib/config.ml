@@ -349,7 +349,8 @@ let current_network config =
   | Some network ->
       Misc.find_network_exn config network
 
-let current_node net =
+let current_node config =
+  let net = current_network config in
   match !set_current_node with
   | None -> assert false
   | Some node ->

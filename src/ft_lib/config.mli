@@ -20,5 +20,5 @@ val set_temporary_switch : string -> unit
 val set_switch : Types.config -> string -> unit
 
 val current_network : Types.config -> Types.network
-val current_node : Types.network -> Types.node
+val current_node : Types.config -> Types.node
 val loaded : unit -> bool

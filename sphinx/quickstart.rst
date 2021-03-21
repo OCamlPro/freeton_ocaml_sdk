@@ -26,10 +26,10 @@ Let's suppose that we have a simple Free TON Solidity smart contract::
   contract HelloWorld {
   
     string variable ;
-    constructor(string arg) public { variable = arg ; }
+    constructor(string arg) public { tvm.accept() ; variable = arg ; }
     
     function get_var() public view returns (string s)
-    { s = variable ; }
+    { tvm.accept(); s = variable ; }
   }
 
 First, let's try to compile it::
@@ -77,9 +77,9 @@ Now, let's start the node::
   
   ─➤ ft node --start
   
-  Config loaded from /home/lefessan/.ft/config.json
+  Config loaded from /home/user/.ft/config.json
   Network: sandbox1
-  Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+  Loading wallet file /home/user/.ft/sandbox1/wallet.json
   Calling docker start local-node-7081
   local-node-7081
 
@@ -87,9 +87,9 @@ It is possible to check that the node is running using::
 
   ─➤ ft node --web
   
-  Config loaded from /home/lefessan/.ft/config.json
+  Config loaded from /home/user/.ft/config.json
   Network: sandbox1
-  Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+  Loading wallet file /home/user/.ft/sandbox1/wallet.json
   Calling xdg-open http://0.0.0.0:7081/graphql
 
 That command will open the browser on the GraphQL Playground page of
@@ -100,9 +100,9 @@ coins to be able to deploy the smart contract::
 
   ─➤ ft account
   
-  Config loaded from /home/lefessan/.ft/config.json
+  Config loaded from /home/user/.ft/config.json
   Network: sandbox1
-  Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+  Loading wallet file /home/user/.ft/sandbox1/wallet.json
   Account "giver": 4_999_999_999.975_350 TONs
   Account "user9": not yet created
   Account "user8": not yet created
@@ -119,9 +119,9 @@ So, let's ask the giver for some coins::
 
   ╰─➤ ft node --give user1
   
-  Config loaded from /home/lefessan/.ft/config.json
+  Config loaded from /home/user/.ft/config.json
   Network: sandbox1
-  Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+  Loading wallet file /home/user/.ft/sandbox1/wallet.json
   For key user1
   Generating external inbound message...
   
@@ -131,16 +131,16 @@ So, let's ask the giver for some coins::
   call returned {}
   node url: http://0.0.0.0:7081
   Contract deployed at 0:f89872394a383dc289f27ded48f02a6269e19d02be5821ba8081c67a1070588a
-  Saving wallet file /home/lefessan/.ft/sandbox1/wallet.json
-  Saving config file /home/lefessan/.ft/config.json
+  Saving wallet file /home/user/.ft/sandbox1/wallet.json
+  Saving config file /home/user/.ft/config.json
 
 We can now check the account of :code:`user1`::
 
   ╰─➤ ft account user1
   
-  Config loaded from /home/lefessan/.ft/config.json
+  Config loaded from /home/user/.ft/config.json
   Network: sandbox1
-  Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+  Loading wallet file /home/user/.ft/sandbox1/wallet.json
   Account "user1": 1_000.944_105_999 TONs
 
 (note that we could have used :code:`ft account user1 -v` to get a
@@ -152,9 +152,9 @@ an account :code:`basic` and call the constructor with the argument
 
   ─➤ ft contract --deploy Basic --create basic --params '{ "arg": "%{hex:string:Hello World}" }'
   
-  Config loaded from /home/lefessan/.ft/config.json
+  Config loaded from /home/user/.ft/config.json
   Network: sandbox1
-  Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+  Loading wallet file /home/user/.ft/sandbox1/wallet.json
 
          <--------- key generation for basic ---------->
   
@@ -190,8 +190,8 @@ an account :code:`basic` and call the constructor with the argument
   
   node url: http://0.0.0.0:7081
   Contract deployed at 0:8a33da5fb4e623f796a33efeae19374cf8646ad050ebf3aac0c5d6766d76f969
-  Saving wallet file /home/lefessan/.ft/sandbox1/wallet.json
-  Saving config file /home/lefessan/.ft/config.json
+  Saving wallet file /home/user/.ft/sandbox1/wallet.json
+  Saving config file /home/user/.ft/config.json
 
 Here, several things happened:
 
@@ -205,11 +205,8 @@ We can now call the :code:`get_var` method::
 
   ╰─➤ ft call basic get_var '{}'
   
-  Config loaded from /home/lefessan/.ft/config.json
-  Keys present. Need saving
+  Config loaded from /home/user/.ft/config.json
   Network: sandbox1
-  Saving wallet file /home/lefessan/.ft/sandbox1/wallet.json
-  Saving config file /home/lefessan/.ft/config.json
   Generating external inbound message...
   
   MessageId: 276b0b4c0b479932f78fa34d4b2e66e5b2f2d91530240190b0409fec940afc31
@@ -224,11 +221,8 @@ method locally::
 
   ─➤ ft call basic get_var --run
   
-  Config loaded from /home/lefessan/.ft/config.json
-  Keys present. Need saving
+  Config loaded from /home/user/.ft/config.json
   Network: sandbox1
-  Saving wallet file /home/lefessan/.ft/sandbox1/wallet.json
-  Saving config file /home/lefessan/.ft/config.json
   Generating external inbound message...
   
   MessageId: a69e5049d7c4d44e3773bc245f988e7f929c57aa2a27a6542bcacd156fa7c36e
