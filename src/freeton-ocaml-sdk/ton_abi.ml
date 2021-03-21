@@ -10,14 +10,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module TYPES = Ton_types
+external encode_body_ml :
+  string array ->
+  string Ton_types.reply = "encode_body_ml"
 
-module CRYPTO = Ton_crypto
-module RPC = Ton_rpc
 
-
-module REQUEST = Ton_request
-module ENCODING = Ton_encoding
-
-module ACTION = Ton_action
-module ABI = Ton_abi
+let encode_body ~abi ~meth ~params =
+  Ton_types.reply
+    (
+      encode_body_ml [| abi ; meth ; params |]
+    )

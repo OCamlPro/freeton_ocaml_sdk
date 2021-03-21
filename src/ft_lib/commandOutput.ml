@@ -16,15 +16,6 @@ open Ez_subst.V1
 
 (* open Types *)
 
-(* Use %{account}, %{account:addr}, %{account:keyfile}, %{acccount:pubkey}
-   %{contract:tvc}, %{contract:abi}
-
-   Also:
-  * %{nanoton<S}
-  * %{hex<S}
-  * %{base64}
- *)
-
 let rec date_now now rem =
   match rem with
   | [] -> now
@@ -87,12 +78,32 @@ let subst_string config =
           let key = Misc.find_key_exn net account in
           let contract = Misc.get_key_contract_exn key in
           Misc.get_contract_abifile contract
+      | "account" :: "payload" :: account :: meth :: rem ->
+          let key = Misc.find_key_exn net account in
+          let contract = Misc.get_key_contract_exn key in
+          let params = match rem with
+            | [] -> "{}"
+            | _ -> String.concat ":" rem in
+          let abi_file = Misc.get_contract_abifile contract in
+          let abi = EzFile.read_file abi_file in
+          Base64.encode_string (
+            Ton_sdk.ABI.encode_body ~abi ~meth ~params
+          )
 
       (* Contracts substitutions *)
       | [ "contract" ; "tvc" ; contract ] ->
           Misc.get_contract_tvcfile contract
       | [ "contract" ; "abi" ; contract ] ->
           Misc.get_contract_abifile contract
+      | "contract" :: "payload" :: contract :: meth :: rem ->
+          let params = match rem with
+            | [] -> "{}"
+            | _ -> String.concat ":" rem in
+          let abi_file = Misc.get_contract_abifile contract in
+          let abi = EzFile.read_file abi_file in
+          Base64.encode_string (
+            Ton_sdk.ABI.encode_body ~abi ~meth ~params
+          )
 
       (* Node substitutions *)
       | [ "node" ; "url" ] ->
@@ -194,10 +205,12 @@ On wallet accounts:
 * account:contract:ACCOUNT    Name of recorded contract of account in wallet
 * account:contract:tvc:ACCOUNT    Contract tvc file for account
 * account:contract:abi:ACCOUNT    Contract abi file for account
+* account:payload:ACCOUNT:METH:PARAMS Output payload base64
 
 On contracts:
 * contract:tvc:CONTRACT
 * contract:abi:CONTRACT
+* contract:payload:CONTRACT:METH:PARAMS Output payload base64
 
 Misc:
 * node:url         Current node URL
