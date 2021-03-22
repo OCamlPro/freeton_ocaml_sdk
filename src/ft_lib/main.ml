@@ -30,6 +30,7 @@ let main () =
       CommandConfig.cmd;
       CommandCall.cmd;
       CommandUtils.cmd;
+      CommandWatch.cmd;
     ]
   in
   let common_args =

@@ -11,7 +11,7 @@
 /**************************************************************************/
 
 use crate::ocp;
-use crate::client::{TonClient, create_client};
+use crate::client::{TonClient, create_client, create_client_local};
 use crate::deploy::{load_abi};
 
 use ton_client::crypto::KeyPair;
@@ -29,6 +29,7 @@ use ton_client::abi::{
 //    decode_message,
 //    ParamsOfDecodeMessage,
     ParamsOfEncodeMessage,
+    ParamsOfEncodeMessageBody,
     Abi,
     CallSet,
     FunctionHeader,
@@ -513,3 +514,24 @@ pub async fn run_get_method(conf: Config, addr: &str, method: &str, params: Opti
 }
 
 */
+
+pub async fn encode_body_rs(abi: &str, func: &str, params: &str) -> Result<String, ocp::Error> {
+    let abi = load_abi(&abi)?;
+    let params = serde_json::from_str(&params)
+        .map_err(|e|
+                 ocp::failwith(
+                     format!("arguments are not in json format: {}", e)))?;
+    let client = create_client_local()?;
+    ton_client::abi::encode_message_body(
+        client.clone(),
+        ParamsOfEncodeMessageBody {
+            abi: abi,
+            call_set: CallSet::some_with_function_and_input(func, params).unwrap(),
+            is_internal: true,
+            signer: Signer::None,
+            processing_try_index: None,
+        },
+    ).await
+    .map_err(|e| ocp::failwith(format!("failed to encode body: {}", e)))
+    .map(|r| r.body)
+}

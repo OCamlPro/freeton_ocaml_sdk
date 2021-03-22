@@ -20,3 +20,4 @@ module REQUEST = Ton_request
 module ENCODING = Ton_encoding
 
 module ACTION = Ton_action
+module ABI = Ton_abi

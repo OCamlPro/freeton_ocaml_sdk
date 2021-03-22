@@ -309,3 +309,11 @@ let delete_account config net name =
     config.modified <- true
   else
     Error.raise "No account %S to delete. Aborting.\n%!" name
+
+let current_network_node net =
+  let node = net.current_node in
+  match find_node net node with
+  | None ->
+      Error.raise "Unknown node %S in network %S"
+        net.current_node net.net_name
+  | Some node -> node

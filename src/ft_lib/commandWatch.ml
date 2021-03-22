@@ -10,15 +10,33 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val save : Types.config -> unit
-val config : unit -> Types.config
-val sandbox_keys : Types.key list
+open Ezcmd.V2
+open EZCMD.TYPES
+(* open Ez_subst.V1 *)
 
-val print : unit -> unit
+type kind = Messages | Transactions
 
-val set_temporary_switch : string -> unit
-val set_switch : Types.config -> string -> unit
+let action ~account ~kind =
+  (* TODO *)
+  ignore( account, kind )
 
-val current_network : Types.config -> Types.network
-val current_node : Types.config -> Types.node
-val loaded : unit -> bool
+let cmd =
+  let account = ref None in
+  let kind = ref Transactions in
+  EZCMD.sub
+    "watch"
+    (fun () ->
+       action
+         ~account:!account
+         ~kind:!kind
+    )
+    ~args:
+      [
+
+        [ "account" ], Arg.String (fun s -> account := Some s),
+        EZCMD.info "ACCOUNT Output account of account";
+
+        [ "messages" ], Arg.Unit (fun () -> kind := Messages),
+        EZCMD.info "Monitor messages instead of transactions";
+      ]
+    ~doc: "Monitor a given account"

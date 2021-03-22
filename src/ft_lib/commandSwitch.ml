@@ -91,14 +91,13 @@ let action ~switch ~create ~url ~remove =
             Error.raise "Cannot remove current switch %S" net_name;
           List.iter (fun net ->
               if net.net_name = net_name then
-                let node = Config.current_node net in
+                let node = Misc.current_network_node net in
                 match node.node_local with
                 | None -> ()
                 | Some local_node ->
                     let container = CommandNode.container_of_node local_node in
                     Misc.call [ "docker" ; "rm" ; container ];
             ) config.networks ;
-
           config.networks <-
             List.filter (fun net -> net.net_name <> net_name ) config.networks;
           Misc.call [ "rm" ; "-rf" ; Globals.ft_dir // net_name ];

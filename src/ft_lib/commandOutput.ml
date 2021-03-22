@@ -16,14 +16,15 @@ open Ez_subst.V1
 
 (* open Types *)
 
-(* Use %{account}, %{account:addr}, %{account:keyfile}, %{acccount:pubkey}
-   %{contract:tvc}, %{contract:abi}
-
-   Also:
-  * %{nanoton<S}
-  * %{hex<S}
-  * %{base64}
- *)
+let rec date_now now rem =
+  match rem with
+  | [] -> now
+  | "plus" :: num :: ( "day" | "days" ) :: rem ->
+      let now = now + int_of_string num * 86400 in
+      date_now now rem
+  | _ ->
+      Error.raise "Bad substitution 'now:%s'"
+        (String.concat ":" rem)
 
 let subst_string config =
   let net = Config.current_network config in
@@ -43,7 +44,9 @@ let subst_string config =
           "0:0000000000000000000000000000000000000000000000000000000000000000"
 
       (* Account substitutions *)
-      | [ "account" ; "addr" ; account ] ->
+      | [ "account" ; "addr" ; account ]
+      | [ "account" ; "address" ; account ]
+        ->
           let key = Misc.find_key_exn net account in
           Misc.get_key_address_exn key
       | [ "account" ; "wc" ; account ] ->
@@ -63,6 +66,10 @@ let subst_string config =
           let file = Misc.gen_keyfile key_pair in
           files := file :: !files;
           file
+      | [ "account" ; "contract" ; account ] ->
+          let key = Misc.find_key_exn net account in
+          let contract = Misc.get_key_contract_exn key in
+          contract
       | [ "account" ; "contract" ; "tvc" ; account ] ->
           let key = Misc.find_key_exn net account in
           let contract = Misc.get_key_contract_exn key in
@@ -71,17 +78,36 @@ let subst_string config =
           let key = Misc.find_key_exn net account in
           let contract = Misc.get_key_contract_exn key in
           Misc.get_contract_abifile contract
+      | "account" :: "payload" :: account :: meth :: rem ->
+          let key = Misc.find_key_exn net account in
+          let contract = Misc.get_key_contract_exn key in
+          let params = match rem with
+            | [] -> "{}"
+            | _ -> String.concat ":" rem in
+          let abi_file = Misc.get_contract_abifile contract in
+          let abi = EzFile.read_file abi_file in
+          Base64.encode_string (
+            Ton_sdk.ABI.encode_body ~abi ~meth ~params
+          )
 
       (* Contracts substitutions *)
       | [ "contract" ; "tvc" ; contract ] ->
           Misc.get_contract_tvcfile contract
       | [ "contract" ; "abi" ; contract ] ->
           Misc.get_contract_abifile contract
+      | "contract" :: "payload" :: contract :: meth :: rem ->
+          let params = match rem with
+            | [] -> "{}"
+            | _ -> String.concat ":" rem in
+          let abi_file = Misc.get_contract_abifile contract in
+          let abi = EzFile.read_file abi_file in
+          Base64.encode_string (
+            Ton_sdk.ABI.encode_body ~abi ~meth ~params
+          )
 
       (* Node substitutions *)
       | [ "node" ; "url" ] ->
-          let net = Config.current_network config in
-          let node = Config.current_node net in
+          let node = Config.current_node config in
           node.node_url
 
       | [ "ton" ; n ] ->
@@ -91,12 +117,19 @@ let subst_string config =
 
       | "string" :: rem -> String.concat ":" rem
 
+      | "now" :: rem ->
+          string_of_int (
+            date_now (int_of_float (Unix.gettimeofday ())) rem )
+
+
       (* encoders *)
       | "read" :: rem -> EzFile.read_file ( iter rem )
       | "hex" :: rem ->
           let `Hex s = Hex.of_string ( iter rem ) in s
       | "base64" :: rem ->
           Base64.encode_string ( iter rem )
+
+
 
       (* deprecated *)
       | [ account ; "addr" ]
@@ -153,6 +186,49 @@ let subst_string config =
   in
   (fun s -> EZ_SUBST.string ~sep:'%' ~brace ~ctxt:() s), files
 
+let list_substitutions () =
+  let content =
+{|
+Substitutions are written as %{SUBST}, and can be recursive (substitutions
+are allowed within SUBST itself).
+Here is a list of allowed expressions within SUBST:
+
+* env:VARIABLE    Environemnt variable
+* addr:zero     For 0:0000000000000000000000000000000000000000000000000000000000000000"
+
+On wallet accounts:
+* account:address:ACCOUNT
+* account:wc:ACCOUNT
+* account:pubkey:ACCOUNT      Pubkey of account (without 0x)
+* account:passphrase:ACCOUNT
+* account:keyfile:ACCOUNT     Name of a keyfile generated in $HOME/.ft/tmp/
+* account:contract:ACCOUNT    Name of recorded contract of account in wallet
+* account:contract:tvc:ACCOUNT    Contract tvc file for account
+* account:contract:abi:ACCOUNT    Contract abi file for account
+* account:payload:ACCOUNT:METH:PARAMS Output payload base64
+
+On contracts:
+* contract:tvc:CONTRACT
+* contract:abi:CONTRACT
+* contract:payload:CONTRACT:METH:PARAMS Output payload base64
+
+Misc:
+* node:url         Current node URL
+* ton:NUMBER       Convert NUMBER of tons to nanotons
+* file:FILENAME    Read content of filename
+* string:SUBST     Take remaining SUBST without substituting, just as a string
+* now              Current date
+* now:PLUS         Current date plus some delay ( "plus:NDAYS:days" )
+
+Encoders, working on the rest of the substitution:
+* read:SUBST       Do SUBST, then read it as a filename
+* hex:SUBST        Do SUBST, then convert to hex
+* base64:SUBST     Do SUBST, then convert to base64
+
+|}
+  in
+  Printf.printf "%s\n%!" content
+
 let with_substituted config params f =
   let (subst, files) = subst_string config in
   let clean () = List.iter Sys.remove !files in
@@ -163,14 +239,18 @@ let with_substituted config params f =
   | res -> clean (); res
   | exception exn -> clean () ; raise exn
 
-let action ~stdout ~input ~keyfile ~addr =
+let action ~stdout ~file ~string ~keyfile ~addr =
   let config = Config.config () in
   let subst, _files = subst_string config in
   let content =
-    match input with
-    | Some file ->
+    match file, string with
+    | Some file, None ->
         subst ( EzFile.read_file file )
-    | None ->
+    | None, Some s ->
+        subst s
+    | Some _, Some _ ->
+        Error.raise "Cannot use both --file and --string"
+    | None, None ->
         match keyfile with
         | Some account ->
             let net = Config.current_network config in
@@ -194,7 +274,8 @@ let action ~stdout ~input ~keyfile ~addr =
 
 let cmd =
   let stdout = ref None in
-  let input = ref None in
+  let file = ref None in
+  let string = ref None in
   let keyfile = ref None in
   let addr = ref None in
   EZCMD.sub
@@ -202,7 +283,8 @@ let cmd =
     (fun () ->
        action
          ~stdout:!stdout
-         ~input:!input
+         ~file:!file
+         ~string:!string
          ~keyfile:!keyfile
          ~addr:!addr
     )
@@ -211,8 +293,11 @@ let cmd =
         [ "o" ], Arg.String (fun s -> stdout := Some s),
         EZCMD.info "FILE Save command stdout to file";
 
-        [ "subst" ], Arg.String (fun s -> input := Some s),
+        [ "file" ], Arg.String (fun s -> file := Some s),
         EZCMD.info "FILE Output content of file after substitution";
+
+        [ "string" ], Arg.String (fun s -> string := Some s),
+        EZCMD.info "FILE Output string after substitution";
 
         [ "keyfile" ], Arg.String (fun s -> keyfile := Some s ),
         EZCMD.info "ACCOUNT Output key file of account";
@@ -220,5 +305,8 @@ let cmd =
         [ "addr" ], Arg.String (fun s -> addr := Some s),
         EZCMD.info "ACCOUNT Output address of account";
 
+        [ "list-subst" ], Arg.Unit (fun () ->
+              list_substitutions (); exit 0),
+          EZCMD.info "List all substitutions";
       ]
     ~doc: "Call tonos-cli, use -- to separate arguments"

@@ -10,15 +10,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val save : Types.config -> unit
-val config : unit -> Types.config
-val sandbox_keys : Types.key list
+external encode_body_ml :
+  string array ->
+  string Ton_types.reply = "encode_body_ml"
 
-val print : unit -> unit
 
-val set_temporary_switch : string -> unit
-val set_switch : Types.config -> string -> unit
-
-val current_network : Types.config -> Types.network
-val current_node : Types.config -> Types.node
-val loaded : unit -> bool
+let encode_body ~abi ~meth ~params =
+  Ton_types.reply
+    (
+      encode_body_ml [| abi ; meth ; params |]
+    )
