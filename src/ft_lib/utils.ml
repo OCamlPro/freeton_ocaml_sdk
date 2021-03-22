@@ -46,7 +46,8 @@ let tonoscli config args =
 
 
 let call_contract
-    config ~address ~contract ~meth ~params ?src ?(local=false) ?output () =
+    config ~address ~contract ~meth ~params
+    ?client ?src ?(local=false) ?output () =
   Misc.with_contract contract
     (fun ~contract_tvc:_ ~contract_abi ->
        if Globals.use_ton_sdk then
@@ -57,7 +58,7 @@ let call_contract
          in
          let abi = EzFile.read_file contract_abi in
          let res =
-           Ton_sdk.ACTION.call ~server_url:node.node_url
+           Ton_sdk.ACTION.call ?client ~server_url:node.node_url
              ~address
              ~abi
              ~meth ~params
@@ -100,7 +101,7 @@ let call_contract
                    )
     )
 
-let deploy_contract config ~key ~contract ~params ~wc =
+let deploy_contract config ~key ~contract ~params ~wc ?client () =
   match key.key_pair with
   | None -> Error.raise "Key has no secret key"
   | Some keypair ->
@@ -112,8 +113,12 @@ let deploy_contract config ~key ~contract ~params ~wc =
                let contract_abi = EzFile.read_file contract_abi in
                let node = Config.current_node config in
                Printf.eprintf "node url: %s\n%!" node.node_url;
+               let client = match client with
+                 | None -> Ton_sdk.CLIENT.create node.node_url
+                 | Some client -> client
+               in
                let addr = Ton_sdk.ACTION.deploy
-                   ~server_url: node.node_url
+                   ~client
                    ~tvc_file: contract_tvc
                    ~abi: contract_abi
                    ~params

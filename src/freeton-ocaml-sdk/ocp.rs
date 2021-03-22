@@ -44,12 +44,6 @@ pub struct Reply<A> {
     error: Option<Error>
 }
 
-#[derive(ocaml::IntoValue, ocaml::FromValue)]
-pub struct KeyPair {
-    public: String,
-    secret: Option<String>,
-}
-
 pub fn reply<A>(r : Result<A, Error > ) -> Reply<A> {
     match r {
         Ok(x) =>
@@ -79,29 +73,6 @@ pub fn reply_async<A,
                               format!("{}", e))
                                 )
                           }
-    }
-}
-
-pub fn keypair_of_ocaml(keys: KeyPair) -> ton_client::crypto::KeyPair
-{
-    if let Some(secret) = keys.secret {
-        ton_client::crypto::KeyPair {
-            public : keys.public,
-            secret : secret,
-        }
-    } else {
-        ton_client::crypto::KeyPair {
-            public : keys.public,
-            secret : "".to_string(),
-        }
-    }
-}
-
-pub fn ocaml_of_keypair(keys: ton_client::crypto::KeyPair) -> KeyPair
-{
-    KeyPair {
-        public : keys.public,
-        secret : Some(keys.secret)
     }
 }
 

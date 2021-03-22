@@ -11,6 +11,8 @@
 /**************************************************************************/
 
 use crate::ocp;
+use crate::types;
+use crate::types::{TonClientStruct};
 
 #[ocaml::func]
 pub fn generate_mnemonic_ml() -> ocp::Reply<String> {
@@ -32,25 +34,28 @@ pub fn ton_client_request_ml(
 
 #[ocaml::func]
 pub fn deploy_contract_ml(
+    ton: ocaml::Pointer<TonClientStruct>,
     args: Vec<String>,
-    keys: ocp::KeyPair,
+    keys: types::KeyPair,
     wc: i16) -> ocp::Reply<String> {
     
+    let ton = crate::types::ton_client_of_ocaml(ton);
     ocp::reply_async(
-        crate::deploy::deploy_contract_rs(args[0].clone(), // server_url
-                           &args[1],        // tvc
-                           &args[2],        // abi
-                           &args[3],        // params
-                           ocp::keypair_of_ocaml(keys),
-                           args[4].clone(),  // initial_data
-                           args[5].clone(),  // initial_pubkey
-                           wc as i32)
+        crate::deploy::deploy_contract_rs(
+            ton,
+            &args[0],        // tvc
+            &args[1],        // abi
+            &args[2],        // params
+            types::keypair_of_ocaml(keys),
+            args[3].clone(),  // initial_data
+            args[4].clone(),  // initial_pubkey
+            wc as i32)
     )
 }
 
 #[ocaml::func]
 pub fn generate_keypair_from_mnemonic_ml
-    (mnemonic: String) -> ocp::Reply<ocp::KeyPair> {
+    (mnemonic: String) -> ocp::Reply<types::KeyPair> {
     
     ocp::reply(
         crate::crypto::generate_keypair_from_mnemonic_rs(&mnemonic))
@@ -59,7 +64,7 @@ pub fn generate_keypair_from_mnemonic_ml
 #[ocaml::func]
 pub fn generate_address_ml(
     args: Vec<String>,
-    keys: ocp::KeyPair,
+    keys: types::KeyPair,
     wc: i16,
 ) -> ocp::Reply<String> {
     ocp::reply_async(
@@ -67,7 +72,7 @@ pub fn generate_address_ml(
             &args[0], //   tvc
             &args[1], //   abi
             wc as i32,
-            ocp::keypair_of_ocaml(keys),
+            types::keypair_of_ocaml(keys),
             args[2].clone(), //   initial_data 
             ))
 }
@@ -103,4 +108,36 @@ pub fn encode_body_ml( args: Vec<String> ) -> ocp::Reply<String> {
             &args[1], //   meth
             &args[3], //   params
             ))
+}
+
+#[ocaml::func]
+pub fn call_contract_ml(
+    ton: ocaml::Pointer<TonClientStruct>,
+    args: Vec<String>,
+    keys: Option<types::KeyPair>,
+    local: bool) -> ocp::Reply<String> {
+    let ton = crate::types::ton_client_of_ocaml(ton);
+    let keys = keys.map(|keys| types::keypair_of_ocaml(keys));
+    ocp::reply_async(
+        crate::call::call_contract_rs(
+            ton,
+            &args[0],         // addr
+            &args[1],         // abi
+            &args[2],         // method
+            &args[3],         // params
+            keys,
+            args[4].clone(),  // acc_boc
+            local)
+    )
+}
+
+
+
+#[ocaml::func]
+pub fn create_client_ml( server_url : &str )
+                           -> ocp::Reply< ocaml::Pointer<TonClientStruct> >
+{
+    let client = crate::client::create_client_rs ( server_url )
+        .map(|client| crate::types::ocaml_of_ton_client( gc, client));
+    ocp::reply( client )
 }

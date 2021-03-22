@@ -66,3 +66,9 @@ type keypair = {
   public : string ;
   mutable secret : string option ;
 } [@@deriving json_encoding]
+
+
+(* abstract OCaml type for Rust
+   ocaml::Pointer<crate::types::TonClientStruct>
+ *)
+type client

@@ -122,7 +122,7 @@ let action ~todo ~force ~sign ~params ~wc ~create =
       end;
       CommandOutput.with_substituted config params (fun params ->
           Printf.eprintf "Deploying contract %S to %s\n%!" contract sign;
-          Utils.deploy_contract config ~key ~contract ~params ~wc)
+          Utils.deploy_contract config ~key ~contract ~params ~wc ())
 
 
 let tab = '\t'

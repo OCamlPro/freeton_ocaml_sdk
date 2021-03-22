@@ -11,7 +11,8 @@
 /**************************************************************************/
 
 use crate::ocp;
-use crate::client::{TonClient, create_client, create_client_local};
+use crate::types::{TonClient};
+use crate::client::{create_client_local};
 use crate::deploy::{load_abi};
 
 use ton_client::crypto::KeyPair;
@@ -328,14 +329,14 @@ async fn send_message_and_wait(
 pub async fn call_contract_with_result(
     ton: TonClient,
     addr: &str,
-    abi: String,
+    abi: &str,
     method: &str,
     params: &str,
     keys: Option<KeyPair>,
     acc_boc: String,
     local: bool,
 ) -> Result<serde_json::Value, ocp::Error> {
-    let abi = load_abi(&abi)?;
+    let abi = load_abi(abi)?;
 
     let msg = prepare_message(
         ton.clone(),
@@ -354,17 +355,15 @@ pub async fn call_contract_with_result(
 }
 
 pub async fn call_contract_rs(
-    server_url: String,
+    ton: TonClient,
     addr: &str,
-    abi: String,
+    abi: &str,
     method: &str,
     params: &str,
     keys: Option<KeyPair>,
     acc_boc: String,
     local: bool
 ) -> Result<String, ocp::Error> {
-    let ton = create_client(server_url)?;
-
     let result = call_contract_with_result(ton, addr, abi,
                                            method, params, keys,
                                            acc_boc, local).await?;
@@ -374,26 +373,6 @@ pub async fn call_contract_rs(
     } else {
         Ok("".to_string())
     }
-}
-
-
-#[ocaml::func]
-pub fn call_contract_ml(
-    args: Vec<String>,
-    keys: Option<ocp::KeyPair>,
-    local: bool) -> ocp::Reply<String> {
-
-    let keys = keys.map(|keys| ocp::keypair_of_ocaml(keys));
-    ocp::reply_async(
-        call_contract_rs(args[0].clone(), // server_url
-                         &args[1],         // addr
-                         args[2].clone(),         // abi
-                         &args[3],         // method
-                         &args[4],         // params
-                         keys,
-                         args[5].clone(),  // acc_boc
-                         local)
-    )
 }
 
 
