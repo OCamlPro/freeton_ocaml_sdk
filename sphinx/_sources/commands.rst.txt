@@ -53,6 +53,9 @@ Overview of sub-commands::
   
   utils
     Some useful tools
+  
+  watch
+    Monitor a given account
 
 
 drom account
@@ -85,10 +88,8 @@ This command can perform the following actions:
 
 Examples:
 ::
-  
   ft account --list
 ::
-  
   ft account my-account --info
 
 
@@ -99,10 +100,8 @@ Accounts must have an address on the blockchain.
 
 Examples:
 ::
-  
   ft account my-account
 ::
-  
   ft account
 
 
@@ -111,16 +110,12 @@ Examples:
 
 Examples:
 ::
-  
   ft account --create account1 account2 account3
 ::
-  
   ft account --create new-account --passphrase "some known passphrase"
 ::
-  
   ft account --create new-account --contract SafeMultisigWallet
 ::
-  
   ft account --create new-address --address 0:1234...
 
 Only the last one will compute an address on the blockchain, since the contract must be known.
@@ -131,7 +126,6 @@ Only the last one will compute an address on the blockchain, since the contract 
 
 Examples:
 ::
-  
   ft account old-account --contract SafeMultisigWallet
 
 
@@ -140,7 +134,6 @@ Examples:
 
 Examples:
 ::
-  
   ft account --delete account1 account2
 
 **USAGE**
@@ -193,6 +186,8 @@ Where options are:
 
 
 * :code:`ARGUMENTS`   ACCOUNT METH [PARAMS] arguments
+
+* :code:`-o STRING` or :code:`--output STRING`   FILE Save result to FILE (use - for stdout)
 
 * :code:`--run`   Run locally
 
@@ -260,6 +255,10 @@ Where options are:
 * :code:`--force`   Override existing contracts
 
 * :code:`--list`   List known contracts
+
+* :code:`--new STRING`   NAME Create template file for contract NAME
+
+* :code:`--newi STRING`   NAME Create template file for interface NAME
 
 * :code:`--params STRING`   PARAMS Constructor/call Arguments ({} by default)
 
@@ -345,7 +344,6 @@ This command is used to manage a multisig wallet, i.e. create the wallet, send t
 
 Create an account and get its address:
 ::
-  
   # ft account --create my-account
   # ft genaddr my-account
 
@@ -355,32 +353,26 @@ The second command will give you an address in 0:XXX format. Send some tokens on
 
 Check its balance with:
 ::
-  
   # ft account my-account
 
 Then, to create a single-owner multisig:
 ::
-  
   # ft multisig -a my-account --create
 
 To create a multi-owners multisig:
 ::
-  
   # ft multisig -a my-account --create owner2 owner3 owner4
 
 To create a multi-owners multisig with 2 signs required:
 ::
-  
   # ft multisig -a my-account --create owner2 owner3 --req 2
 
 To create a multi-owners multisig not self-owning:
 ::
-  
   # ft multisig -a my-account --create owner1 owner2 owner3 --not-owner
 
 Verify that it worked:
 ::
-  
   # ft account my-account -v
 
 
@@ -389,7 +381,6 @@ Verify that it worked:
 
 To get the list of signers:
 ::
-  
   # ft multisig -a my-account --custodians"
 
 
@@ -398,17 +389,14 @@ To get the list of signers:
 
 Should be like that:
 ::
-  
   # ft multisig -a my-account --transfer 100.000 --to other-account
 
 If the target is not an active account:
 ::
-  
   # ft multisig -a my-account --transfer 100.000 --to other-account --parrain
 
 To send all the balance:
 ::
-  
   # ft multisig -a my-account --transfer all --to other-account
 
 
@@ -417,7 +405,6 @@ To send all the balance:
 
 Display transactions waiting for confirmations:
 ::
-  
   # ft multisig -a my-account --waiting
 
 
@@ -426,7 +413,6 @@ Display transactions waiting for confirmations:
 
 Get the transaction ID from above, and use:
 ::
-  
   # ft multisig -a my-account --confirm TX_ID
 
 **USAGE**
@@ -507,11 +493,15 @@ Where options are:
 
 * :code:`--addr STRING`   ACCOUNT Output address of account
 
+* :code:`--file STRING`   FILE Output content of file after substitution
+
 * :code:`--keyfile STRING`   ACCOUNT Output key file of account
+
+* :code:`--list-subst`   List all substitutions
 
 * :code:`-o STRING`   FILE Save command stdout to file
 
-* :code:`--subst STRING`   FILE Output content of file after substitution
+* :code:`--string STRING`   FILE Output string after substitution
 
 
 drom switch
@@ -573,3 +563,22 @@ Where options are:
 * :code:`--of-base64 STRING`   STR Translates from base64
 
 * :code:`--of-boc STRING`   STR Parse boc in base64 format
+
+
+drom watch
+~~~~~~~~~~~~
+
+Monitor a given account
+
+
+**USAGE**
+::
+  
+  drom watch [OPTIONS]
+
+Where options are:
+
+
+* :code:`--account STRING`   ACCOUNT Output account of account
+
+* :code:`--messages`   Monitor messages instead of transactions

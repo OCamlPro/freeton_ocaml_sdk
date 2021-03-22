@@ -1,6 +1,6 @@
 var DOCUMENTATION_OPTIONS = {
     URL_ROOT: document.getElementById("documentation_options").getAttribute('data-url_root'),
-    VERSION: 'z-2021-03-03-multisig-debot (d90b4b6) (2021/03/17 16:48)',
+    VERSION: 'master (2b869d7) (2021/03/22 10:05)',
     LANGUAGE: 'None',
     COLLAPSE_INDEX: false,
     FILE_SUFFIX: '.html',

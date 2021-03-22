@@ -8,9 +8,9 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Quick Start &mdash; freeton-ocaml-sdk z-2021-03-03-multisig-debot
- (d90b4b6
-) (2021/03/17 16:48) documentation</title>
+  <title>Quick Start &mdash; freeton-ocaml-sdk master
+ (2b869d7
+) (2021/03/22 10:05) documentation</title>
   
 
   
@@ -64,8 +64,8 @@
             
             
               <div class="version">
-                z-2021-03-03-multisig-debot
- (d90b4b6
+                master
+ (2b869d7
 )
               </div>
             
@@ -191,10 +191,10 @@ of Rust installed:</p>
 <span class="n">contract</span> <span class="nc">HelloWorld</span> <span class="o">{</span>
 
   <span class="kt">string</span> <span class="n">variable</span> <span class="o">;</span>
-  <span class="n">constructor</span><span class="o">(</span><span class="kt">string</span> <span class="n">arg</span><span class="o">)</span> <span class="n">public</span> <span class="o">{</span> <span class="n">variable</span> <span class="o">=</span> <span class="n">arg</span> <span class="o">;</span> <span class="o">}</span>
+  <span class="n">constructor</span><span class="o">(</span><span class="kt">string</span> <span class="n">arg</span><span class="o">)</span> <span class="n">public</span> <span class="o">{</span> <span class="n">tvm</span><span class="o">.</span><span class="n">accept</span><span class="bp">()</span> <span class="o">;</span> <span class="n">variable</span> <span class="o">=</span> <span class="n">arg</span> <span class="o">;</span> <span class="o">}</span>
 
   <span class="k">function</span> <span class="n">get_var</span><span class="bp">()</span> <span class="n">public</span> <span class="n">view</span> <span class="n">returns</span> <span class="o">(</span><span class="kt">string</span> <span class="n">s</span><span class="o">)</span>
-  <span class="o">{</span> <span class="n">s</span> <span class="o">=</span> <span class="n">variable</span> <span class="o">;</span> <span class="o">}</span>
+  <span class="o">{</span> <span class="n">tvm</span><span class="o">.</span><span class="n">accept</span><span class="bp">()</span><span class="o">;</span> <span class="n">s</span> <span class="o">=</span> <span class="n">variable</span> <span class="o">;</span> <span class="o">}</span>
 <span class="o">}</span>
 </pre></div>
 </div>
@@ -240,9 +240,9 @@ constraint is for the name to start with <code class="code docutils literal notr
 <p>Now, let’s start the node:</p>
 <div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span>─➤ ft node --start
 
-Config loaded from /home/lefessan/.ft/config.json
+Config loaded from /home/user/.ft/config.json
 Network: sandbox1
-Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+Loading wallet file /home/user/.ft/sandbox1/wallet.json
 Calling docker start local-node-7081
 local-node-7081
 </pre></div>
@@ -250,9 +250,9 @@ local-node-7081
 <p>It is possible to check that the node is running using:</p>
 <div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span>─➤ ft node --web
 
-Config loaded from /home/lefessan/.ft/config.json
+Config loaded from /home/user/.ft/config.json
 Network: sandbox1
-Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+Loading wallet file /home/user/.ft/sandbox1/wallet.json
 Calling xdg-open http://0.0.0.0:7081/graphql
 </pre></div>
 </div>
@@ -262,9 +262,9 @@ the server.</p>
 coins to be able to deploy the smart contract:</p>
 <div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span>─➤ ft account
 
-Config loaded from /home/lefessan/.ft/config.json
+Config loaded from /home/user/.ft/config.json
 Network: sandbox1
-Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+Loading wallet file /home/user/.ft/sandbox1/wallet.json
 Account &quot;giver&quot;: 4_999_999_999.975_350 TONs
 Account &quot;user9&quot;: not yet created
 Account &quot;user8&quot;: not yet created
@@ -281,9 +281,9 @@ Account &quot;user0&quot;: not yet created
 <p>So, let’s ask the giver for some coins:</p>
 <div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span>╰─➤ ft node --give user1
 
-Config loaded from /home/lefessan/.ft/config.json
+Config loaded from /home/user/.ft/config.json
 Network: sandbox1
-Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+Loading wallet file /home/user/.ft/sandbox1/wallet.json
 For key user1
 Generating external inbound message...
 
@@ -293,16 +293,16 @@ Succeeded.
 call returned {}
 node url: http://0.0.0.0:7081
 Contract deployed at 0:f89872394a383dc289f27ded48f02a6269e19d02be5821ba8081c67a1070588a
-Saving wallet file /home/lefessan/.ft/sandbox1/wallet.json
-Saving config file /home/lefessan/.ft/config.json
+Saving wallet file /home/user/.ft/sandbox1/wallet.json
+Saving config file /home/user/.ft/config.json
 </pre></div>
 </div>
 <p>We can now check the account of <code class="code docutils literal notranslate"><span class="pre">user1</span></code>:</p>
 <div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span>╰─➤ ft account user1
 
-Config loaded from /home/lefessan/.ft/config.json
+Config loaded from /home/user/.ft/config.json
 Network: sandbox1
-Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+Loading wallet file /home/user/.ft/sandbox1/wallet.json
 Account &quot;user1&quot;: 1_000.944_105_999 TONs
 </pre></div>
 </div>
@@ -313,9 +313,9 @@ an account <code class="code docutils literal notranslate"><span class="pre">bas
 <code class="code docutils literal notranslate"><span class="pre">&quot;Hello</span> <span class="pre">World&quot;</span></code>:</p>
 <div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span>─➤ ft contract --deploy Basic --create basic --params &#39;{ &quot;arg&quot;: &quot;%{hex:string:Hello World}&quot; }&#39;
 
-Config loaded from /home/lefessan/.ft/config.json
+Config loaded from /home/user/.ft/config.json
 Network: sandbox1
-Loading wallet file /home/lefessan/.ft/sandbox1/wallet.json
+Loading wallet file /home/user/.ft/sandbox1/wallet.json
 
        &lt;--------- key generation for basic ----------&gt;
 
@@ -351,8 +351,8 @@ call returned {
 
 node url: http://0.0.0.0:7081
 Contract deployed at 0:8a33da5fb4e623f796a33efeae19374cf8646ad050ebf3aac0c5d6766d76f969
-Saving wallet file /home/lefessan/.ft/sandbox1/wallet.json
-Saving config file /home/lefessan/.ft/config.json
+Saving wallet file /home/user/.ft/sandbox1/wallet.json
+Saving config file /home/user/.ft/config.json
 </pre></div>
 </div>
 <p>Here, several things happened:</p>
@@ -364,11 +364,8 @@ Saving config file /home/lefessan/.ft/config.json
 <p>We can now call the <code class="code docutils literal notranslate"><span class="pre">get_var</span></code> method:</p>
 <div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span>╰─➤ ft call basic get_var &#39;{}&#39;
 
-Config loaded from /home/lefessan/.ft/config.json
-Keys present. Need saving
+Config loaded from /home/user/.ft/config.json
 Network: sandbox1
-Saving wallet file /home/lefessan/.ft/sandbox1/wallet.json
-Saving config file /home/lefessan/.ft/config.json
 Generating external inbound message...
 
 MessageId: 276b0b4c0b479932f78fa34d4b2e66e5b2f2d91530240190b0409fec940afc31
@@ -383,11 +380,8 @@ call returned {
 method locally:</p>
 <div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span>─➤ ft call basic get_var --run
 
-Config loaded from /home/lefessan/.ft/config.json
-Keys present. Need saving
+Config loaded from /home/user/.ft/config.json
 Network: sandbox1
-Saving wallet file /home/lefessan/.ft/sandbox1/wallet.json
-Saving config file /home/lefessan/.ft/config.json
 Generating external inbound message...
 
 MessageId: a69e5049d7c4d44e3773bc245f988e7f929c57aa2a27a6542bcacd156fa7c36e
