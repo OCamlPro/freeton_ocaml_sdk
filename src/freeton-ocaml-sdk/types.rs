@@ -72,3 +72,52 @@ pub fn ocaml_of_keypair(keys: ton_client::crypto::KeyPair) -> KeyPair
         secret : Some(keys.secret)
     }
 }
+
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
+pub struct ShardDescr {
+    pub workchain_id: i32,
+    pub shard: u64,
+}
+
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
+pub struct MsgDescr {
+    pub msg_id: Option<String>,  // MessageId
+    pub transaction_id: Option<String>, // TransactionId
+}
+
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
+pub struct Block {
+    pub id: String,
+    pub gen_utime: u64,
+    pub after_split: bool,
+    pub shard_descr: ShardDescr,
+    pub in_msg_descr: Vec<MsgDescr>,
+}
+
+pub fn ocaml_of_shard_descr( s : ton_sdk::ShardDescr ) -> ShardDescr
+{
+    ShardDescr {
+        workchain_id : s.workchain_id,
+        shard : s.shard
+    }
+}
+
+pub fn ocaml_of_msg_descr( m : &ton_sdk::MsgDescr ) -> MsgDescr
+{
+    MsgDescr {
+        msg_id: m.msg_id.as_ref().map(|id| id.to_string() ),
+        transaction_id: m.transaction_id.as_ref().map(|id| id.to_string() )
+    }
+}
+
+pub fn ocaml_of_block( b : ton_sdk::Block ) -> Block
+{
+    Block {
+        id: b.id.to_string(),
+        gen_utime: b.gen_utime as u64,
+        after_split: b.after_split,
+        shard_descr: ocaml_of_shard_descr( b.shard_descr ),
+        in_msg_descr: b.in_msg_descr.
+            iter().map(|m| ocaml_of_msg_descr(m)).collect()
+    }
+}

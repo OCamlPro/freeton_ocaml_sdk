@@ -30,17 +30,22 @@ let debug_graphql = match Sys.getenv "FT_DEBUG_GRAPHQL" with
   | exception _ -> false
   | _ -> true
 
-let post url input output =
+type 'a t = {
+  input : query ;
+  output : 'a Json_encoding.encoding ;
+}
+
+let post url ( req : 'a t ) =
   let url = EzAPI.TYPES.BASE url in
   let open Lwt.Infix in
   let request () =
     if debug_graphql then begin
       Printf.eprintf "Graphql query (input): %s\n%!"
-        (Graphql.string_of_query input);
+        (Graphql.string_of_query req.input);
     end;
     EzCohttp_lwt.post0
-      url (service output)
-      ~input >|= function
+      url (service req.output)
+      ~input:req.input >|= function
     | Error e ->
         failwith
           (EzRequest_lwt.string_of_error
@@ -48,7 +53,7 @@ let post url input output =
     | Ok v ->
         if debug_graphql then
           Printf.eprintf "Server replied: %s\n%!"
-            (EzEncoding.construct ~compact:false output v);
+            (EzEncoding.construct ~compact:false req.output v);
         v
   in
   Lwt_main.run (request ())
@@ -99,15 +104,28 @@ let account_info3 =
   scalar "workchain_id" ;
 ]
 
+let account_info ~level =
+  match level with
+  | 0 | 1 -> account_info1
+  | 2 -> account_info2
+  | _ -> account_info3
+
 let accounts ?(level=1) ?limit ?order ?filter args =
-  let args = alist ?limit ?order ?filter args in
-  fields ~args "accounts" (match level with
-      | 0 | 1 -> account_info1
-      | 2 -> account_info2
-      | _ -> account_info3 )
+  let input =
+    let args = alist ?limit ?order ?filter args in
+    fields ~args "accounts" (account_info ~level)
+  in
+  let output = Ton_encoding.accounts_enc in
+  { input ; output }
 
 let account ?level id =
   accounts ?level ~filter:(aeq "id" (astring id)) []
+
+
+
+
+
+
 
 let ext_blk_ref = [
   scalar ~args:["format", araw "DEC"] "end_lt";
@@ -121,9 +139,10 @@ let block_value_flow = [
   scalar ~args:["format", araw "DEC"] "minted";
 ]
 
-let block_info = [
+let block_info1 = [
   scalar "id";
   scalar "status";
+  scalar "status_name";
   scalar "workchain_id";
   scalar "shard";
   scalar "seq_no";
@@ -133,52 +152,238 @@ let block_info = [
   scalar "tr_count";
   scalar "key_block";
   fields "value_flow" block_value_flow;
+  fields "in_msg_descr" [
+    scalar "msg_id" ;
+    scalar "msg_type_name" ;
+    scalar "transaction_id" ];
+  fields "out_msg_descr"
+    [ scalar "msg_id" ;
+      scalar "msg_type_name" ;
+      scalar "transaction_id" ];
 ]
 
-let blocks ?limit ?order ?filter args =
+let block_info2 =
+  block_info1 @ [
+
+  ]
+
+
+let block_info ~level =
+  match level with
+  | 0 | 1 -> block_info1
+  | _ -> block_info2
+
+let blocks ?(level=1) ?limit ?order ?filter args =
   let args = alist ?limit ?order ?filter args in
-  fields ~args "blocks" block_info
+  let input = fields ~args "blocks" (block_info ~level) in
+  let output = Ton_encoding.blocks_enc in
+  { input ; output }
 
-let block (id : [< `int of int | `string of string ]) =
+let block ?level (id : [< `int of int | `string of string ]) =
   let filter = match id with `string s -> aeq "id" (astring s) | `int i -> aeq "seq_no" (aint i) in
-  blocks ~filter []
+  blocks ?level ~filter []
 
-let head () = blocks ~limit:1 ~order:("seq_no", None) []
+let head ?level () = blocks ?level ~limit:1 ~order:("seq_no", None) []
 
-let message_info = [
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+let message_info1 = [
   scalar "id";
   scalar "msg_type";
+  scalar "msg_type_name";
   scalar "status";
+  scalar "status_name";
   scalar "block_id";
   scalar "src";
   scalar "dst";
   scalar ~args:["format", araw "DEC"] "value"
 ]
 
-let messages ?limit ?order ?filter args =
-  let args = alist ?limit ?order ?filter args in
-  fields ~args "messages" message_info
+let message_info2 =
+  message_info1 @
+  [
+    scalar "boc";
+    scalar "body";
+    scalar "body_hash";
+    scalar "bounce";
+    scalar "bounced";
+    scalar "code";
+    scalar "code_hash";
+    scalar "created_at";
+    scalar "created_at_string";
+    scalar "created_lt";
+    scalar "data";
+    scalar "data_hash";
+    scalar "dst_workchain_id";
+    scalar "fwd_fee";
+    scalar "ihr_disabled";
+    scalar "ihr_fee";
+    scalar "import_fee";
+    scalar "library";
+    scalar "library_hash";
+    scalar "proof";
+    scalar "split_depth";
+    scalar "src_workchain_id";
+    scalar "tick";
+    scalar "tock";
+    fields "src_transaction" [ scalar "id" ];
+    fields "dst_transaction" [ scalar "id" ];
+  ]
 
-let transaction_info = [
+let message_info3 =
+  message_info2 @
+  [
+
+  ]
+
+
+
+let message_info ~level =
+  match level with
+  | 0 | 1 -> message_info1
+  | 2 -> message_info2
+  | _ -> message_info3
+
+let messages ?(level=1) ?id ?limit ?order ?(filter=[]) args =
+  let input =
+    let filter =
+      (match id with
+       | None -> []
+       | Some id -> aeq "id" (astring id)
+      ) @ filter
+    in
+    let args = alist ?limit ?order ~filter args in
+    ignore (level);
+    fields ~args "messages" (message_info ~level)
+  in
+  let output = Ton_encoding.messages_enc in
+  { input ; output }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+let transaction_info1 = [
   scalar "id";
-  scalar "tr_type";
-  scalar "status";
-  scalar "block_id";
+  scalar "aborted";
   scalar "account_addr";
+  scalar "tr_type";
+  scalar "tr_type_name";
+  scalar "status";
+  scalar "status_name";
+  scalar "block_id";
   scalar ~args:["format", araw "DEC"] "total_fees";
   scalar ~args:["format", araw "DEC"] "balance_delta";
-  fields "in_message" message_info;
+  (*  fields "in_message" message_info; *)
+  scalar "in_msg";
+  scalar "out_msgs";
 ]
 
-let transactions ?limit ?order ?filter args =
-  let args = alist ?limit ?order ?filter args in
-  fields ~args "transactions" transaction_info
+let transaction_info2 =
+  transaction_info1 @ [
+    scalar "boc" ;
+    scalar "destroyed";
+    scalar "end_status";
+    scalar "end_status_name";
+    scalar "installed";
+    scalar "lt";
+    scalar "new_hash";
+    scalar "now";
+    scalar "old_hash";
+    scalar "orig_status";
+    scalar "orig_status_name";
+    scalar "outmsg_cnt";
+    scalar "prepare_transaction";
+    scalar "prev_trans_hash";
+    scalar "prev_trans_lt";
+    scalar "proof";
+    scalar "tt";
+  ]
 
-let transaction id =
-  transactions ~filter:(aeq "id" (astring id)) []
+let transaction_info ~level =
+  match level with
+  | 0|1 -> transaction_info1
+  | _ -> transaction_info2
 
-let block_transactions id =
-  transactions ~filter:(aeq "block_id" (astring id)) []
 
-let account_transactions id =
-  transactions ~filter:(aeq "account_addr" (astring id)) []
+let transactions ?(level=1) ?limit ?order ?filter args =
+  let input =
+    let args = alist ?limit ?order ?filter args in
+    fields ~args "transactions" ( transaction_info ~level )
+  in
+  let output = Ton_encoding.transactions_enc in
+  { input ; output }
+
+let transaction ?level id =
+  transactions ?level ~filter:(aeq "id" (astring id)) []
+
+let transactions ?level ?block_id ?account_addr ?limit ?order ?(filter=[]) args =
+  let filter =
+    (match block_id with
+     | None -> []
+     | Some id -> aeq "block_id" (astring id)
+    )
+    @
+    (match account_addr with
+     | None -> []
+     | Some id -> aeq "account_addr" (astring id)
+    )
+    @
+    filter
+  in
+  let filter = match filter with
+      [] -> None
+    | filter -> Some filter
+  in
+  transactions ?level ?filter ?limit ?order args
+
+
+
+
+(*
+
+EXAMPLE:
+
+{ transactions
+  (limit: 10,
+   filter:
+    { account_addr:
+     { eq: "0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94" },
+      block_id:
+      { eq: "c51b78e4be021caaa552ffea848e6958c446f870f0a698e324916f474383ea76" }
+    }) {
+    id tr_type status block_id account_addr
+    total_fees(format: DEC) balance_delta(format: DEC)
+    in_message { id msg_type status block_id src dst value(format: DEC) } }
+}
+
+
+*)

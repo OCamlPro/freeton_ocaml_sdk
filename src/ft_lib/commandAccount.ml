@@ -82,7 +82,6 @@ let get_account_info config address =
   match
     Utils.post config
       ( REQUEST.account ~level address )
-      ENCODING.accounts_enc
   with
   | [] -> None
   |  [ account ] ->

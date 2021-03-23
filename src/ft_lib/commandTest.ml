@@ -102,8 +102,7 @@ List last 10 transactions:
 let test3 () =
   let open Ton_sdk in
   let config = Config.config () in
-  let accounts = Utils.post config
-      (REQUEST.accounts ~level:3 []) ENCODING.accounts_enc in
+  let accounts = Utils.post config (REQUEST.accounts ~level:3 []) in
   List.iter (fun acc ->
       Printf.eprintf "%s -> %s\n%!"
         acc.ENCODING.acc_id

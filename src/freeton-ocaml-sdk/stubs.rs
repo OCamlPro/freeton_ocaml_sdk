@@ -141,3 +141,35 @@ pub fn create_client_ml( server_url : &str )
         .map(|client| crate::types::ocaml_of_ton_client( gc, client));
     ocp::reply( client )
 }
+
+#[ocaml::func]
+pub fn find_last_shard_block_ml(
+    ton: ocaml::Pointer<TonClientStruct>,
+    address: &str )
+    -> ocp::Reply< String>
+{
+    let ton = crate::types::ton_client_of_ocaml(ton);
+    ocp::reply_async(
+        crate::blocks::find_last_shard_block_rs( ton, address) )
+}
+
+#[ocaml::func]
+pub fn wait_next_block_ml(
+    ton: ocaml::Pointer<TonClientStruct>,
+    blockid: &str,
+    address: &str,
+    timeout: Option<u64>
+)
+    -> ocp::Reply<crate::types::Block>
+{
+    let timeout =
+        if let Some(timeout) = timeout {
+            Some(timeout as u32)
+        } else {
+            None
+        };
+    let ton = crate::types::ton_client_of_ocaml(ton);
+    ocp::reply_async(
+        crate::blocks::wait_next_block_rs( ton, blockid, address, timeout ) )
+}
+

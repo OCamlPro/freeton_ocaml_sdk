@@ -10,16 +10,27 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module TYPES = Ton_types
+external find_last_shard_block_ml :
+  Ton_types.client->
+  string ->
+  string Ton_types.reply = "find_last_shard_block_ml"
 
-module CLIENT = Ton_client
+let find_last_shard_block ~client ~address =
+  Ton_types.reply
+    (
+      find_last_shard_block_ml client address
+    )
 
-module CRYPTO = Ton_crypto
-module RPC = Ton_rpc
+external wait_next_block_ml :
+  Ton_types.client->
+  string ->
+  string ->
+  int64 option ->
+  Ton_types.block Ton_types.reply = "wait_next_block_ml"
 
-module BLOCK = Ton_block
-module REQUEST = Ton_request
-module ENCODING = Ton_encoding
-
-module ACTION = Ton_action
-module ABI = Ton_abi
+(* timeout is in ms *)
+let wait_next_block ~client ~blockid ~address ?timeout () =
+  Ton_types.reply
+    (
+      wait_next_block_ml client blockid address timeout
+    )

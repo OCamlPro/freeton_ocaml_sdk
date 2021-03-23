@@ -72,3 +72,52 @@ type keypair = {
    ocaml::Pointer<crate::types::TonClientStruct>
  *)
 type client
+
+type shard_descr = {
+  workchain_id: int32 ;
+  shard: int64 ;
+}
+
+type msg_descr = {
+    msg_id: string option ;
+    transaction_id : string option ;
+}
+
+type block = {
+    id: string ;
+    gen_utime: int64 ;
+    after_split: bool ;
+    shard_descr: shard_descr ;
+    in_msg_descr: msg_descr array ;
+}
+
+let string_of_msg_descr m =
+  Printf.sprintf {|{ msg_id = %s ; transaction_id = %s }|}
+    (match m.msg_id with
+     | None -> "None"
+     | Some s -> Printf.sprintf "Some %S" s)
+    (match m.transaction_id with
+     | None -> "None"
+     | Some s -> Printf.sprintf "Some %S" s)
+
+let string_of_block b =
+  Printf.sprintf {|{
+  id = %S ;
+  gen_utime = %LdL ;
+  after_split = %b ;
+  shard_descr = {
+    workchain_id = %ldl ;
+    shard = %LdL ;
+ } ;
+ in_msg_descr = [|
+    %s
+    |];
+}
+|}
+    b.id
+    b.gen_utime
+    b.after_split
+    b.shard_descr.workchain_id
+    b.shard_descr.shard
+    (String.concat " ;\n      "
+       (Array.map string_of_msg_descr b.in_msg_descr |> Array.to_list))

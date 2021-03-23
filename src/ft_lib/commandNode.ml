@@ -80,7 +80,6 @@ let action ~todo =
                     match
                       Utils.post config
                         (Ton_sdk.REQUEST.account acc_address)
-                        Ton_sdk.ENCODING.accounts_enc
                     with
                       [] -> true, true
                     | [ acc ] ->

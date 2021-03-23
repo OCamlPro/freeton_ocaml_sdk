@@ -23,7 +23,7 @@ val call_contract :
   unit -> unit
 
 val post :
-  Types.config -> Graphql.query -> 'a Json_encoding.encoding -> 'a
+  Types.config -> 'a Ton_request.t -> 'a
 
 val deploy_contract :
   Types.config ->
@@ -34,3 +34,5 @@ val deploy_contract :
 
 
 val tonoscli : Types.config -> string list -> string list
+
+val address_of_account : Types.config -> string -> string

@@ -44,7 +44,7 @@ let call ~client ~address ~abi ~meth ~params ?keypair ~boc
 let call ?client ~server_url ~address ~abi ~meth ~params ?keypair ~local () =
   match
       Ton_request.post server_url
-      (Ton_request.account ~level:2 address) Ton_encoding.accounts_enc
+      (Ton_request.account ~level:2 address)
   with
   | [] -> Printf.kprintf failwith "Account %s does not exist" address
   | _ :: _ :: _ -> assert false

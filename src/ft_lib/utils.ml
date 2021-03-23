@@ -155,8 +155,16 @@ let deploy_contract config ~key ~contract ~params ~wc ?client () =
         )
 
 
-let post config input output =
+let post config req =
   let node = Config.current_node config in
   let url = node.node_url in
   let open Ton_sdk in
-  REQUEST.post url input output
+  REQUEST.post url req
+
+let address_of_account config account =
+  if String.length account > 2 &&  account.[1] = ':' then
+    account
+  else
+    let net = Config.current_network config in
+    let key = Misc.find_key_exn net account in
+    Misc.get_key_address_exn key
