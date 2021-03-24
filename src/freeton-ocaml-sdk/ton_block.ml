@@ -10,31 +10,27 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val deploy :
-  client:Ton_types.client ->
-  tvc_file:string ->
-  abi:string ->
-  params:string ->
-  keypair:Ton_types.keypair ->
-  ?initial_data:string ->
-  ?initial_pubkey:string -> ?wc:int -> unit -> string
+external find_last_shard_block_ml :
+  Ton_types.client->
+  string ->
+  string Ton_types.reply = "find_last_shard_block_ml"
 
-val call :
-  ?client:Ton_types.client ->
-  server_url:string ->
-  address:string ->
-  abi:string ->
-  meth:string ->
-  params:string ->
-  ?keypair:Ton_types.keypair -> local:bool -> unit -> string
+let find_last_shard_block ~client ~address =
+  Ton_types.reply
+    (
+      find_last_shard_block_ml client address
+    )
 
-(* Modify a TVC file *)
-val update_contract_state :
-  tvc_file:string ->
-  pubkey:string -> (* in hex format *)
-  ?data:string -> (* initial_data in JSON format ? *)
-  abi:string -> (* abi in JSON format *)
-  unit ->
-  unit
+external wait_next_block_ml :
+  Ton_types.client->
+  string ->
+  string ->
+  int64 option ->
+  Ton_types.block Ton_types.reply = "wait_next_block_ml"
 
-val parse_message : string -> string
+(* timeout is in ms *)
+let wait_next_block ~client ~blockid ~address ?timeout () =
+  Ton_types.reply
+    (
+      wait_next_block_ml client blockid address timeout
+    )

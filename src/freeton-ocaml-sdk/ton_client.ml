@@ -10,31 +10,11 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val deploy :
-  client:Ton_types.client ->
-  tvc_file:string ->
-  abi:string ->
-  params:string ->
-  keypair:Ton_types.keypair ->
-  ?initial_data:string ->
-  ?initial_pubkey:string -> ?wc:int -> unit -> string
+external create_client_ml :
+  string -> Ton_types.client Ton_types.reply = "create_client_ml"
 
-val call :
-  ?client:Ton_types.client ->
-  server_url:string ->
-  address:string ->
-  abi:string ->
-  meth:string ->
-  params:string ->
-  ?keypair:Ton_types.keypair -> local:bool -> unit -> string
-
-(* Modify a TVC file *)
-val update_contract_state :
-  tvc_file:string ->
-  pubkey:string -> (* in hex format *)
-  ?data:string -> (* initial_data in JSON format ? *)
-  abi:string -> (* abi in JSON format *)
-  unit ->
-  unit
-
-val parse_message : string -> string
+let create server_url =
+  Ton_types.reply
+    (
+      create_client_ml server_url
+    )

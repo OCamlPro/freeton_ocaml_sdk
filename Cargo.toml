@@ -11,8 +11,12 @@ path = "src/freeton-ocaml-sdk/lib.rs"
 [dependencies]
 ocaml = "0.20"
 ton_abi = { git = "https://github.com/tonlabs/ton-labs-abi.git" }
-ton_client = { git = 'https://github.com/tonlabs/TON-SDK.git' }
-ton_sdk = { git = 'https://github.com/tonlabs/TON-SDK.git' }
+
+# ton_client = { git = 'https://github.com/tonlabs/TON-SDK.git' }
+# ton_sdk = { git = 'https://github.com/tonlabs/TON-SDK.git' }
+ton_client = { git = 'https://github.com/lefessan/TON-SDK.git', branch = "pub" }
+ton_sdk = { git = 'https://github.com/lefessan/TON-SDK.git', branch = "pub" }
+
 ton_types = { git = "https://github.com/tonlabs/ton-labs-types.git" }
 ton_block = { git = "https://github.com/tonlabs/ton-labs-block.git" }
 serde_json = "1.0"
@@ -24,6 +28,8 @@ tokio = { version = "0.2.13", features = ["sync", "stream"], default-features = 
 hex = "0.3.2"
 chrono = "0.4"
 ed25519-dalek = "1.0.0-pre.3"
+crc-any = "2.2.3"
+num-bigint = "0.2.2"
 
 # Or use the development version:
 # ocaml = {git = "git://github.com/zshipko/ocaml-rs"}

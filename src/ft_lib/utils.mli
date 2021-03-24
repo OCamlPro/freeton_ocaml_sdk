@@ -16,17 +16,23 @@ val call_contract :
   contract:string ->
   meth:string ->
   params:string ->
+  ?client:Ton_types.client ->
   ?src:Types.key ->
   ?local:bool ->
   ?output:string ->
   unit -> unit
 
 val post :
-  Types.config -> Graphql.query -> 'a Json_encoding.encoding -> 'a
+  Types.config -> 'a Ton_request.t -> 'a
 
 val deploy_contract :
   Types.config ->
   key:Types.key ->
-  contract:string -> params:string -> wc:int option -> unit
+  contract:string -> params:string -> wc:int option ->
+  ?client:Ton_types.client ->
+  unit -> unit
+
 
 val tonoscli : Types.config -> string list -> string list
+
+val address_of_account : Types.config -> string -> string

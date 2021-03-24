@@ -80,7 +80,6 @@ let action ~todo =
                     match
                       Utils.post config
                         (Ton_sdk.REQUEST.account acc_address)
-                        Ton_sdk.ENCODING.accounts_enc
                     with
                       [] -> true, true
                     | [ acc ] ->
@@ -113,6 +112,7 @@ let action ~todo =
                 check_key ~force:true key
           end;
           let amount = string_of_int amount in
+          let client = Ton_sdk.CLIENT.create node.node_url in
           List.iter (fun (address, key) ->
               let meth = "sendGrams" in
               let params =
@@ -133,7 +133,9 @@ let action ~todo =
                 | None -> ()
                 | Some keypair ->
                     let res =
-                      Ton_sdk.ACTION.call ~server_url:node.node_url
+                      Ton_sdk.ACTION.call
+                        ~client
+                        ~server_url:node.node_url
                         ~address:giver ~abi
                         ~meth ~params
                         ~local:false
@@ -153,7 +155,7 @@ let action ~todo =
             ) !to_give;
 
           List.iter (fun (contract, key) ->
-              CommandMultisig.create_multisig key.key_name ?contract
+              CommandMultisig.create_multisig ~client key.key_name ?contract
             ) !to_deploy;
 
           ()

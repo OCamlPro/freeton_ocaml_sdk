@@ -31,6 +31,7 @@ let main () =
       CommandCall.cmd;
       CommandUtils.cmd;
       CommandWatch.cmd;
+      CommandInspect.cmd;
     ]
   in
   let common_args =

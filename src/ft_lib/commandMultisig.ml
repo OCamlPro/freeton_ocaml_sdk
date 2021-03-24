@@ -83,6 +83,7 @@ let get_waiting account =
     ()
 
 let create_multisig
+    ?client
     ?(accounts=[])
     ?(not_owner=false)
     ?(req=1)
@@ -155,7 +156,7 @@ let create_multisig
             acc.acc_workchain
   in
 
-  Utils.deploy_contract config ~key ~contract ~params ~wc
+  Utils.deploy_contract config ~key ~contract ~params ~wc ?client ()
 
 let send_transfer ~src ~dst ~bounce ~amount =
   let config = Config.config () in

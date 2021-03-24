@@ -11,6 +11,7 @@
 /**************************************************************************/
 
 use crate::ocp;
+use crate::types;
 
 use crate::client::{create_client_local, WORD_COUNT, HD_PATH};
 
@@ -46,7 +47,7 @@ pub fn generate_mnemonic_rs() -> Result<String, ocp::Error > {
 
 
 pub fn generate_keypair_from_mnemonic_rs
-    (mnemonic: &str) -> Result<ocp::KeyPair, ocp::Error> {
+    (mnemonic: &str) -> Result<types::KeyPair, ocp::Error> {
     let client = create_client_local()?;
     let hdk_master = hdkey_xprv_from_mnemonic(
         client.clone(),
@@ -89,6 +90,6 @@ pub fn generate_keypair_from_mnemonic_rs
     if secret.len() > 32 {
         keypair.secret = hex::encode(&secret[..32]);
     }
-    Ok(ocp::ocaml_of_keypair(keypair))
+    Ok(types::ocaml_of_keypair(keypair))
 }
 

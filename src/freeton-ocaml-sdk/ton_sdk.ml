@@ -12,10 +12,12 @@
 
 module TYPES = Ton_types
 
+module CLIENT = Ton_client
+
 module CRYPTO = Ton_crypto
 module RPC = Ton_rpc
 
-
+module BLOCK = Ton_block
 module REQUEST = Ton_request
 module ENCODING = Ton_encoding
 

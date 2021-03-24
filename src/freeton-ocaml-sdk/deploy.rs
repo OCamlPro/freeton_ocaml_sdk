@@ -13,7 +13,8 @@
 
 
 use crate::ocp;
-use crate::client::{create_client, create_client_local};
+use crate::types::{TonClient};
+use crate::client::{create_client_local};
 
 use ton_client::abi::{Abi, AbiContract};
 use ton_client::processing::{ParamsOfProcessMessage};
@@ -77,7 +78,7 @@ pub async fn calc_acc_address(
 }
 
 pub async fn deploy_contract_rs(
-    server_url: String,
+    ton: TonClient,
     tvc: &str,
     abi: &str,
     params: &str,
@@ -85,8 +86,6 @@ pub async fn deploy_contract_rs(
     initial_data: String,
     initial_pubkey: String,
     wc: i32) -> Result<String, ocp::Error> {
-    let ton = create_client(server_url)?;
-
     let abi = load_abi(&abi)?;
 
     let tvc_bytes = &std::fs::read(tvc)

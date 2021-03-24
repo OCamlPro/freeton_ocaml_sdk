@@ -11,6 +11,7 @@
 /**************************************************************************/
 
 use crate::ocp;
+use crate::types::{TonClient};
 
 use std::sync::Arc;
 use ton_client::abi::{AbiConfig};
@@ -31,9 +32,6 @@ use ton_client::{
 use serde::de::DeserializeOwned;
 use serde_json::{Value};
 
-
-pub type TonClient = Arc<ClientContext>;
-
 pub fn create_client_local() -> Result<TonClient, ocp::Error> {
     let cli = ClientContext::new(ClientConfig::default())
         .map_err(|e|
@@ -46,7 +44,7 @@ pub fn create_client_local() -> Result<TonClient, ocp::Error> {
 pub const HD_PATH: &str = "m/44'/396'/0'/0/0";
 pub const WORD_COUNT: u8 = 12;
 
-pub fn create_client(server_url: String) -> Result<TonClient, ocp::Error> {
+pub fn create_client_rs(server_url: &str) -> Result<TonClient, ocp::Error> {
     let cli_conf = ClientConfig {
         abi: AbiConfig {
             workchain: 0,
@@ -80,7 +78,9 @@ pub fn create_client(server_url: String) -> Result<TonClient, ocp::Error> {
 }
 
 
-pub fn parse_sync_response<R: DeserializeOwned>(response: *const String) -> Result<R, ocp::Error> {
+
+pub fn parse_sync_response<R: DeserializeOwned>(response: *const String)
+                                                -> Result<R, ocp::Error> {
     let response = unsafe {
         let result = tc_read_string(response).to_string();
         tc_destroy_string(response);
