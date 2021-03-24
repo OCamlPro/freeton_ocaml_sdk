@@ -90,8 +90,8 @@ let action ~todo =
                               z < Z.of_int amount
                         in
                         let deploy =
-                          match acc.acc_type with
-                          | 0 -> true
+                          match acc.acc_type_name with
+                          | Some "Uninit" (* 0 *) -> true
                           | _ -> false
                         in
                         give, deploy

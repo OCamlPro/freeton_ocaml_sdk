@@ -121,3 +121,55 @@ pub fn ocaml_of_block( b : ton_sdk::Block ) -> Block
             iter().map(|m| ocaml_of_msg_descr(m)).collect()
     }
 }
+
+
+
+// pub enum MessageBodyType {
+    /// Message contains the input of the ABI function.
+//    Input => 0
+
+    /// Message contains the output of the ABI function.
+//    Output => 1
+
+    /// Message contains the input of the imported ABI function.
+    ///
+    /// Occurs when contract sends an internal message to other
+    /// contract.
+//    InternalOutput => 2
+
+    /// Message contains the input of the ABI event.
+//    Event => 3
+//}
+
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
+pub struct DecodedMessageBody {
+    /// Type of the message body content.
+    pub body_type: u8,
+
+    /// Function or event name.
+    pub name: String,
+
+    /// Parameters or result value.
+    pub value: Option<String>,
+
+    // Function header.
+    // pub header: Option<FunctionHeader>,
+}
+
+use ton_client::abi::MessageBodyType;
+
+pub fn ocaml_of_decoded_message_body( m : ton_client::abi::DecodedMessageBody ) -> DecodedMessageBody
+{
+    let body_type = match m.body_type {
+        MessageBodyType::Input => 0,
+        MessageBodyType::Output => 1,
+        MessageBodyType::InternalOutput => 2,
+        MessageBodyType::Event => 3,
+    };
+    DecodedMessageBody {
+        body_type,
+        name: m.name,
+        value: m.value.map(|v| v.to_string() )
+    }
+}
+

@@ -168,3 +168,13 @@ let address_of_account config account =
     let net = Config.current_network config in
     let key = Misc.find_key_exn net account in
     Misc.get_key_address_exn key
+
+let abi_of_account config account =
+  if String.length account > 2 &&  account.[1] = ':' then
+    None
+  else
+    let net = Config.current_network config in
+    let key = Misc.find_key_exn net account in
+    let contract = Misc.get_key_contract_exn key in
+    let filename = Misc.get_contract_abifile contract in
+    Some ( EzFile.read_file filename )

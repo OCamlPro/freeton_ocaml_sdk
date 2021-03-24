@@ -36,3 +36,4 @@ val deploy_contract :
 val tonoscli : Types.config -> string list -> string list
 
 val address_of_account : Types.config -> string -> string
+val abi_of_account : Types.config -> string -> string option (* content *)

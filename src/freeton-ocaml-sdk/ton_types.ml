@@ -91,6 +91,16 @@ type block = {
     in_msg_descr: msg_descr array ;
 }
 
+type decoded_message_body = {
+  body_type : int ; (* 0:Input, 1:Output, 2:InternalOutput, 3:Event *)
+  body_name : string ;
+  body_args : string option ;
+} [@@deriving json_encoding {option="option"}]
+
+
+let string_of_decoded_message_body tr =
+  EzEncoding.construct ~compact:false decoded_message_body_enc tr
+
 let string_of_msg_descr m =
   Printf.sprintf {|{ msg_id = %s ; transaction_id = %s }|}
     (match m.msg_id with

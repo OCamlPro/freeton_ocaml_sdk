@@ -16,6 +16,8 @@ ton_abi = { git = "https://github.com/tonlabs/ton-labs-abi.git" }
 # ton_sdk = { git = 'https://github.com/tonlabs/TON-SDK.git' }
 ton_client = { git = 'https://github.com/lefessan/TON-SDK.git', branch = "pub" }
 ton_sdk = { git = 'https://github.com/lefessan/TON-SDK.git', branch = "pub" }
+# ton_client = { git = 'file:///home/lefessan/GIT/FREETON/TONLABS/TON-SDK', branch = "pub" }
+# ton_sdk = { git = 'file:///home/lefessan/GIT/FREETON/TONLABS/TON-SDK', branch = "pub" }
 
 ton_types = { git = "https://github.com/tonlabs/ton-labs-types.git" }
 ton_block = { git = "https://github.com/tonlabs/ton-labs-block.git" }
