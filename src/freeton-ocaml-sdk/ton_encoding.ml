@@ -127,7 +127,7 @@ gen_utime_string: String
 gen_validator_list_hash_short: Float
 global_id: Int
 *)
-  bl_in_msg_descr: in_message list ;
+  bl_in_msg_descr: in_message list option ;
 
   bl_key_block : bool option;
 (*
@@ -135,7 +135,7 @@ master: BlockMaster
 master_ref: ExtBlkRef
 min_ref_mc_seqno: Float
 *)
-  bl_out_msg_descr: out_message list ;
+  bl_out_msg_descr: out_message list option ;
                  (*
 prev_alt_ref: ExtBlkRef
 prev_key_block_seqno: Float
