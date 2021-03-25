@@ -173,3 +173,16 @@ pub fn wait_next_block_ml(
         crate::blocks::wait_next_block_rs( ton, blockid, address, timeout ) )
 }
 
+#[ocaml::func]
+pub fn decode_message_boc_ml(
+    ton: ocaml::Pointer<TonClientStruct>,
+    message_boc: String,
+    abi: &str
+)
+    -> ocp::Reply<crate::types::DecodedMessageBody>
+{
+    let ton = crate::types::ton_client_of_ocaml(ton);
+    ocp::reply_async(
+        crate::blocks::decode_message_boc_rs( ton, message_boc, abi ) )
+}
+

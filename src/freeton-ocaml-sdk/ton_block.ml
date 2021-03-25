@@ -34,3 +34,15 @@ let wait_next_block ~client ~blockid ~address ?timeout () =
     (
       wait_next_block_ml client blockid address timeout
     )
+
+external decode_message_boc_ml :
+  Ton_types.client->
+  string ->
+  string ->
+  Ton_types.decoded_message_body Ton_types.reply = "decode_message_boc_ml"
+
+let decode_message_boc ~client ~boc ~abi =
+  Ton_types.reply
+    (
+      decode_message_boc_ml client boc abi
+    )

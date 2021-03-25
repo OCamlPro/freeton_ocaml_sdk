@@ -17,7 +17,9 @@ open EZCMD.TYPES
 open Ton_sdk (* REQUEST, ENCODING *)
 
 let query_message config ~level msg_id =
-  Utils.post config (REQUEST.messages ~level ~id:msg_id [])
+  Utils.post config (match msg_id with
+      | "all" -> REQUEST.messages ~level []
+      | _ -> REQUEST.messages ~level ~id:msg_id [])
 
 
 let query_messages config ~level ids =
@@ -28,11 +30,14 @@ let inspect_transaction ~v tr_id =
 
   let trs =
     Utils.post config
-      (REQUEST.transaction ~level:3 tr_id)
+      (match tr_id with
+       | "all" -> REQUEST.transactions ~level:3 []
+       | _ -> REQUEST.transaction ~level:3 tr_id
+      )
   in
   List.iter (fun tr ->
 
-      Printf.printf "TRANSACTION: %s\n%!"
+      Printf.printf "\nTRANSACTION: %s\n%!"
         (ENCODING.string_of_transaction tr);
 
       if v then begin
@@ -54,21 +59,29 @@ let inspect_transaction ~v tr_id =
 
 let inspect_account ~level account =
   let config = Config.config () in
-  let address = Utils.address_of_account config account in
+  let request = match account with
+    | "all" ->
+        REQUEST.accounts ~level []
+    | _ ->
+        let address = Utils.address_of_account config account in
+        REQUEST.account ~level address
+  in
   let accounts =
-    Utils.post config (REQUEST.account ~level address)
+    Utils.post config request
   in
   List.iter (fun account ->
-      Printf.printf "ACCOUNT: %s\n%!"
+      Printf.printf "\nACCOUNT: %s\n%!"
         (ENCODING.string_of_account account) ) accounts
 
 let inspect_block ~level ~id =
   let config = Config.config () in
   let blocks =
-    Utils.post config (REQUEST.block ~level id)
+    Utils.post config (match id with
+        | `string "all" -> REQUEST.blocks ~level []
+        | _ -> REQUEST.block ~level id)
   in
   List.iter (fun b ->
-      Printf.printf "BLOCK: %s\n%!"
+      Printf.printf "\nBLOCK: %s\n%!"
         (ENCODING.string_of_block b) ) blocks
 
 let inspect_head ~level () =
@@ -85,7 +98,7 @@ let inspect_message ~level id =
   let config = Config.config () in
   let messages = query_message config ~level id in
   List.iter (fun msg ->
-      Printf.printf "MESSAGE: %s\n%!"
+      Printf.printf "MESSAGE\n: %s\n%!"
         (ENCODING.string_of_message msg) ) messages
 
 

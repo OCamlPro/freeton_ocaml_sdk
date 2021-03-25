@@ -74,9 +74,10 @@ let version = fields "info" [ scalar "version"; scalar "time" ]
 
 let account_info1 = [
   scalar "id";
-  scalar "acc_type";
+  (*  scalar "acc_type"; *)
   scalar "acc_type_name";
   scalar ~args:["format", araw "DEC"] "balance";
+  scalar "code_hash";
 ]
 
 let account_info2 =
@@ -84,7 +85,6 @@ let account_info2 =
   (* balance_other: [OtherCurrency] *)
   scalar "boc";
   scalar "code";
-  scalar "code_hash";
   scalar "data" ;
   scalar "data_hash" ;
 ]
@@ -141,17 +141,9 @@ let block_value_flow = [
 
 let block_info1 = [
   scalar "id";
-  scalar "status";
   scalar "status_name";
-  scalar "workchain_id";
-  scalar "shard";
   scalar "seq_no";
-  fields "prev_ref" ext_blk_ref;
   scalar "gen_utime";
-  scalar "created_by";
-  scalar "tr_count";
-  scalar "key_block";
-  fields "value_flow" block_value_flow;
   fields "in_msg_descr" [
     scalar "msg_id" ;
     scalar "msg_type_name" ;
@@ -165,13 +157,27 @@ let block_info1 = [
 let block_info2 =
   block_info1 @ [
 
+    scalar "workchain_id";
+    scalar "shard";
+    fields "prev_ref" ext_blk_ref;
+    scalar "created_by";
+    scalar "tr_count";
+    scalar "key_block";
+    fields "value_flow" block_value_flow;
+
+  ]
+
+let block_info3 =
+  block_info2 @ [
+
   ]
 
 
 let block_info ~level =
   match level with
   | 0 | 1 -> block_info1
-  | _ -> block_info2
+  | 2 -> block_info2
+  | _ -> block_info3
 
 let blocks ?(level=1) ?limit ?order ?filter args =
   let args = alist ?limit ?order ?filter args in
@@ -227,10 +233,10 @@ let message_info2 =
     scalar "data";
     scalar "data_hash";
     scalar "dst_workchain_id";
-    scalar "fwd_fee";
+    scalar ~args:["format", araw "DEC"] "fwd_fee";
     scalar "ihr_disabled";
-    scalar "ihr_fee";
-    scalar "import_fee";
+    scalar ~args:["format", araw "DEC"] "ihr_fee";
+    scalar ~args:["format", araw "DEC"] "import_fee";
     scalar "library";
     scalar "library_hash";
     scalar "proof";
