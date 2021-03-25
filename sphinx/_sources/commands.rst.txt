@@ -33,6 +33,9 @@ Overview of sub-commands::
   init
     Initialize with TON Labs binary tools
   
+  inspect
+    Monitor a given account
+  
   list
     List known contracts
   
@@ -309,6 +312,51 @@ Where options are:
 * :code:`--clean`   Clean before building
 
 * :code:`--client`   Only build and install the client, not solc&linker
+
+
+drom inspect
+~~~~~~~~~~~~~~
+
+Monitor a given account
+
+
+**USAGE**
+::
+  
+  drom inspect [OPTIONS]
+
+Where options are:
+
+
+* :code:`-a STRING`   ACCOUNT Inspect account TR_ID on blockchain
+
+* :code:`--a2 STRING`   ACCOUNT Inspect account TR_ID on blockchain
+
+* :code:`--a3 STRING`   ACCOUNT Inspect account TR_ID on blockchain
+
+* :code:`-b STRING`   BLOCK Inspect block TR_ID on blockchain
+
+* :code:`--b2 STRING`   BLOCK Inspect block TR_ID on blockchain
+
+* :code:`--b3 STRING`   BLOCK Inspect block TR_ID on blockchain
+
+* :code:`--bn STRING`   LEVEL Inspect block at LEVEL on blockchain
+
+* :code:`-h`   Inspect head
+
+* :code:`--h2`   Inspect head
+
+* :code:`--h3`   Inspect head
+
+* :code:`-m STRING`   MSG_ID Inspect message MSG_ID on blockchain
+
+* :code:`--m2 STRING`   MSG_ID Inspect message MSG_ID on blockchain
+
+* :code:`--m3 STRING`   MSG_ID Inspect message MSG_ID on blockchain
+
+* :code:`-t STRING`   TR_ID Inspect transaction TR_ID on blockchain
+
+* :code:`--t2 STRING` or :code:`--t3 STRING`   TR_ID Inspect transaction TR_ID on blockchain
 
 
 drom list
