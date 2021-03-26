@@ -9,8 +9,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Sub-commands and Arguments &mdash; freeton-ocaml-sdk master
- (5f8500d
-) (2021/03/25 13:34) documentation</title>
+ (6736f89
+) (2021/03/26 07:44) documentation</title>
   
 
   
@@ -65,7 +65,7 @@
             
               <div class="version">
                 master
- (5f8500d
+ (6736f89
 )
               </div>
             
@@ -430,14 +430,20 @@ Delete existing accounts</li>
 <li><code class="code docutils literal notranslate"><span class="pre">--b2</span> <span class="pre">STRING</span></code>   BLOCK Inspect block TR_ID on blockchain</li>
 <li><code class="code docutils literal notranslate"><span class="pre">--b3</span> <span class="pre">STRING</span></code>   BLOCK Inspect block TR_ID on blockchain</li>
 <li><code class="code docutils literal notranslate"><span class="pre">--bn</span> <span class="pre">STRING</span></code>   LEVEL Inspect block at LEVEL on blockchain</li>
+<li><code class="code docutils literal notranslate"><span class="pre">--bn2</span> <span class="pre">STRING</span></code>   LEVEL Inspect block at LEVEL on blockchain</li>
+<li><code class="code docutils literal notranslate"><span class="pre">--bn3</span> <span class="pre">STRING</span></code>   LEVEL Inspect block at LEVEL on blockchain</li>
 <li><code class="code docutils literal notranslate"><span class="pre">-h</span></code>   Inspect head</li>
 <li><code class="code docutils literal notranslate"><span class="pre">--h2</span></code>   Inspect head</li>
 <li><code class="code docutils literal notranslate"><span class="pre">--h3</span></code>   Inspect head</li>
 <li><code class="code docutils literal notranslate"><span class="pre">-m</span> <span class="pre">STRING</span></code>   MSG_ID Inspect message MSG_ID on blockchain</li>
 <li><code class="code docutils literal notranslate"><span class="pre">--m2</span> <span class="pre">STRING</span></code>   MSG_ID Inspect message MSG_ID on blockchain</li>
 <li><code class="code docutils literal notranslate"><span class="pre">--m3</span> <span class="pre">STRING</span></code>   MSG_ID Inspect message MSG_ID on blockchain</li>
+<li><code class="code docutils literal notranslate"><span class="pre">--shard</span> <span class="pre">STRING</span></code>   SHARD Block info level/head for this shard</li>
+<li><code class="code docutils literal notranslate"><span class="pre">--shard-account</span> <span class="pre">STRING</span></code>   ACCOUNT Block info level/head for this shard</li>
+<li><code class="code docutils literal notranslate"><span class="pre">--shard-block</span> <span class="pre">STRING</span></code>   BLOCK_ID Block info level/head for this shard</li>
 <li><code class="code docutils literal notranslate"><span class="pre">-t</span> <span class="pre">STRING</span></code>   TR_ID Inspect transaction TR_ID on blockchain</li>
-<li><code class="code docutils literal notranslate"><span class="pre">--t2</span> <span class="pre">STRING</span></code> or <code class="code docutils literal notranslate"><span class="pre">--t3</span> <span class="pre">STRING</span></code>   TR_ID Inspect transaction TR_ID on blockchain</li>
+<li><code class="code docutils literal notranslate"><span class="pre">--t2</span> <span class="pre">STRING</span></code>   TR_ID Inspect transaction TR_ID on blockchain</li>
+<li><code class="code docutils literal notranslate"><span class="pre">--t3</span> <span class="pre">STRING</span></code>   TR_ID Inspect transaction TR_ID on blockchain</li>
 </ul>
 </div>
 <div class="section" id="drom-list">
@@ -620,6 +626,7 @@ Delete existing accounts</li>
 <p>Where options are:</p>
 <ul class="simple">
 <li><code class="code docutils literal notranslate"><span class="pre">--account</span> <span class="pre">STRING</span></code>   ACCOUNT Output account of account</li>
+<li><code class="code docutils literal notranslate"><span class="pre">--from</span> <span class="pre">STRING</span></code>   ID Start with blockid ID</li>
 <li><code class="code docutils literal notranslate"><span class="pre">--messages</span></code>   Monitor messages instead of transactions</li>
 </ul>
 </div>

@@ -342,6 +342,10 @@ Where options are:
 
 * :code:`--bn STRING`   LEVEL Inspect block at LEVEL on blockchain
 
+* :code:`--bn2 STRING`   LEVEL Inspect block at LEVEL on blockchain
+
+* :code:`--bn3 STRING`   LEVEL Inspect block at LEVEL on blockchain
+
 * :code:`-h`   Inspect head
 
 * :code:`--h2`   Inspect head
@@ -354,9 +358,17 @@ Where options are:
 
 * :code:`--m3 STRING`   MSG_ID Inspect message MSG_ID on blockchain
 
+* :code:`--shard STRING`   SHARD Block info level/head for this shard
+
+* :code:`--shard-account STRING`   ACCOUNT Block info level/head for this shard
+
+* :code:`--shard-block STRING`   BLOCK_ID Block info level/head for this shard
+
 * :code:`-t STRING`   TR_ID Inspect transaction TR_ID on blockchain
 
-* :code:`--t2 STRING` or :code:`--t3 STRING`   TR_ID Inspect transaction TR_ID on blockchain
+* :code:`--t2 STRING`   TR_ID Inspect transaction TR_ID on blockchain
+
+* :code:`--t3 STRING`   TR_ID Inspect transaction TR_ID on blockchain
 
 
 drom list
@@ -628,5 +640,7 @@ Where options are:
 
 
 * :code:`--account STRING`   ACCOUNT Output account of account
+
+* :code:`--from STRING`   ID Start with blockid ID
 
 * :code:`--messages`   Monitor messages instead of transactions
