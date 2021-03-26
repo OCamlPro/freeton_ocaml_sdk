@@ -71,6 +71,7 @@ let display_message ~out msg =
       if_z "ihr_fee" msg.msg_ihr_fee;
       if_z "fwd_fee" msg.msg_fwd_fee;
       if_z "import_fee" msg.msg_import_fee;
+
   | _ ->
       Printf.printf "  MESSAGE%s %s\n%!"
         (if out then " OUT" else "")
@@ -141,7 +142,7 @@ let display_transaction tr =
 
   | _ -> assert false
 
-let action ~account ~kind:_ =
+let action ~account ?blockid ~kind:_ =
   match account with
   | None -> assert false
   | Some account ->
@@ -150,7 +151,11 @@ let action ~account ~kind:_ =
       let abi = Utils.abi_of_account config account in
       let node = Config.current_node config in
       let client = CLIENT.create node.node_url in
-      let blockid = BLOCK.find_last_shard_block ~client ~address in
+      let blockid = match blockid with
+        | None ->
+            BLOCK.find_last_shard_block ~client ~address
+        | Some blockid -> blockid
+      in
       Printf.eprintf "initial blockid: %S\n%!" blockid ;
       let timeout = 300_000L in (* in ms *)
       let ton = Ton_sdk.CLIENT.create node.node_url in
@@ -172,6 +177,7 @@ let action ~account ~kind:_ =
           with
           | [] -> ()
           | trs ->
+              Printf.eprintf "In block with id: %S\n%!" b.id;
               List.iter (fun tr ->
                   if !Globals.verbosity > 1 then
                     Printf.eprintf "\nTRANSACTION: %s\n%!"
@@ -191,12 +197,14 @@ let action ~account ~kind:_ =
 let cmd =
   let account = ref None in
   let kind = ref Transactions in
+  let blockid = ref None in
   EZCMD.sub
     "watch"
     (fun () ->
        action
          ~account:!account
          ~kind:!kind
+         ?blockid:!blockid
     )
     ~args:
       [
@@ -206,5 +214,9 @@ let cmd =
 
         [ "messages" ], Arg.Unit (fun () -> kind := Messages),
         EZCMD.info "Monitor messages instead of transactions";
+
+        [ "from" ], Arg.String (fun s -> blockid := Some s),
+        EZCMD.info "ID Start with blockid ID";
+
       ]
     ~doc: "Monitor a given account"

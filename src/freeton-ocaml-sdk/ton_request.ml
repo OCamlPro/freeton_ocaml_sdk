@@ -59,7 +59,8 @@ let post url ( req : 'a t ) =
   Lwt_main.run (request ())
 
 
-
+let astring = astring
+let aint = aint
 let aeq name value = [ name, aobj [ "eq", value ] ]
 let alimit n = [ "limit", aint n ]
 let aorder ?(direction="DESC") name =
@@ -144,31 +145,32 @@ let block_info1 = [
   scalar "status_name";
   scalar "seq_no";
   scalar "gen_utime";
-  fields "in_msg_descr" [
-    scalar "msg_id" ;
-    scalar "msg_type_name" ;
-    scalar "transaction_id" ];
-  fields "out_msg_descr"
-    [ scalar "msg_id" ;
-      scalar "msg_type_name" ;
-      scalar "transaction_id" ];
+  scalar "tr_count";
+  scalar "workchain_id";
+  scalar "shard";
 ]
 
 let block_info2 =
   block_info1 @ [
 
-    scalar "workchain_id";
-    scalar "shard";
-    fields "prev_ref" ext_blk_ref;
-    scalar "created_by";
-    scalar "tr_count";
-    scalar "key_block";
-    fields "value_flow" block_value_flow;
+    fields "in_msg_descr" [
+      scalar "msg_id" ;
+      scalar "msg_type_name" ;
+      scalar "transaction_id" ];
+    fields "out_msg_descr"
+      [ scalar "msg_id" ;
+        scalar "msg_type_name" ;
+        scalar "transaction_id" ];
 
   ]
 
 let block_info3 =
   block_info2 @ [
+
+    fields "prev_ref" ext_blk_ref;
+    scalar "created_by";
+    scalar "key_block";
+    fields "value_flow" block_value_flow;
 
   ]
 
@@ -185,11 +187,14 @@ let blocks ?(level=1) ?limit ?order ?filter args =
   let output = Ton_encoding.blocks_enc in
   { input ; output }
 
-let block ?level (id : [< `int of int | `string of string ]) =
-  let filter = match id with `string s -> aeq "id" (astring s) | `int i -> aeq "seq_no" (aint i) in
+let block ?level ?(filter=[]) (id : [< `int of int | `string of string ]) =
+  let filter =
+    filter @
+    match id with `string s -> aeq "id" (astring s) | `int i -> aeq "seq_no" (aint i) in
   blocks ?level ~filter []
 
-let head ?level () = blocks ?level ~limit:1 ~order:("seq_no", None) []
+let head ?filter ?level () =
+  blocks ?level ?filter ~limit:1 ~order:("seq_no", None) []
 
 
 

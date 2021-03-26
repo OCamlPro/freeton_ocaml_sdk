@@ -162,15 +162,16 @@ let post config req =
   REQUEST.post url req
 
 let address_of_account config account =
-  if String.length account > 2 &&  account.[1] = ':' then
+  if String.contains account ':' then
     account
   else
     let net = Config.current_network config in
     let key = Misc.find_key_exn net account in
     Misc.get_key_address_exn key
 
+
 let abi_of_account config account =
-  if String.length account > 2 &&  account.[1] = ':' then
+  if String.contains account ':' then
     None
   else
     let net = Config.current_network config in
