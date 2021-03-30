@@ -4,18 +4,16 @@ opam-version: "2.0"
 name: "ft"
 version: "0.1.0"
 license: "LGPL-2.1-only with OCaml-LGPL-linking-exception"
-synopsis: "The freeton-ocaml-sdk project"
+synopsis: "The 'ft' tool is a terminal wallet for the Free TON blockchain"
 description: """
-This project implements an OCaml binding to the TON-SDK and a set of tools
-in OCaml to interact with Free TON, in particular the 'ft' command-line 
-wallet.
+The 'ft' tool is a multi-account wallet for use by Free TON developers in a terminal. It implements account creation/queries, contract deployments and calls, and inspection of blockchain state.
 """
 authors: ["Fabrice Le Fessant <fabrice.le_fessant@origin-labs.com>"]
 maintainer: ["Fabrice Le Fessant <fabrice.le_fessant@origin-labs.com>"]
-homepage: "https://ocamlpro.github.io/freeton-ocaml-sdk"
-doc: "https://ocamlpro.github.io/freeton-ocaml-sdk/sphinx"
-bug-reports: "https://github.com/ocamlpro/freeton-ocaml-sdk/issues"
-dev-repo: "git+https://github.com/ocamlpro/freeton-ocaml-sdk.git"
+homepage: "https://ocamlpro.github.io/freeton_ocaml_sdk"
+doc: "https://ocamlpro.github.io/freeton_ocaml_sdk/sphinx"
+bug-reports: "https://github.com/ocamlpro/freeton_ocaml_sdk/issues"
+dev-repo: "git+https://github.com/ocamlpro/freeton_ocaml_sdk.git"
 tags: "org:ocamlpro"
 build: [
   ["dune" "subst"] {dev}
@@ -39,7 +37,7 @@ install: [
 depends: [
   "ocaml" {>= "4.08.0"}
   "dune" {>= "2.6.0"}
-  "ft_lib" {= version}
+  "freeton_wallet_lib" {= version}
   "ppx_inline_test" {with-test}
   "ppx_expect" {with-test}
   "odoc" {with-doc}

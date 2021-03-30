@@ -1,6 +1,6 @@
 (**************************************************************************)
 (*                                                                        *)
-(*  Copyright (c) 2021 OCamlPro SAS                                       *)
+(*  Copyright (c) 2021 OCamlPro SAS & Origin Labs SAS                     *)
 (*                                                                        *)
 (*  All rights reserved.                                                  *)
 (*  This file is distributed under the terms of the GNU Lesser General    *)
@@ -11,4 +11,10 @@
 (**************************************************************************)
 
 
-let () = Freeton_wallet_lib.Main.main ()
+(* If you delete or rename this file, you should add
+   'src/freeton_ocaml_sdk/main.ml' to the 'skip' field in "drom.toml" *)
+
+external hello_world: unit -> string = "hello_world"
+
+let main () =
+  print_endline @@ hello_world ()

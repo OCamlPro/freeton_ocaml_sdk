@@ -1,9 +1,8 @@
 About
 =====
 
-This project implements an OCaml binding to the TON-SDK and a set of tools
-in OCaml to interact with Free TON, in particular the 'ft' command-line 
-wallet.
+This project implements an OCaml-Rust binding to the TON-SDK, and a
+Graphql client to interact with the node.
 
 
 Authors

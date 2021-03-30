@@ -2,17 +2,17 @@
 
 # hash of toml configuration files
 # used for generation of all files
-e2713f2e45348561c4fd69da3364ceea:.
+062dd463bc82469f2cf131403bb390aa:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
 # file .github/workflows/doc-deploy.yml
-036437d6c8bcf8fcc135bd813547b10d:.github/workflows/doc-deploy.yml
+a9eac5f20aab83ae8b85d2dbe691f1e8:.github/workflows/doc-deploy.yml
 # end context for .github/workflows/doc-deploy.yml
 
 # begin context for .github/workflows/workflow.yml
 # file .github/workflows/workflow.yml
-02a17dc1c3fb677a8bca1a8250974c81:.github/workflows/workflow.yml
+881355b285d02d2d05fed3b19b87a40d:.github/workflows/workflow.yml
 # end context for .github/workflows/workflow.yml
 
 # begin context for .gitignore
@@ -37,7 +37,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for CHANGES.md
 # file CHANGES.md
-383130f53cd15289e7c7a7af79b32644:CHANGES.md
+7b7e52f78be4e5855924ac9037046e8c:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
@@ -47,12 +47,12 @@ d091b81b6155e5fd5d6556fc8bba0094:LICENSE.md
 
 # begin context for Makefile
 # file Makefile
-556dbad584e4d97455c79385aac798f2:Makefile
+2c72c01867e665af1f13b86dae3ea8db:Makefile
 # end context for Makefile
 
 # begin context for README.md
 # file README.md
-7c157b450e1425a5240f3f5c4b602bbc:README.md
+982ceb276757cc723692aabfbe751aa6:README.md
 # end context for README.md
 
 # begin context for docs/README.txt
@@ -72,7 +72,7 @@ e739f3026aa997af4026bc428f4c9ef6:docs/favicon.png
 
 # begin context for docs/index.html
 # file docs/index.html
-180b6938358f1a1ecbc795ff2b860bb5:docs/index.html
+758df1694ca62fc92fcaa014ec872198:docs/index.html
 # end context for docs/index.html
 
 # begin context for docs/sphinx/index.html
@@ -87,7 +87,7 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for drom.toml
 # file drom.toml
-313819d775cc99f1274f998f09187eaf:drom.toml
+8d4b20f8e8cc93ba774beaee038344c0:drom.toml
 # end context for drom.toml
 
 # begin context for dune
@@ -97,23 +97,23 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-d88d1df48046ba60fc5e103a0a17932a:dune-project
+5179ab0a7be05cdf66eafbe167fb8f4d:dune-project
 # end context for dune-project
 
-# begin context for freeton-ocaml-sdk.opam
-# file freeton-ocaml-sdk.opam
-5b68c2a2384eff46bc51f624af4aabd1:freeton-ocaml-sdk.opam
-# end context for freeton-ocaml-sdk.opam
+# begin context for freeton_ocaml_sdk.opam
+# file freeton_ocaml_sdk.opam
+44807f91fa198a1630eda8f79f12fb4d:freeton_ocaml_sdk.opam
+# end context for freeton_ocaml_sdk.opam
+
+# begin context for freeton_wallet_lib.opam
+# file freeton_wallet_lib.opam
+163cb689ed7409f9b4e49bdf35a29386:freeton_wallet_lib.opam
+# end context for freeton_wallet_lib.opam
 
 # begin context for ft.opam
 # file ft.opam
-699604cdd6cf52dee6d50e3610d82b2d:ft.opam
+e5471a906c524e2627f47fac2e86da4e:ft.opam
 # end context for ft.opam
-
-# begin context for ft_lib.opam
-# file ft_lib.opam
-786faa37d9b9205a71b46d3b87d2cbf6:ft_lib.opam
-# end context for ft_lib.opam
 
 # begin context for scripts/after.sh
 # file scripts/after.sh
@@ -137,12 +137,12 @@ bb3a9d286f0dc64021db4194427263ee:scripts/copy-bin.sh
 
 # begin context for sphinx/about.rst
 # file sphinx/about.rst
-ff0b92739a36e3bd4e309fed1f7f386a:sphinx/about.rst
+2bf62ff5ed49191859f01c2aaac9f6a4:sphinx/about.rst
 # end context for sphinx/about.rst
 
 # begin context for sphinx/conf.py
 # file sphinx/conf.py
-498e61567cc792a327942f1eefceaeff:sphinx/conf.py
+d2340caf8c179657f5936c3f74d211da:sphinx/conf.py
 # end context for sphinx/conf.py
 
 # begin context for sphinx/index.rst
@@ -160,84 +160,39 @@ d034deb6026bb202abefd98d0f5d6e35:sphinx/index.rst
 cdf74f69fd392ea9a545b06789762a13:sphinx/license.rst
 # end context for sphinx/license.rst
 
-# begin context for src/freeton-ocaml-sdk/dune
-# file src/freeton-ocaml-sdk/dune
-fd74259d0506c5cfcc9378f69ae7ef43:src/freeton-ocaml-sdk/dune
-# end context for src/freeton-ocaml-sdk/dune
+# begin context for src/freeton_ocaml_sdk/dune
+# file src/freeton_ocaml_sdk/dune
+4a044dcbe893a1180b46ded9ee5cfded:src/freeton_ocaml_sdk/dune
+# end context for src/freeton_ocaml_sdk/dune
 
-# begin context for src/freeton-ocaml-sdk/index.mld
-# file src/freeton-ocaml-sdk/index.mld
-13ec5d256e8f30616bca1ced5b8a4041:src/freeton-ocaml-sdk/index.mld
-# end context for src/freeton-ocaml-sdk/index.mld
+# begin context for src/freeton_ocaml_sdk/main.ml
+# file src/freeton_ocaml_sdk/main.ml
+d3e6ee34d4e04c61cf868761173ebd2d:src/freeton_ocaml_sdk/main.ml
+# end context for src/freeton_ocaml_sdk/main.ml
 
-# begin context for src/freeton-ocaml-sdk/lib.rs
-# file src/freeton-ocaml-sdk/lib.rs
-43191970bd4633d682d25272281d40fd:src/freeton-ocaml-sdk/lib.rs
-# end context for src/freeton-ocaml-sdk/lib.rs
+# begin context for src/freeton_ocaml_sdk/package.toml
+# file src/freeton_ocaml_sdk/package.toml
+56a721970f5ed9e2f846e594e53f0902:src/freeton_ocaml_sdk/package.toml
+# end context for src/freeton_ocaml_sdk/package.toml
 
-# begin context for src/freeton-ocaml-sdk/package.toml
-# file src/freeton-ocaml-sdk/package.toml
-e0e80571c7a3f6c6488c90f9717270aa:src/freeton-ocaml-sdk/package.toml
-# end context for src/freeton-ocaml-sdk/package.toml
+# begin context for src/freeton_wallet_lib/dune
+# file src/freeton_wallet_lib/dune
+ece198ad5dd96bec6e54568c7e0b9dcb:src/freeton_wallet_lib/dune
+# end context for src/freeton_wallet_lib/dune
+
+# begin context for src/freeton_wallet_lib/package.toml
+# file src/freeton_wallet_lib/package.toml
+0410a231c3baf33aa69575e19b718049:src/freeton_wallet_lib/package.toml
+# end context for src/freeton_wallet_lib/package.toml
 
 # begin context for src/ft/dune
 # file src/ft/dune
-c2da58bf2c3918b51f9a85340280d5c3:src/ft/dune
+1c4b4ec8980345f4e221c22d75d2d8f4:src/ft/dune
 # end context for src/ft/dune
-
-# begin context for src/ft/index.mld
-# file src/ft/index.mld
-8d38033ff2a9ad925ab5c79480088f80:src/ft/index.mld
-# end context for src/ft/index.mld
-
-# begin context for src/ft/package.toml
-# file src/ft/package.toml
-d50a680cecf4b4d49d58f978290fc669:src/ft/package.toml
-# end context for src/ft/package.toml
-
-# begin context for src/ft_lib/dune
-# file src/ft_lib/dune
-fec7f61d652007b252ed2016a9216e91:src/ft_lib/dune
-# end context for src/ft_lib/dune
-
-# begin context for src/ft_lib/index.mld
-# file src/ft_lib/index.mld
-e0922b77d602deb7faae4c97f69f10e3:src/ft_lib/index.mld
-# end context for src/ft_lib/index.mld
-
-# begin context for src/ft_lib/main.ml
-# file src/ft_lib/main.ml
-2419712fa396e328ce6448593cc9eb79:src/ft_lib/main.ml
-# end context for src/ft_lib/main.ml
-
-# begin context for src/ft_lib/package.toml
-# file src/ft_lib/package.toml
-7c206ee459cddb898524a7a4becb61c9:src/ft_lib/package.toml
-# end context for src/ft_lib/package.toml
-
-# begin context for src/ton_lib/dune
-# file src/ton_lib/dune
-8182b021235294091525d80856028431:src/ton_lib/dune
-# end context for src/ton_lib/dune
-
-# begin context for src/ton_lib/index.mld
-# file src/ton_lib/index.mld
-03a758dacf1a5678c3e0e1bc6a017d8f:src/ton_lib/index.mld
-# end context for src/ton_lib/index.mld
-
-# begin context for src/ton_lib/package.toml
-# file src/ton_lib/package.toml
-9ca3b1b28392646d8e7c598f2888e709:src/ton_lib/package.toml
-# end context for src/ton_lib/package.toml
-
-# begin context for src/ton_lib/version.mlt
-# file src/ton_lib/version.mlt
-e5152b4b8b0489050db1e38339e55a7e:src/ton_lib/version.mlt
-# end context for src/ton_lib/version.mlt
 
 # begin context for test/expect-tests/dune
 # file test/expect-tests/dune
-dd5a85a0dd19a6c1e44a6ec067e56a7b:test/expect-tests/dune
+f4a2987dae24ef73ff53af376755cb99:test/expect-tests/dune
 # end context for test/expect-tests/dune
 
 # begin context for test/expect-tests/test.ml
@@ -247,7 +202,7 @@ dd5a85a0dd19a6c1e44a6ec067e56a7b:test/expect-tests/dune
 
 # begin context for test/inline-tests/dune
 # file test/inline-tests/dune
-5bb68893630b6ce59cf30f734af26dab:test/inline-tests/dune
+0b70f502b31505a067acda848722aaf0:test/inline-tests/dune
 # end context for test/inline-tests/dune
 
 # begin context for test/inline-tests/test.ml
@@ -257,7 +212,7 @@ dd5a85a0dd19a6c1e44a6ec067e56a7b:test/expect-tests/dune
 
 # begin context for test/output-tests/dune
 # file test/output-tests/dune
-3db5e96c6c4ba685f7c11ae520134c46:test/output-tests/dune
+1b1d4dc9a9291be603ca0bfd32df087a:test/output-tests/dune
 # end context for test/output-tests/dune
 
 # begin context for test/output-tests/test1.expected
@@ -274,8 +229,3 @@ ee63957b3b77455a12e6c269a5032c3f:test/output-tests/test2.expected
 # file test/output-tests/test2.ml
 e8eaab7626ef0aace5e570fffe81f869:test/output-tests/test2.ml
 # end context for test/output-tests/test2.ml
-
-# begin context for ton_lib.opam
-# file ton_lib.opam
-ebe98cd226f9c164549a5a9499ba37e5:ton_lib.opam
-# end context for ton_lib.opam
