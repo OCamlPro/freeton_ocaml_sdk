@@ -18,7 +18,7 @@ jobs:
         id: cache-opam
         with:
           path: ~/.opam
-          key: v1-Linux-freeton-ocaml-sdk-4.10.0-${{ hashFiles('*.opam') }}
+          key: v1-Linux-freeton_ocaml_sdk-4.10.0-${{ hashFiles('*.opam') }}
       - name: setup-ocaml
         uses: avsm/setup-ocaml@v1
         with:
@@ -28,7 +28,7 @@ jobs:
           sudo apt install -yqq python3-sphinx python3-sphinx-rtd-theme
           opam install -y dune odoc
       - run: opam pin add . -y --no-action
-      - run: opam depext -y freeton-ocaml-sdk ft_lib ft ton_lib
+      - run: opam depext -y freeton_ocaml_sdk freeton_wallet_lib ft
         if: steps.cache-opam.outputs.cache-hit != 'true'
       - run: opam install -y ./*.opam --deps-only --with-test
         if: steps.cache-opam.outputs.cache-hit != 'true'

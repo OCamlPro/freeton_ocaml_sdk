@@ -1,7 +1,7 @@
 
 # name of package
-name = "ft_lib"
-skeleton = "library"
+name = "freeton_ocaml_sdk"
+skeleton = "rust_binding_lib"
 
 # version if different from project version
 # version = "0.1.0"
@@ -19,48 +19,44 @@ kind = "library"
 # authors = [ "Me <me@metoo.org>" ]
 
 # name of a file to generate with the current version
-gen-version = "version.ml"
+# gen-version = "version.ml"
 
 # supported file generators are "ocamllex", "ocamlyacc" and "menhir" 
 # default is [ "ocamllex", "ocamlyacc" ] 
 # generators = [ "ocamllex", "menhir" ]
 
 # whether all modules should be packed/wrapped (default is true)
-# pack-modules = false
+pack-modules = false
 
 # module name used to pack modules (if pack-modules is true)
 # pack = "Mylib"
 
 # files to skip while updating at package level
-# skip = []
+skip = [ "main.ml" ]
 
 # package library dependencies
 #   [dependencies]
 #   ez_file = ">=0.1 <1.3"
 #   base-unix = { libname = "unix", version = ">=base" } 
 [dependencies]
-ez_cmdliner = "0.2.0"
-ez_config = "0.1.0"
-ez_file = "0.2.0"
-ez_subst = ">=0.1"
-freeton-ocaml-sdk = "version"
-ton_lib = "version"
+cohttp-lwt-unix = ""
+zarith = ">1"
+[dependencies.ez_api]
+libname = "ez_api.encoding ez_api.cohttp_lwt"
 
 # package tools dependencies
 [tools]
-crunch = ""
+conf-rust-2018 = ""
 ppx_deriving_encoding = ""
 
 # package fields (depends on package skeleton)
 [fields]
+c-libraries = "-lssl -lcrypto"
 dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
-dune-trailer = """
-(rule
-  (targets files.ml)
-  (deps
-   (:data
-     (source_tree files)))
-  (action
-      (run %{bin:ocaml-crunch} -m plain -o files.ml files/))
-)
-"""
+opam-trailer = '''
+conflicts: [ "ocplib-json-typed" ]
+#pin-depends: [
+#  [ "websocket-httpaf-lwt.~dev" "git+https://github.com/anmonteiro/websocket-httpaf.git" ]
+#]
+
+'''

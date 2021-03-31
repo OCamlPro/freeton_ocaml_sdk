@@ -17,10 +17,10 @@ let dev_base = TYPES.BASE "https://net.ton.dev"
 let base = TYPES.BASE "https://main.ton.dev"
 
 let service
-  ?section ?name ?descr ?error_outputs ?params ?security ?register ?input_example ?output_example
+  ?section ?name ?descr ?errors ?params ?security ?register ?input_example ?output_example
   (output: 'a Json_encoding.encoding) : (query, 'a, 'error, 'security) post_service0 =
   post_service
-    ?section ?name ?descr ?error_outputs ?params ?security ?register ?input_example ?output_example
+    ?section ?name ?descr ?errors ?params ?security ?register ?input_example ?output_example
     ~input:request_encoding
     ~output:Json_encoding.(obj1 (req "data" output))
     Path.(root // "graphql")

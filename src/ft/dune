@@ -3,7 +3,7 @@
   (name main)
   (public_name ft)
   (package ft)
-  (libraries ft_lib )
+  (libraries freeton_wallet_lib )
   
   
   )

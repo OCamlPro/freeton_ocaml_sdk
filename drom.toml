@@ -9,8 +9,8 @@ edition = "4.10.0"
 github-organization = "ocamlpro"
 license = "LGPL2"
 min-edition = "4.08.0"
-name = "freeton-ocaml-sdk"
-synopsis = "The freeton-ocaml-sdk project"
+name = "freeton_ocaml_sdk"
+synopsis = "The freeton-ocaml-sdk library is a binding over TON-SDK for Free TON"
 version = "0.1.0"
 
 # keys that you could also define:
@@ -25,13 +25,12 @@ version = "0.1.0"
 
 [project]
 description = """
-This project implements an OCaml binding to the TON-SDK and a set of tools
-in OCaml to interact with Free TON, in particular the 'ft' command-line 
-wallet.
+This project implements an OCaml-Rust binding to the TON-SDK, and a
+Graphql client to interact with the node.
 """
 
 [project]
-skip = ["src/ton_lib/main.ml", "src/freeton-ocaml-sdk/lib.rs", "src/ft/main.ml", "src/ft_lib/main.ml", "src/freeton-ocaml-sdk/main.ml", "sphinx/index.rst", "sphinx/install.rst"]
+skip = [ "sphinx/index.rst", "sphinx/install.rst", "src/ft/index.mld", "src/ft/main.ml", "src/freeton_wallet_lib/index.mld", "src/freeton_wallet_lib/main.ml", "src/freeton_ocaml_sdk/index.mld", "src/freeton_ocaml_sdk/lib.rs"]
 
 # project-wide library dependencies (not for package-specific deps)
 [dependencies]
@@ -66,23 +65,18 @@ share-dirs = ["share"]
 
 # project-wide fields (depends on project skeleton)
 [fields]
-dot-gitignore-trailer = """
-Cargo.lock
+dot-gitignore-trailer = """Cargo.lock
 """
 
 [[package]]
-dir = "src/freeton-ocaml-sdk"
-# edit 'src/freeton-ocaml-sdk/package.toml' for package-specific options
+dir = "src/freeton_ocaml_sdk"
+# edit 'src/freeton_ocaml_sdk/package.toml' for package-specific options
 
 [[package]]
-dir = "src/ft_lib"
-# edit 'src/ft_lib/package.toml' for package-specific options
+dir = "src/freeton_wallet_lib"
+# edit 'src/freeton_wallet_lib/package.toml' for package-specific options
 
 [[package]]
 dir = "src/ft"
-# edit 'src/ft/package.toml' for package-specific options
-
-[[package]]
-dir = "src/ton_lib"
-# edit 'src/ton_lib/package.toml' for package-specific options
+# edit 'src/freeton_wallet/package.toml' for package-specific options
 

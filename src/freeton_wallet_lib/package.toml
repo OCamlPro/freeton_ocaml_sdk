@@ -1,16 +1,18 @@
 
 # name of package
-name = "ton_lib"
+name = "freeton_wallet_lib"
 skeleton = "library"
 
 # version if different from project version
 # version = "0.1.0"
 
 # synopsis if different from project synopsis
-# synopsis = ...
+synopsis = "The 'ft' tool is a terminal wallet for the Free TON blockchain (assoicated library)"
 
 # description if different from project description
-# description = ...
+description = """
+The 'ft' tool is a multi-account wallet for use by Free TON developers in a terminal. It implements account creation/queries, contract deployments and calls, and inspection of blockchain state.
+"""
 
 # kind is either "library", "program" or "virtual"
 kind = "library"
@@ -39,12 +41,26 @@ gen-version = "version.ml"
 #   ez_file = ">=0.1 <1.3"
 #   base-unix = { libname = "unix", version = ">=base" } 
 [dependencies]
-# ...
+ez_cmdliner = "0.2.0"
+ez_config = "0.1.0"
+ez_file = "0.2.0"
+ez_subst = ">=0.1"
+freeton_ocaml_sdk = "version"
 
 # package tools dependencies
 [tools]
+crunch = ""
 ppx_deriving_encoding = ""
 
 # package fields (depends on package skeleton)
 [fields]
 dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
+dune-trailer = """(rule
+  (targets files.ml)
+  (deps
+   (:data
+     (source_tree files)))
+  (action
+      (run %{bin:ocaml-crunch} -m plain -o files.ml files/))
+)
+"""
