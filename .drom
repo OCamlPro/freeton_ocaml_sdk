@@ -2,7 +2,7 @@
 
 # hash of toml configuration files
 # used for generation of all files
-062dd463bc82469f2cf131403bb390aa:.
+d1e494a6b057f54537b82ac3f2a87fc7:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -164,11 +164,6 @@ cdf74f69fd392ea9a545b06789762a13:sphinx/license.rst
 # file src/freeton_ocaml_sdk/dune
 4a044dcbe893a1180b46ded9ee5cfded:src/freeton_ocaml_sdk/dune
 # end context for src/freeton_ocaml_sdk/dune
-
-# begin context for src/freeton_ocaml_sdk/main.ml
-# file src/freeton_ocaml_sdk/main.ml
-d3e6ee34d4e04c61cf868761173ebd2d:src/freeton_ocaml_sdk/main.ml
-# end context for src/freeton_ocaml_sdk/main.ml
 
 # begin context for src/freeton_ocaml_sdk/package.toml
 # file src/freeton_ocaml_sdk/package.toml

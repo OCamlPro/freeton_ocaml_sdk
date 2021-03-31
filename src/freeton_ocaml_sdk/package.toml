@@ -32,7 +32,7 @@ pack-modules = false
 # pack = "Mylib"
 
 # files to skip while updating at package level
-# skip = []
+skip = [ "main.ml" ]
 
 # package library dependencies
 #   [dependencies]
