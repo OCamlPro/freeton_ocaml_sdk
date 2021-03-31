@@ -257,6 +257,8 @@ Where options are:
 
 * :code:`--force`   Override existing contracts
 
+* :code:`--import STRING`   CONTRACT Deploy contract CONTRACT
+
 * :code:`--list`   List known contracts
 
 * :code:`--new STRING`   NAME Create template file for contract NAME
