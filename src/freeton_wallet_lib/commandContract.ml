@@ -25,6 +25,7 @@ type todo =
     ListContracts
   | BuildContract of string
   | DeployContract of string
+  | ImportContract of string
 
 let remove_files dirname files =
   List.iter (fun file ->
@@ -81,6 +82,46 @@ let action ~todo ~force ~sign ~params ~wc ~create =
       Misc.call [ "cp" ; "-f" ; tvm_file ; tvc_file ];
       ()
 
+  | ImportContract filename ->
+      let dirname = Filename.dirname filename in
+      let basename = Filename.basename filename in
+      let name, _ext = EzString.cut_at basename '.' in
+      let abi = ref [] in
+      let tvc = ref [] in
+      let src = ref [] in
+      let files = [
+        abi, "abi.json";
+        abi, "abi";
+        tvc, "tvm";
+        tvc, "tvc";
+        src, "sol";
+        src, "cpp";
+        src, "hpp";
+
+      ] in
+      List.iter (fun (kind, ext) ->
+          let filename = Filename.concat dirname (name ^ "." ^ ext) in
+          if Sys.file_exists filename then
+            kind := filename :: !kind
+        ) files;
+      begin
+        match !abi, !tvc with
+        | [ abi ], [ tvc ] ->
+            Misc.call [ "cp"; "-f"; abi ;
+                        Globals.contracts_dir // name ^ ".abi.json" ];
+            Misc.call [ "cp"; "-f"; tvc ;
+                        Globals.contracts_dir // name ^ ".tvc" ];
+            List.iter (fun src ->
+                Misc.call [ "cp"; "-f"; src ;
+                            Globals.contracts_dir // Filename.basename src ];
+              ) !src
+        | [], _ -> Error.raise "Missing abi file"
+        | _, [] -> Error.raise "Missing tvc file"
+        | _, [_] -> Error.raise "Ambiguity with abi files (.abi.json/.abi)"
+        | _, _ -> Error.raise "Ambiguity with tvc files (.tvc/.tvm)"
+
+      end
+
   | DeployContract contract ->
 
       let config = Config.config () in
@@ -108,9 +149,9 @@ let action ~todo ~force ~sign ~params ~wc ~create =
             sign
         | ReplaceAccount _ -> assert false
         | UseAccount ->
-          match sign with
-          | None -> Error.raise "--deploy CONTRACT requires --sign SIGNER"
-          | Some sign -> sign
+            match sign with
+            | None -> Error.raise "--deploy CONTRACT requires --sign SIGNER"
+            | Some sign -> sign
       in
       let key = Misc.find_key_exn net sign in
       begin
@@ -232,6 +273,8 @@ contracts::%s.code
 |};
       Printf.eprintf "File .gitignore created\n%!";
     end
+
+
 let cmd =
   let set_todo, with_todo = Misc.todo_arg () in
   let has_todo = ref false in
@@ -283,6 +326,11 @@ let cmd =
 
         [ "deploy" ], Arg.String (fun contract ->
             set_todo "--deploy" (DeployContract contract)
+          ),
+        EZCMD.info "CONTRACT Deploy contract CONTRACT";
+
+        [ "import" ], Arg.String (fun contract ->
+            set_todo "--import" (ImportContract contract)
           ),
         EZCMD.info "CONTRACT Deploy contract CONTRACT";
 
