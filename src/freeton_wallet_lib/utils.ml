@@ -58,7 +58,7 @@ let call_contract
          in
          let abi = EzFile.read_file contract_abi in
          let res =
-           Ton_sdk.ACTION.call ?client ~server_url:node.node_url
+           Ton_sdk.ACTION.call_run ?client ~server_url:node.node_url
              ~address
              ~abi
              ~meth ~params
@@ -159,7 +159,7 @@ let post config req =
   let node = Config.current_node config in
   let url = node.node_url in
   let open Ton_sdk in
-  REQUEST.post url req
+  REQUEST.post_run url req
 
 let address_of_account config account =
   if String.contains account ':' then

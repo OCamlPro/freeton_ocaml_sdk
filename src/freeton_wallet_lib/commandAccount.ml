@@ -125,6 +125,17 @@ let string_of_nanoton v =
   let s = Printf.sprintf "%s.%s" tons nanotons in
   s
 
+let get_account_info config ~name ~address =
+    match get_account_info config address with
+    | None ->
+        Printf.eprintf "Account %S: not yet created\n%!" name
+    | Some account ->
+        Printf.eprintf "Account %S: %s\n%!" name
+          (match account.acc_balance with
+           | None -> "no balance"
+           | Some n ->
+               Printf.sprintf "%s TONs" (string_of_nanoton (Z.to_int64 n)))
+
 let get_key_info config key ~info =
   if info then
     let json = EzEncoding.construct ~compact:false Encoding.key key in
@@ -136,16 +147,7 @@ let get_key_info config key ~info =
             key.key_name
       | Some account -> account.acc_address
     in
-
-    match get_account_info config address with
-    | None ->
-        Printf.eprintf "Account %S: not yet created\n%!" key.key_name
-    | Some account ->
-        Printf.eprintf "Account %S: %s\n%!" key.key_name
-          (match account.acc_balance with
-           | None -> "no balance"
-           | Some n ->
-               Printf.sprintf "%s TONs" (string_of_nanoton (Z.to_int64 n)))
+    get_account_info config ~address ~name:key.key_name
 
 let shorten_key s =
   let len = String.length s in
@@ -167,13 +169,13 @@ let get_account_info accounts ~list ~info =
            | Some _ -> " P"
            | None -> "")
           (match key.key_pair with
-               | None -> ""
-               | Some pair ->
-                   Printf.sprintf " %s%s"
-                     (shorten_key pair.public)
-                     (match pair.secret with
-                      | None -> ""
-                      | Some _ -> " P"))
+           | None -> ""
+           | Some pair ->
+               Printf.sprintf " %s%s"
+                 (shorten_key pair.public)
+                 (match pair.secret with
+                  | None -> ""
+                  | Some _ -> " P"))
           (match key.key_account with
            | None -> ""
            | Some acc ->
@@ -184,6 +186,7 @@ let get_account_info accounts ~list ~info =
           )
       ) net.net_keys
   else
+  if info then
     match accounts with
     | [] -> List.iter (fun key ->
         match key.key_account with
@@ -198,6 +201,25 @@ let get_account_info accounts ~list ~info =
             | Some key ->
                 get_key_info config key ~info
           ) names
+  else
+    List.iter (fun account ->
+        let address = Utils.address_of_account config account in
+        get_account_info config ~address ~name:account
+      ) accounts
+
+let whois address =
+  let config = Config.config () in
+  let net = Config.current_network config in
+  let re = Re.Str.regexp address in
+  List.iter (fun key ->
+      match key.key_account with
+      | None -> ()
+      | Some acc ->
+          match Re.Str.search_forward re acc.acc_address 0 with
+          | exception Not_found -> ()
+          | _ ->
+              Printf.printf "%s is %S\n%!" acc.acc_address key.key_name)
+    net.net_keys
 
 let gen_passphrase config =
   if Globals.use_ton_sdk then
@@ -216,6 +238,8 @@ let gen_passphrase config =
              (String.concat "|" stdout)
 
 let gen_keypair config passphrase =
+  let subst, _ = CommandOutput.subst_string config in
+  let passphrase = subst passphrase in
   if Globals.use_ton_sdk then
     Ton_sdk.CRYPTO.generate_keypair_from_mnemonic passphrase
   else
@@ -557,8 +581,7 @@ let get_live accounts =
     | _ -> assert false
   in
   List.iter (fun account ->
-      let key = Misc.find_key_exn net account in
-      let address = Misc.get_key_address_exn key in
+      let address = Utils.address_of_account config account in
       let url = Printf.sprintf
           "https://%s/accounts/accountDetails?id=%s" host address in
       Misc.call [ "xdg-open" ; url ]
@@ -612,7 +635,6 @@ let genkey ?name ?contract config =
       | None -> ()
       | Some contract ->
           change_account config ~name ~contract ()
-
 
 let action accounts ~list ~info
     ~create ~delete ~passphrase ~address ~contract ~keyfile ~live ~wc =
@@ -731,6 +753,9 @@ let cmd =
 
         [ "wc" ], Arg.Int (fun s -> wc := Some s),
         EZCMD.info "WORKCHAIN The workchain (default is 0)";
+
+        [ "whois" ], Arg.String whois,
+        EZCMD.info "ADDR Returns corresponding key name";
 
       ]
     ~man:[

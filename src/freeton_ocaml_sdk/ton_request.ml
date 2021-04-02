@@ -35,7 +35,7 @@ type 'a t = {
   output : 'a Json_encoding.encoding ;
 }
 
-let post url ( req : 'a t ) =
+let post_lwt url ( req : 'a t ) =
   let url = EzAPI.TYPES.BASE url in
   let open Lwt.Infix in
   let request () =
@@ -56,8 +56,10 @@ let post url ( req : 'a t ) =
             (EzEncoding.construct ~compact:false req.output v);
         v
   in
-  Lwt_main.run (request ())
+  request ()
 
+let post_run url req =
+  Lwt_main.run (post_lwt url req)
 
 let astring = astring
 let aint = aint

@@ -17,8 +17,6 @@ open EZCMD.TYPES
 open Ton_sdk
 open ENCODING
 
-type kind = Messages | Transactions
-
 let z_ton = Z.of_string "1000000000"
 let z_0 = Z.of_string "0"
 
@@ -142,7 +140,7 @@ let display_transaction tr =
 
   | _ -> assert false
 
-let action ~account ?blockid ~kind:_ =
+let action ~account ?blockid ~timeout =
   match account with
   | None -> assert false
   | Some account ->
@@ -157,7 +155,7 @@ let action ~account ?blockid ~kind:_ =
         | Some blockid -> blockid
       in
       Printf.eprintf "initial blockid: %S\n%!" blockid ;
-      let timeout = 300_000L in (* in ms *)
+      let timeout = Int64.of_int ( timeout * 1000 ) in (* in ms *)
       let ton = Ton_sdk.CLIENT.create node.node_url in
       let rec iter blockid =
         let b = BLOCK.wait_next_block
@@ -196,15 +194,15 @@ let action ~account ?blockid ~kind:_ =
 
 let cmd =
   let account = ref None in
-  let kind = ref Transactions in
   let blockid = ref None in
+  let timeout = ref ( 15 * 60) in (* 15 minutes *)
   EZCMD.sub
     "watch"
     (fun () ->
        action
          ~account:!account
-         ~kind:!kind
          ?blockid:!blockid
+         ~timeout:!timeout
     )
     ~args:
       [
@@ -212,11 +210,11 @@ let cmd =
         [ "account" ], Arg.String (fun s -> account := Some s),
         EZCMD.info "ACCOUNT Output account of account";
 
-        [ "messages" ], Arg.Unit (fun () -> kind := Messages),
-        EZCMD.info "Monitor messages instead of transactions";
-
         [ "from" ], Arg.String (fun s -> blockid := Some s),
         EZCMD.info "ID Start with blockid ID";
+
+        [ "timeout" ], Arg.Int (fun s -> timeout := s),
+        EZCMD.info "TIMEOUT Timeout in seconds";
 
       ]
     ~doc: "Monitor a given account"

@@ -60,6 +60,7 @@ let action ~todo ~force ~sign ~params ~wc ~create =
       if not force && StringMap.mem name known then
         Error.raise "Contract %s already exists (use -f to override)" name;
       let solc = Misc.binary_file "solc" in
+      (* maybe use argument --tvm-optimize *)
       let tvm_linker = Misc.binary_file "tvm_linker" in
       let stdlib = Misc.binary_file "stdlib_sol.tvm" in
 

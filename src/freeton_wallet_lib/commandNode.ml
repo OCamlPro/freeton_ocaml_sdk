@@ -61,6 +61,7 @@ let action ~todo =
           Misc.call [ "xdg-open";
                       Printf.sprintf "http://0.0.0.0:%d/graphql"
                         local_node.local_port ]
+
       | NodeGive account ->
 
           let account, amount = EzString.cut_at account ':' in
@@ -70,37 +71,37 @@ let action ~todo =
           let to_give = ref [] in
           let to_deploy = ref [] in
           let check_key ?(force=false) key =
-              Printf.eprintf "For key %s\n%!" key.key_name;
-              match key.key_account with
-              | None ->
-                  if force then
-                    Error.raise "Key %S has no address\n%!" key.key_name
-              | Some { acc_address ; acc_contract ; _ } ->
-                  let give, deploy =
-                    match
-                      Utils.post config
-                        (Ton_sdk.REQUEST.account acc_address)
-                    with
-                      [] -> true, true
-                    | [ acc ] ->
-                        let give =
-                          match acc.acc_balance with
-                          | None -> true
-                          | Some z ->
-                              z < Z.of_int amount
-                        in
-                        let deploy =
-                          match acc.acc_type_name with
-                          | Some "Uninit" (* 0 *) -> true
-                          | _ -> false
-                        in
-                        give, deploy
-                    | _ -> assert false
-                  in
-                  if give then
-                    to_give := (acc_address, key) :: !to_give ;
-                  if deploy then
-                    to_deploy := (acc_contract, key) :: !to_deploy
+            Printf.eprintf "For key %s\n%!" key.key_name;
+            match key.key_account with
+            | None ->
+                if force then
+                  Error.raise "Key %S has no address\n%!" key.key_name
+            | Some { acc_address ; acc_contract ; _ } ->
+                let give, deploy =
+                  match
+                    Utils.post config
+                      (Ton_sdk.REQUEST.account acc_address)
+                  with
+                    [] -> true, true
+                  | [ acc ] ->
+                      let give =
+                        match acc.acc_balance with
+                        | None -> true
+                        | Some z ->
+                            z < Z.of_int amount
+                      in
+                      let deploy =
+                        match acc.acc_type_name with
+                        | Some "Uninit" (* 0 *) -> true
+                        | _ -> false
+                      in
+                      give, deploy
+                  | _ -> assert false
+                in
+                if give then
+                  to_give := (acc_address, key) :: !to_give ;
+                if deploy then
+                  to_deploy := (acc_contract, key) :: !to_deploy
           in
           let config = Config.config () in
           let net = Config.current_network config in
@@ -129,20 +130,16 @@ let action ~todo =
                   | None -> assert false
                   | Some { acc_address ; _ } -> acc_address
                 in
-                match key.key_pair with
-                | None -> ()
-                | Some keypair ->
-                    let res =
-                      Ton_sdk.ACTION.call
-                        ~client
-                        ~server_url:node.node_url
-                        ~address:giver ~abi
-                        ~meth ~params
-                        ~local:false
-                        ~keypair
-                        ()
-                    in
-                    Printf.eprintf "call returned %s\n%!" res
+                let res =
+                  Ton_sdk.ACTION.call_run
+                    ~client
+                    ~server_url:node.node_url
+                    ~address:giver ~abi
+                    ~meth ~params
+                    ~local:false
+                    ()
+                in
+                Printf.eprintf "call returned %s\n%!" res
               else
                 CommandClient.action
                   ~exec:false

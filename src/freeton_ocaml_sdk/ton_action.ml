@@ -41,9 +41,34 @@ let call ~client ~address ~abi ~meth ~params ?keypair ~boc
       ~local
   )
 
-let call ?client ~server_url ~address ~abi ~meth ~params ?keypair ~local () =
+let call_lwt
+    ?client ~server_url ~address ~abi ~meth ~params ?keypair ~local () =
+  Lwt.bind
+    (Ton_request.post_lwt server_url
+       (Ton_request.account ~level:2 address) )
+    (function
+      | [] -> Printf.kprintf failwith "Account %s does not exist" address
+      | _ :: _ :: _ -> assert false
+      | [ acc ] ->
+          match acc.acc_boc with
+          | None ->
+              Printf.kprintf failwith "Account %s is not initialized" address
+          | Some boc ->
+              let client =
+                match client with
+                | Some client -> client
+                | None -> Ton_client.create server_url
+              in
+              let v =
+                call ~client ~address ~abi ~meth ~params ?keypair ~boc
+                  ~local ()
+              in
+              Lwt.return v
+    )
+
+let call_run ?client ~server_url ~address ~abi ~meth ~params ?keypair ~local () =
   match
-      Ton_request.post server_url
+    Ton_request.post_run server_url
       (Ton_request.account ~level:2 address)
   with
   | [] -> Printf.kprintf failwith "Account %s does not exist" address
