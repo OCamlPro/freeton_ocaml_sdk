@@ -230,13 +230,73 @@ type messages = message list [@obj1 "messages"] [@@deriving json_encoding]
 
 
 
+type transactionAction = {
+  action_list_hash: string option ;
+  msgs_created: int option ;
+  no_funds: bool option ;
+  result_arg: int option ;
+  result_code: int option ;
+  skipped_actions: int option ;
+  spec_actions: int option ;
+  status_change: int option ;
+  status_change_name: string option ;
+  success: bool option ;
+  tot_actions: int option ;
+  total_action_fees : z option ;
+  total_fwd_fees : z option ;
+  total_msg_size_bits: string option ;
+  total_msg_size_cells: string option ;
+  valid: bool option ;
+} [@@deriving json_encoding {option="option"}]
 
+type transactionBounce = {
+  bounce_type: int option ;
+  bounce_type_name: string option ;
+  fwd_fees : z option ;
+  msg_fees : z option ;
+  msg_size_bits: string option ;
+  msg_size_cells: string option ;
+  req_fwd_fees : z option ;
+} [@@deriving json_encoding {option="option"}]
+
+type transactionCompute = {
+  account_activated: bool option ;
+  compute_type: int option ;
+  compute_type_name: string option ;
+  exit_arg: int option ;
+  exit_code: int option ;
+  gas_credit: int option ;
+  gas_fees : z option ;
+  gas_limit : z option ;
+  gas_used : z option ;
+  mode: int option ;
+  msg_state_used: bool option ;
+  skipped_reason: int option ;
+  skipped_reason_name: string option ;
+  success: bool option ;
+  vm_final_state_hash: string option ;
+  vm_init_state_hash: string option ;
+  vm_steps: int option ;
+} [@@deriving json_encoding {option="option"}]
+
+type transactionCredit = {
+  credit : z option ;
+  due_fees_collected : z option ;
+} [@@deriving json_encoding {option="option"}]
+
+type transactionStorage = {
+  status_change: int option ;
+  status_change_name: string option ;
+  storage_fees_collected : z option ;
+  storage_fees_due : z option ;
+  x : unit option ; (* otherwise, derived names are not ok *)
+} [@@deriving json_encoding {option="option"}]
 
 type transaction = {
   tr_id : string;
   tr_aborted: bool;
   tr_account_addr : string;
-  (* action: TransactionAction *)
+  tr_action: transactionAction ;
   tr_balance_delta : z;
     (*
 balance_delta_other: [OtherCurrency]
@@ -244,12 +304,10 @@ block(...): Block
 *)
   tr_block_id : string;
   tr_boc : string option ;
-(*
-bounce: TransactionBounce
-compute: TransactionCompute
-credit: TransactionCredit
-credit_first: Boolean
-*)
+  tr_bounce: transactionBounce option ;
+  tr_compute: transactionCompute option ;
+  tr_credit: transactionCredit option ;
+  tr_credit_first: bool option ;
   tr_destroyed: bool option ;
   tr_end_status: int option ;
   tr_end_status_name : string option ;
@@ -272,7 +330,7 @@ credit_first: Boolean
   (* split_info: TransactionSplitInfo *)
   tr_status : int;
   tr_status_name : string option ;
-  (* storage: TransactionStorage *)
+  tr_storage : transactionStorage option ;
   tr_total_fees : z;
   (* total_fees_other: [OtherCurrency] *)
   tr_tr_type : int; [@key "tr_type"]

@@ -341,10 +341,76 @@ let transaction_info2 =
     scalar "tt";
   ]
 
+let transaction_info3 =
+  transaction_info2 @ [
+
+    fields "action" [
+      scalar "action_list_hash" ;
+      scalar "msgs_created" ;
+      scalar "no_funds" ;
+      scalar "result_arg" ;
+      scalar "result_code" ;
+      scalar "skipped_actions" ;
+      scalar "spec_actions" ;
+      scalar "status_change" ;
+      scalar "status_change_name" ;
+      scalar "success" ;
+      scalar "tot_actions" ;
+      scalar ~args:["format", araw "DEC"] "total_action_fees" ;
+      scalar ~args:["format", araw "DEC"]"total_fwd_fees" ;
+      scalar "total_msg_size_bits" ;
+      scalar "total_msg_size_cells" ;
+      scalar "valid" ;
+
+    ];
+    fields "bounce" [
+      scalar "bounce_type" ;
+      scalar "bounce_type_name" ;
+      scalar ~args:["format", araw "DEC"] "fwd_fees" ;
+      scalar ~args:["format", araw "DEC"] "msg_fees" ;
+      scalar "msg_size_bits" ;
+      scalar "msg_size_cells" ;
+      scalar ~args:["format", araw "DEC"] "req_fwd_fees" ;
+    ];
+    fields "compute" [
+      scalar "account_activated" ;
+      scalar "compute_type" ;
+      scalar "compute_type_name" ;
+      scalar "exit_arg" ;
+      scalar "exit_code" ;
+      scalar "gas_credit" ;
+      scalar ~args:["format", araw "DEC"] "gas_fees" ;
+      scalar ~args:["format", araw "DEC"] "gas_limit" ;
+      scalar ~args:["format", araw "DEC"] "gas_used" ;
+      scalar "mode" ;
+      scalar "msg_state_used" ;
+      scalar "skipped_reason" ;
+      scalar "skipped_reason_name" ;
+      scalar "success" ;
+      scalar "vm_final_state_hash" ;
+      scalar "vm_init_state_hash" ;
+      scalar "vm_steps" ;
+    ];
+    fields "credit" [
+      scalar ~args:["format", araw "DEC"] "credit";
+      scalar ~args:["format", araw "DEC"] "due_fees_collected";
+    ];
+    scalar "credit_first";
+    fields "storage" [
+      scalar "status_change" ;
+      scalar "status_change_name" ;
+      scalar ~args:["format", araw "DEC"] "storage_fees_collected";
+      scalar ~args:["format", araw "DEC"] "storage_fees_due";
+    ];
+  ]
+
+
+
 let transaction_info ~level =
   match level with
   | 0|1 -> transaction_info1
-  | _ -> transaction_info2
+  | 2 -> transaction_info2
+  | _ -> transaction_info3
 
 
 let transactions ?(level=1) ?limit ?order ?filter args =
