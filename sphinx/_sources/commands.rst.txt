@@ -173,6 +173,8 @@ Where options are:
 
 * :code:`--wc INT`   WORKCHAIN The workchain (default is 0)
 
+* :code:`--whois STRING`   ADDR Returns corresponding key name
+
 
 drom call
 ~~~~~~~~~~~
@@ -645,4 +647,4 @@ Where options are:
 
 * :code:`--from STRING`   ID Start with blockid ID
 
-* :code:`--messages`   Monitor messages instead of transactions
+* :code:`--timeout INT`   TIMEOUT Timeout in seconds
