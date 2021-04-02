@@ -19,7 +19,16 @@ val deploy :
   ?initial_data:string ->
   ?initial_pubkey:string -> ?wc:int -> unit -> string
 
-val call :
+val call_lwt :
+  ?client:Ton_types.client ->
+  server_url:string ->
+  address:string ->
+  abi:string ->
+  meth:string ->
+  params:string ->
+  ?keypair:Ton_types.keypair -> local:bool -> unit -> string Lwt.t
+
+val call_run :
   ?client:Ton_types.client ->
   server_url:string ->
   address:string ->

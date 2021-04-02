@@ -26,6 +26,20 @@ let rec date_now now rem =
       Error.raise "Bad substitution 'now:%s'"
         (String.concat ":" rem)
 
+let get_code filename =
+  let tvm_linker = Misc.binary_file "tvm_linker" in
+  let lines =
+    Misc.call_stdout_lines [ tvm_linker ; "decode" ; "--tvc" ; filename ] in
+  let code = ref None in
+  List.iter (fun line ->
+      match EzString.split line ' ' with
+      | [ "" ; "code:" ; base64 ] -> code := Some base64
+      | _ -> ()
+    ) lines;
+  match !code with
+  | None -> Error.raise "Code not found in file %S" filename
+  | Some code -> code
+
 let subst_string config =
   let net = Config.current_network config in
   let files = ref [] in
@@ -128,7 +142,8 @@ let subst_string config =
           let `Hex s = Hex.of_string ( iter rem ) in s
       | "base64" :: rem ->
           Base64.encode_string ( iter rem )
-
+      | "get-code" :: rem ->
+          get_code ( iter rem )
 
 
       (* deprecated *)
