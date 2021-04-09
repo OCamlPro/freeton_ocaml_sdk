@@ -7,11 +7,18 @@ skeleton = "library"
 # version = "0.1.0"
 
 # synopsis if different from project synopsis
-synopsis = "The 'ft' tool is a terminal wallet for the Free TON blockchain (assoicated library)"
+synopsis = "The 'ft' tool is a multi-account terminal wallet for the Free TON blockchain (associated library)"
 
 # description if different from project description
 description = """
-The 'ft' tool is a multi-account wallet for use by Free TON developers in a terminal. It implements account creation/queries, contract deployments and calls, and inspection of blockchain state.
+The 'ft' tool is a multi-account terminal wallet for Free TON users and developers. It implements account creation/queries, contract deployments and calls, and inspection of blockchain state. It is the swissknife of Free TON.
+
+The FreeTON blockchain is the open-source version of the Telegram Open
+Network. FreeTON is one of the only blockchains with dynamic sharding
+for unlimited scalability and immediate finality for real-time
+applications. It also uses Proof-of-Stake with delegation through
+smart contracts. Smart contracts are written in dialects of Solidity
+and C++ with asynchonous external calls.
 """
 
 # kind is either "library", "program" or "virtual"

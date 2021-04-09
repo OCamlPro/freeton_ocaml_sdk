@@ -8,8 +8,8 @@
 
 (package
  (name freeton_ocaml_sdk)
- (synopsis "The freeton-ocaml-sdk library is a binding over TON-SDK for Free TON")
- (description "This project implements an OCaml-Rust binding to the TON-SDK, and a\nGraphql client to interact with the node.\n")
+ (synopsis "OCaml binding to the TON-SDK and the Graphql API for Free TON blockchain")
+ (description "\nThe freeton_ocaml_sdk library is a binding to the TON-SDK Rust library\nand the GraphQL API of the FreeTON blockchain. It can be used to build\napplication to query the account states, transactions and other blockchain\ndata. to deploy and call smart contracts.\n\nThe FreeTON blockchain is the open-source version of the Telegram Open\nNetwork. FreeTON is one of the only blockchains with dynamic sharding\nfor unlimited scalability and immediate finality for real-time\napplications. It also uses Proof-of-Stake with delegation through\nsmart contracts. Smart contracts are written in dialects of Solidity\nand C++ with asynchonous external calls.\n\n")
  (depends
    (ocaml (>= 4.08.0))
    (zarith ( > 1 ))
@@ -25,8 +25,8 @@
 
 (package
  (name freeton_wallet_lib)
- (synopsis "The 'ft' tool is a terminal wallet for the Free TON blockchain (assoicated library)")
- (description "The 'ft' tool is a multi-account wallet for use by Free TON developers in a terminal. It implements account creation/queries, contract deployments and calls, and inspection of blockchain state.\n")
+ (synopsis "The 'ft' tool is a multi-account terminal wallet for the Free TON blockchain (associated library)")
+ (description "The 'ft' tool is a multi-account terminal wallet for Free TON users and developers. It implements account creation/queries, contract deployments and calls, and inspection of blockchain state. It is the swissknife of Free TON.\n\nThe FreeTON blockchain is the open-source version of the Telegram Open\nNetwork. FreeTON is one of the only blockchains with dynamic sharding\nfor unlimited scalability and immediate finality for real-time\napplications. It also uses Proof-of-Stake with delegation through\nsmart contracts. Smart contracts are written in dialects of Solidity\nand C++ with asynchonous external calls.\n")
  (depends
    (ocaml (>= 4.08.0))
    (freeton_ocaml_sdk (= version))
@@ -44,8 +44,8 @@
 
 (package
  (name ft)
- (synopsis "The 'ft' tool is a terminal wallet for the Free TON blockchain")
- (description "The 'ft' tool is a multi-account wallet for use by Free TON developers in a terminal. It implements account creation/queries, contract deployments and calls, and inspection of blockchain state.\n")
+ (synopsis "The 'ft' tool is a multi-account terminal wallet for the Free TON blockchain (executable)")
+ (description "The 'ft' tool is a multi-account terminal wallet for Free TON users and developers. It implements account creation/queries, contract deployments and calls, and inspection of blockchain state. It is the swissknife of Free TON.\n\nThe FreeTON blockchain is the open-source version of the Telegram Open\nNetwork. FreeTON is one of the only blockchains with dynamic sharding\nfor unlimited scalability and immediate finality for real-time\napplications. It also uses Proof-of-Stake with delegation through\nsmart contracts. Smart contracts are written in dialects of Solidity\nand C++ with asynchonous external calls.\n")
  (depends
    (ocaml (>= 4.08.0))
    (freeton_wallet_lib (= version))
