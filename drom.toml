@@ -2,9 +2,9 @@
 drom-version = "0.1"
 
 [project]
-authors = ["Fabrice Le Fessant <fabrice.le_fessant@origin-labs.com>"]
+authors = ["Fabrice Le Fessant <fabrice.le_fessant@ocamlpro.com>"]
 ci-systems = ["ubuntu-latest"]
-copyright = "OCamlPro SAS & Origin Labs SAS"
+copyright = "OCamlPro SAS"
 edition = "4.10.0"
 github-organization = "ocamlpro"
 license = "LGPL2"

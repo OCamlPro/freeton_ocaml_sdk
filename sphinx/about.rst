@@ -8,4 +8,4 @@ Graphql client to interact with the node.
 Authors
 -------
 
-* Fabrice Le Fessant <fabrice.le_fessant@origin-labs.com>
+* Fabrice Le Fessant <fabrice.le_fessant@ocamlpro.com>

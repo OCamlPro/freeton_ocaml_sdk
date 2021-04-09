@@ -51,8 +51,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'freeton_ocaml_sdk'
-copyright = 'OCamlPro SAS & Origin Labs SAS'
-author = 'Fabrice Le Fessant <fabrice.le_fessant@origin-labs.com>'
+copyright = 'OCamlPro SAS'
+author = 'Fabrice Le Fessant <fabrice.le_fessant@ocamlpro.com>'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

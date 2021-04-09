@@ -2,7 +2,7 @@
 name = "freeton_ocaml_sdk"
 version = "0.1.0"
 edition = "2018"
-authors = ["Fabrice Le Fessant <fabrice.le_fessant@origin-labs.com>"]
+authors = ["Fabrice Le Fessant <fabrice.le_fessant@ocamlpro.com>"]
 
 [lib]
 crate-type = ["staticlib", "cdylib"]

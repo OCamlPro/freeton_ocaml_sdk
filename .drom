@@ -2,7 +2,7 @@
 
 # hash of toml configuration files
 # used for generation of all files
-d1e494a6b057f54537b82ac3f2a87fc7:.
+3f90fd901c53c33730ef7cfba5167fcb:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -37,12 +37,12 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for CHANGES.md
 # file CHANGES.md
-7b7e52f78be4e5855924ac9037046e8c:CHANGES.md
+07d251df8888df14bb503a94d9c89d9c:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
 # file LICENSE.md
-d091b81b6155e5fd5d6556fc8bba0094:LICENSE.md
+02f5d892afcdc564e5fb067198a06740:LICENSE.md
 # end context for LICENSE.md
 
 # begin context for Makefile
@@ -72,7 +72,7 @@ e739f3026aa997af4026bc428f4c9ef6:docs/favicon.png
 
 # begin context for docs/index.html
 # file docs/index.html
-758df1694ca62fc92fcaa014ec872198:docs/index.html
+40a0a977acd5d1508d60f1958fc02073:docs/index.html
 # end context for docs/index.html
 
 # begin context for docs/sphinx/index.html
@@ -97,22 +97,22 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-5179ab0a7be05cdf66eafbe167fb8f4d:dune-project
+0e129ca15996e8de1ee3de4bfc453c83:dune-project
 # end context for dune-project
 
 # begin context for freeton_ocaml_sdk.opam
 # file freeton_ocaml_sdk.opam
-44807f91fa198a1630eda8f79f12fb4d:freeton_ocaml_sdk.opam
+6abb330cef928ddf8f1b0125983a9888:freeton_ocaml_sdk.opam
 # end context for freeton_ocaml_sdk.opam
 
 # begin context for freeton_wallet_lib.opam
 # file freeton_wallet_lib.opam
-163cb689ed7409f9b4e49bdf35a29386:freeton_wallet_lib.opam
+623dac1fc89b2ca418ecbe5342bd75b6:freeton_wallet_lib.opam
 # end context for freeton_wallet_lib.opam
 
 # begin context for ft.opam
 # file ft.opam
-e5471a906c524e2627f47fac2e86da4e:ft.opam
+8170e0b32289a63ba7909ad601a2bfb7:ft.opam
 # end context for ft.opam
 
 # begin context for scripts/after.sh
@@ -137,12 +137,12 @@ bb3a9d286f0dc64021db4194427263ee:scripts/copy-bin.sh
 
 # begin context for sphinx/about.rst
 # file sphinx/about.rst
-2bf62ff5ed49191859f01c2aaac9f6a4:sphinx/about.rst
+e1f1cc7d9744749ab84238b7c565623d:sphinx/about.rst
 # end context for sphinx/about.rst
 
 # begin context for sphinx/conf.py
 # file sphinx/conf.py
-d2340caf8c179657f5936c3f74d211da:sphinx/conf.py
+a562548bd6cc8b0a733aa335c58c5908:sphinx/conf.py
 # end context for sphinx/conf.py
 
 # begin context for sphinx/index.rst
@@ -157,7 +157,7 @@ d034deb6026bb202abefd98d0f5d6e35:sphinx/index.rst
 
 # begin context for sphinx/license.rst
 # file sphinx/license.rst
-cdf74f69fd392ea9a545b06789762a13:sphinx/license.rst
+8d984cbb854fe94fc5fa77b97b6ee046:sphinx/license.rst
 # end context for sphinx/license.rst
 
 # begin context for src/freeton_ocaml_sdk/dune

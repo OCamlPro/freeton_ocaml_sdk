@@ -5,13 +5,24 @@ name: "freeton_ocaml_sdk"
 version: "0.1.0"
 license: "LGPL-2.1-only with OCaml-LGPL-linking-exception"
 synopsis:
-  "The freeton-ocaml-sdk library is a binding over TON-SDK for Free TON"
+  "OCaml binding to the TON-SDK and the Graphql API for Free TON blockchain"
 description: """
-This project implements an OCaml-Rust binding to the TON-SDK, and a
-Graphql client to interact with the node.
+
+The freeton_ocaml_sdk library is a binding to the TON-SDK Rust library
+and the GraphQL API of the FreeTON blockchain. It can be used to build
+application to query the account states, transactions and other blockchain
+data. to deploy and call smart contracts.
+
+The FreeTON blockchain is the open-source version of the Telegram Open
+Network. FreeTON is one of the only blockchains with dynamic sharding
+for unlimited scalability and immediate finality for real-time
+applications. It also uses Proof-of-Stake with delegation through
+smart contracts. Smart contracts are written in dialects of Solidity
+and C++ with asynchonous external calls.
+
 """
-authors: ["Fabrice Le Fessant <fabrice.le_fessant@origin-labs.com>"]
-maintainer: ["Fabrice Le Fessant <fabrice.le_fessant@origin-labs.com>"]
+authors: ["Fabrice Le Fessant <fabrice.le_fessant@ocamlpro.com>"]
+maintainer: ["Fabrice Le Fessant <fabrice.le_fessant@ocamlpro.com>"]
 homepage: "https://ocamlpro.github.io/freeton_ocaml_sdk"
 doc: "https://ocamlpro.github.io/freeton_ocaml_sdk/sphinx"
 bug-reports: "https://github.com/ocamlpro/freeton_ocaml_sdk/issues"

@@ -7,10 +7,24 @@ skeleton = "rust_binding_lib"
 # version = "0.1.0"
 
 # synopsis if different from project synopsis
-# synopsis = ...
+synopsis = "OCaml binding to the TON-SDK and the Graphql API for Free TON blockchain"
 
 # description if different from project description
-# description = ...
+description = """
+
+The freeton_ocaml_sdk library is a binding to the TON-SDK Rust library
+and the GraphQL API of the FreeTON blockchain. It can be used to build
+application to query the account states, transactions and other blockchain
+data. to deploy and call smart contracts.
+
+The FreeTON blockchain is the open-source version of the Telegram Open
+Network. FreeTON is one of the only blockchains with dynamic sharding
+for unlimited scalability and immediate finality for real-time
+applications. It also uses Proof-of-Stake with delegation through
+smart contracts. Smart contracts are written in dialects of Solidity
+and C++ with asynchonous external calls.
+
+"""
 
 # kind is either "library", "program" or "virtual"
 kind = "library"
