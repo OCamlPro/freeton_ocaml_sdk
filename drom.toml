@@ -11,7 +11,7 @@ license = "LGPL2"
 min-edition = "4.08.0"
 name = "freeton_ocaml_sdk"
 synopsis = "The freeton_ocaml_sdk library is a binding over TON-SDK for Free TON"
-version = "0.1.0"
+version = "0.1.1"
 
 # keys that you could also define:
 # odoc-target = "...odoc-target..."
@@ -65,7 +65,9 @@ share-dirs = ["share"]
 
 # project-wide fields (depends on project skeleton)
 [fields]
-dot-gitignore-trailer = """Cargo.lock
+dot-gitignore-trailer = """
+# commit Cargo.lock in the repository to force same versions
+# Cargo.lock
 """
 
 [[package]]
