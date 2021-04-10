@@ -65,7 +65,9 @@ share-dirs = ["share"]
 
 # project-wide fields (depends on project skeleton)
 [fields]
-dot-gitignore-trailer = """Cargo.lock
+dot-gitignore-trailer = """
+# commit Cargo.lock in the repository to force same versions
+# Cargo.lock
 """
 
 [[package]]
