@@ -19,7 +19,7 @@
 
 (executable
  (name test2)
- (libraries freeton_ocaml_sdk freeton_wallet_lib) ; add your own library here
+ (libraries freeton_ocaml_sdk) ; add your own library here
  )
 
 (alias
