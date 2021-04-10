@@ -53,7 +53,7 @@ jobs:
 
       - run: opam pin add . -y --no-action
 
-      - run: opam depext -y freeton_ocaml_sdk freeton_wallet_lib ft
+      - run: opam depext -y freeton_ocaml_sdk
         if: steps.cache-opam.outputs.cache-hit != 'true'
 
       - run: opam install -y ./*.opam --deps-only --with-test
