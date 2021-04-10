@@ -62,6 +62,7 @@ libname = "ez_api.encoding ez_api.cohttp_lwt"
 [tools]
 conf-rust-2018 = ""
 ppx_deriving_encoding = ""
+conf-libssl = ""
 
 # package fields (depends on package skeleton)
 [fields]
