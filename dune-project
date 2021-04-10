@@ -3,7 +3,7 @@
 (name freeton_ocaml_sdk)
 (allow_approximate_merlin)
 (generate_opam_files false)
-(version 0.1.1)
+(version 0.1.2)
 (formatting (enabled_for ocaml reason))
 
 (package
@@ -17,6 +17,7 @@
    cohttp-lwt-unix
    ppx_deriving_encoding
    conf-rust-2018
+   conf-libssl
    ppx_inline_test
    ppx_expect
    odoc

@@ -6,5 +6,5 @@
   (pps ppx_expect))
  (inline_tests
   (modes best)) ; add js for testing with nodejs
- (libraries freeton_ocaml_sdk freeton_wallet_lib) ; add your project libraries here
+ (libraries freeton_ocaml_sdk) ; add your project libraries here
  )
