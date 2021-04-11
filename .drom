@@ -2,7 +2,7 @@
 
 # hash of toml configuration files
 # used for generation of all files
-0d38a806d42cc863f98c4ea9fc46e4b0:.
+348f713540e46579833d089c03a3eda6:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -37,7 +37,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for CHANGES.md
 # file CHANGES.md
-a7165eaa3da3f82ad89c94a7c9eb93bb:CHANGES.md
+c0591721f8c3b35432599c4bfe174b0c:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
@@ -97,22 +97,22 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-9b36f8a847794869a0d646d260f04f89:dune-project
+4a338f8cb9a5a813b75d2859799621a5:dune-project
 # end context for dune-project
 
 # begin context for freeton_ocaml_sdk.opam
 # file freeton_ocaml_sdk.opam
-50c89809b30d5c83093d4027ea6bebf8:freeton_ocaml_sdk.opam
+4e79b8298dae26b4da70299c05c9b4fa:freeton_ocaml_sdk.opam
 # end context for freeton_ocaml_sdk.opam
 
 # begin context for freeton_wallet_lib.opam
 # file freeton_wallet_lib.opam
-8ca9475c01a754997699a101af20a8ce:freeton_wallet_lib.opam
+6bd96a7476e6d1103ad955ee3445568d:freeton_wallet_lib.opam
 # end context for freeton_wallet_lib.opam
 
 # begin context for ft.opam
 # file ft.opam
-9f7f3900f2c135ffad3b29ff7c59607b:ft.opam
+671a32429794fbd382f170e164d6fae1:ft.opam
 # end context for ft.opam
 
 # begin context for scripts/after.sh
@@ -182,7 +182,7 @@ ece198ad5dd96bec6e54568c7e0b9dcb:src/freeton_wallet_lib/dune
 
 # begin context for src/freeton_wallet_lib/version.mlt
 # file src/freeton_wallet_lib/version.mlt
-e2da0ad26588c78354cb83a5232b0210:src/freeton_wallet_lib/version.mlt
+81ef978ed0310637a2e2cc8428bcc65d:src/freeton_wallet_lib/version.mlt
 # end context for src/freeton_wallet_lib/version.mlt
 
 # begin context for src/ft/dune
