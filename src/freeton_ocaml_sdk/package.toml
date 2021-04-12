@@ -75,3 +75,4 @@ conflicts: [ "ocplib-json-typed" ]
 #]
 
 '''
+no-opam-test = ""

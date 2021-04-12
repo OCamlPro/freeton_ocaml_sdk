@@ -2,42 +2,32 @@
 
 # hash of toml configuration files
 # used for generation of all files
-348f713540e46579833d089c03a3eda6:.
+ed9ac622421479398c6b299614d182de:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
 # file .github/workflows/doc-deploy.yml
-a9eac5f20aab83ae8b85d2dbe691f1e8:.github/workflows/doc-deploy.yml
+929b9f8b837859de743aa11da1eb0357:.github/workflows/doc-deploy.yml
 # end context for .github/workflows/doc-deploy.yml
 
 # begin context for .github/workflows/workflow.yml
 # file .github/workflows/workflow.yml
-881355b285d02d2d05fed3b19b87a40d:.github/workflows/workflow.yml
+dfe5b37f4f863421759d8f73f11b6b53:.github/workflows/workflow.yml
 # end context for .github/workflows/workflow.yml
 
 # begin context for .gitignore
 # file .gitignore
-40c38acddee2a1155d30d39116129f2b:.gitignore
+cb2e5d7d1a6c49582d61e0c1767ee2a5:.gitignore
 # end context for .gitignore
-
-# begin context for .ocamlformat
-# file .ocamlformat
-51f788c6dcd47d33ffec6427b686ed4f:.ocamlformat
-# end context for .ocamlformat
 
 # begin context for .ocamlformat-ignore
 # file .ocamlformat-ignore
 a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 # end context for .ocamlformat-ignore
 
-# begin context for .ocp-indent
-# file .ocp-indent
-6048407431b8d9baf725ae5365d4c2f2:.ocp-indent
-# end context for .ocp-indent
-
 # begin context for CHANGES.md
 # file CHANGES.md
-c0591721f8c3b35432599c4bfe174b0c:CHANGES.md
+3ad7f9477e27d2bca9238d28f992fcca:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
@@ -47,7 +37,7 @@ c0591721f8c3b35432599c4bfe174b0c:CHANGES.md
 
 # begin context for Makefile
 # file Makefile
-2c72c01867e665af1f13b86dae3ea8db:Makefile
+a9dea633d334c663984be4419d9c6787:Makefile
 # end context for Makefile
 
 # begin context for README.md
@@ -60,11 +50,6 @@ c0591721f8c3b35432599c4bfe174b0c:CHANGES.md
 bfbacf00053bb9ab2a6e2ce94ed4a642:docs/README.txt
 # end context for docs/README.txt
 
-# begin context for docs/doc/index.html
-# file docs/doc/index.html
-0e3adf9f8dd17a39708b80a24a887de1:docs/doc/index.html
-# end context for docs/doc/index.html
-
 # begin context for docs/favicon.png
 # file docs/favicon.png
 e739f3026aa997af4026bc428f4c9ef6:docs/favicon.png
@@ -75,20 +60,10 @@ e739f3026aa997af4026bc428f4c9ef6:docs/favicon.png
 40a0a977acd5d1508d60f1958fc02073:docs/index.html
 # end context for docs/index.html
 
-# begin context for docs/sphinx/index.html
-# file docs/sphinx/index.html
-276db5e37995a83a81162ef444940a45:docs/sphinx/index.html
-# end context for docs/sphinx/index.html
-
 # begin context for docs/style.css
 # file docs/style.css
 c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 # end context for docs/style.css
-
-# begin context for drom.toml
-# file drom.toml
-8d4b20f8e8cc93ba774beaee038344c0:drom.toml
-# end context for drom.toml
 
 # begin context for dune
 # file dune
@@ -97,23 +72,13 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-4a338f8cb9a5a813b75d2859799621a5:dune-project
+8286d2969195af19f97b2e3e8905bf71:dune-project
 # end context for dune-project
 
 # begin context for freeton_ocaml_sdk.opam
 # file freeton_ocaml_sdk.opam
-4e79b8298dae26b4da70299c05c9b4fa:freeton_ocaml_sdk.opam
+2e4629e289ccd125003fec8f0d35f20e:freeton_ocaml_sdk.opam
 # end context for freeton_ocaml_sdk.opam
-
-# begin context for freeton_wallet_lib.opam
-# file freeton_wallet_lib.opam
-6bd96a7476e6d1103ad955ee3445568d:freeton_wallet_lib.opam
-# end context for freeton_wallet_lib.opam
-
-# begin context for ft.opam
-# file ft.opam
-671a32429794fbd382f170e164d6fae1:ft.opam
-# end context for ft.opam
 
 # begin context for scripts/after.sh
 # file scripts/after.sh
@@ -130,11 +95,6 @@ ae050b3099ac0b43d7c7f4295f6b2319:scripts/before.sh
 bb3a9d286f0dc64021db4194427263ee:scripts/copy-bin.sh
 # end context for scripts/copy-bin.sh
 
-# begin context for sphinx/_static/css/fixes.css
-# file sphinx/_static/css/fixes.css
-20bbe7a5dbb3c3278a1511d960616fe5:sphinx/_static/css/fixes.css
-# end context for sphinx/_static/css/fixes.css
-
 # begin context for sphinx/about.rst
 # file sphinx/about.rst
 e1f1cc7d9744749ab84238b7c565623d:sphinx/about.rst
@@ -144,16 +104,6 @@ e1f1cc7d9744749ab84238b7c565623d:sphinx/about.rst
 # file sphinx/conf.py
 a562548bd6cc8b0a733aa335c58c5908:sphinx/conf.py
 # end context for sphinx/conf.py
-
-# begin context for sphinx/index.rst
-# file sphinx/index.rst
-d034deb6026bb202abefd98d0f5d6e35:sphinx/index.rst
-# end context for sphinx/index.rst
-
-# begin context for sphinx/install.rst
-# file sphinx/install.rst
-982f8453cfd5fc540225bb222af75751:sphinx/install.rst
-# end context for sphinx/install.rst
 
 # begin context for sphinx/license.rst
 # file sphinx/license.rst
@@ -165,34 +115,9 @@ d034deb6026bb202abefd98d0f5d6e35:sphinx/index.rst
 4a044dcbe893a1180b46ded9ee5cfded:src/freeton_ocaml_sdk/dune
 # end context for src/freeton_ocaml_sdk/dune
 
-# begin context for src/freeton_ocaml_sdk/package.toml
-# file src/freeton_ocaml_sdk/package.toml
-56a721970f5ed9e2f846e594e53f0902:src/freeton_ocaml_sdk/package.toml
-# end context for src/freeton_ocaml_sdk/package.toml
-
-# begin context for src/freeton_wallet_lib/dune
-# file src/freeton_wallet_lib/dune
-ece198ad5dd96bec6e54568c7e0b9dcb:src/freeton_wallet_lib/dune
-# end context for src/freeton_wallet_lib/dune
-
-# begin context for src/freeton_wallet_lib/package.toml
-# file src/freeton_wallet_lib/package.toml
-0410a231c3baf33aa69575e19b718049:src/freeton_wallet_lib/package.toml
-# end context for src/freeton_wallet_lib/package.toml
-
-# begin context for src/freeton_wallet_lib/version.mlt
-# file src/freeton_wallet_lib/version.mlt
-81ef978ed0310637a2e2cc8428bcc65d:src/freeton_wallet_lib/version.mlt
-# end context for src/freeton_wallet_lib/version.mlt
-
-# begin context for src/ft/dune
-# file src/ft/dune
-1c4b4ec8980345f4e221c22d75d2d8f4:src/ft/dune
-# end context for src/ft/dune
-
 # begin context for test/expect-tests/dune
 # file test/expect-tests/dune
-f4a2987dae24ef73ff53af376755cb99:test/expect-tests/dune
+cb6cebbf6a537b2cf81e0166c86df5e4:test/expect-tests/dune
 # end context for test/expect-tests/dune
 
 # begin context for test/expect-tests/test.ml
@@ -202,7 +127,7 @@ f4a2987dae24ef73ff53af376755cb99:test/expect-tests/dune
 
 # begin context for test/inline-tests/dune
 # file test/inline-tests/dune
-0b70f502b31505a067acda848722aaf0:test/inline-tests/dune
+94bb4d21e56fc8e0ebc5fe6018fc7c18:test/inline-tests/dune
 # end context for test/inline-tests/dune
 
 # begin context for test/inline-tests/test.ml
@@ -212,7 +137,7 @@ f4a2987dae24ef73ff53af376755cb99:test/expect-tests/dune
 
 # begin context for test/output-tests/dune
 # file test/output-tests/dune
-1b1d4dc9a9291be603ca0bfd32df087a:test/output-tests/dune
+bebd0dc4bba27f9b8b54d6c39d37dd7d:test/output-tests/dune
 # end context for test/output-tests/dune
 
 # begin context for test/output-tests/test1.expected

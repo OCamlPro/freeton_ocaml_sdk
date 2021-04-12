@@ -1,0 +1,15 @@
+[package]
+name = "api_derive"
+version = "1.11.2"
+authors = ["TON DEV SOLUTIONS LTD <support@tonlabs.io>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0", features = ["full"] }
+serde_json = "1.0.57"
+quote = "1.0"
+api_info = { path = "../info" }
+

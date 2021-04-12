@@ -296,7 +296,7 @@ type transaction = {
   tr_id : string;
   tr_aborted: bool;
   tr_account_addr : string;
-  tr_action: transactionAction option;
+  tr_action: transactionAction option ;
   tr_balance_delta : z;
     (*
 balance_delta_other: [OtherCurrency]
