@@ -9,8 +9,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>How to install &mdash; freeton_ocaml_sdk master
- (e2a4432
-) (2021/04/11 08:41) documentation</title>
+ (65a6879
+) (2021/04/12 07:50) documentation</title>
   
 
   
@@ -40,7 +40,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Copyright and License" href="license.html" />
-    <link rel="prev" title="Sub-commands and Arguments" href="commands.html" /> 
+    <link rel="prev" title="About" href="about.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -65,7 +65,7 @@
             
               <div class="version">
                 master
- (e2a4432
+ (65a6879
 )
               </div>
             
@@ -94,11 +94,9 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference external" href="https://ocamlpro.github.io/freeton_ocaml_sdk">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="about.html">About</a></li>
-<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="commands.html">Sub-commands and Arguments</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">How to install</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#build-and-install">Build and install</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#initial-configuration">Initial Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#install-with-opam">Install with <code class="code docutils literal notranslate"><span class="pre">opam</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#build-and-install-with-dune">Build and install with <code class="code docutils literal notranslate"><span class="pre">dune</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference external" href="https://ocamlpro.github.io/freeton_ocaml_sdk/doc">API doc</a></li>
@@ -170,25 +168,23 @@
             
   <div class="section" id="how-to-install">
 <h1>How to install<a class="headerlink" href="#how-to-install" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="build-and-install">
-<h2>Build and install<a class="headerlink" href="#build-and-install" title="Permalink to this headline">¶</a></h2>
-<p>In the following, you will need to use the OCaml Package Manager
-called <code class="code docutils literal notranslate"><span class="pre">opam</span></code>. It is available from
-<a class="reference external" href="https://github.com/ocaml/opam">https://github.com/ocaml/opam</a> (you can directly download binary
-versions from the Releases section, just make sure to choose a version
-above 2.0.0).</p>
-<p>First, you need a switch with at least version <code class="code docutils literal notranslate"><span class="pre">4.10.0</span></code> of OCaml,
+<div class="section" id="install-with-opam">
+<h2>Install with <code class="code docutils literal notranslate"><span class="pre">opam</span></code><a class="headerlink" href="#install-with-opam" title="Permalink to this headline">¶</a></h2>
+<p>If <code class="code docutils literal notranslate"><span class="pre">freeton_ocaml_sdk</span></code> is available in your opam repository, you can just call:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="n">opam</span> <span class="n">install</span> <span class="n">freeton_ocaml_sdk</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="build-and-install-with-dune">
+<h2>Build and install with <code class="code docutils literal notranslate"><span class="pre">dune</span></code><a class="headerlink" href="#build-and-install-with-dune" title="Permalink to this headline">¶</a></h2>
+<p>Checkout the sources of <code class="code docutils literal notranslate"><span class="pre">freeton_ocaml_sdk</span></code> in a directory.</p>
+<p>You need a switch with at least version <code class="code docutils literal notranslate"><span class="pre">4.08.0</span></code> of OCaml,
 you can for example create it with:</p>
 <div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="n">opam</span> <span class="n">switch</span> <span class="n">create</span> <span class="mi">4</span><span class="o">.</span><span class="mi">10</span><span class="o">.</span><span class="mi">0</span>
 </pre></div>
 </div>
-<p>Second, checkout the sources of <code class="code docutils literal notranslate"><span class="pre">freeton_ocaml_sdk</span></code> in a directory:</p>
-<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">git</span><span class="o">@</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">:</span><span class="nc">OCamlPro</span><span class="o">/</span><span class="n">freeton_ocaml_sdk</span><span class="o">.</span><span class="n">git</span>
-</pre></div>
-</div>
 <p>Then, you need to install all the dependencies:</p>
-<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">freeton_ocaml_sdk</span><span class="o">/</span>
-<span class="n">opam</span> <span class="n">install</span> <span class="o">--</span><span class="n">deps</span><span class="o">-</span><span class="n">only</span> <span class="o">.</span>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="n">opam</span> <span class="n">install</span> <span class="o">--</span><span class="n">deps</span><span class="o">-</span><span class="n">only</span> <span class="o">.</span>
 </pre></div>
 </div>
 <p>Finally, you can build the package and install it:</p>
@@ -197,29 +193,19 @@ you can for example create it with:</p>
 <span class="n">dune</span> <span class="n">install</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="initial-configuration">
-<h2>Initial Configuration<a class="headerlink" href="#initial-configuration" title="Permalink to this headline">¶</a></h2>
-<p>To be able to use <code class="code docutils literal notranslate"><span class="pre">ft</span></code>, we will need some tools from TON-SDK
-(<code class="code docutils literal notranslate"><span class="pre">tonos-cli</span></code>, <code class="code docutils literal notranslate"><span class="pre">tvm_linker</span></code>, <code class="code docutils literal notranslate"><span class="pre">solc</span></code> and
-<code class="code docutils literal notranslate"><span class="pre">stdlib_sol.tvm</span></code>) to be installed in <code class="code docutils literal notranslate"><span class="pre">$HOME/.ft/bin/</span></code>.</p>
-<p>For that, <code class="code docutils literal notranslate"><span class="pre">ft</span></code> provides a simple command that will download
-their sources and build them, provided that you have a recent version
-of Rust installed:</p>
-<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="n">ft</span> <span class="n">init</span>
-</pre></div>
-</div>
-<p>If it fails, you may have to do it manually:</p>
-<ol class="arabic simple">
-<li>Follow the steps from <a class="reference external" href="https://github.com/tonlabs/tonos-cli">https://github.com/tonlabs/tonos-cli</a>, and copy
-<code class="code docutils literal notranslate"><span class="pre">tonos-cli</span></code> into  <code class="code docutils literal notranslate"><span class="pre">$HOME/.ft/bin/</span></code></li>
-<li>Follow the steps in <a class="reference external" href="https://github.com/tonlabs/TON-Solidity-Compiler">https://github.com/tonlabs/TON-Solidity-Compiler</a>,
-and copy the resulting files (<code class="code docutils literal notranslate"><span class="pre">solc</span></code> from <code class="code docutils literal notranslate"><span class="pre">build/solc</span></code> and
-<code class="code docutils literal notranslate"><span class="pre">stdlib_sol.tvm</span></code> from <code class="code docutils literal notranslate"><span class="pre">lib/stdlib_sol.tvm</span></code>) into
-<code class="code docutils literal notranslate"><span class="pre">$HOME/.ft/bin/</span></code></li>
-<li>Follow the steps from <a class="reference external" href="https://github.com/tonlabs/TVM-linker">https://github.com/tonlabs/TVM-linker</a>, and copy
-<code class="code docutils literal notranslate"><span class="pre">tvm_linker/target/release/tvm_linker</span></code> into  <code class="code docutils literal notranslate"><span class="pre">$HOME/.ft/bin/</span></code></li>
-</ol>
+<p>Note that a <code class="code docutils literal notranslate"><span class="pre">Makefile</span></code> is provided, it contains the following
+targets:</p>
+<ul class="simple">
+<li><code class="code docutils literal notranslate"><span class="pre">build</span></code>: build the code</li>
+<li><code class="code docutils literal notranslate"><span class="pre">install</span></code>: install the generated files</li>
+<li><code class="code docutils literal notranslate"><span class="pre">build-deps</span></code>: install opam dependencies</li>
+<li><code class="code docutils literal notranslate"><span class="pre">sphinx</span></code>: build sphinx documentation (from the <code class="code docutils literal notranslate"><span class="pre">sphinx/</span></code> directory)</li>
+<li><code class="code docutils literal notranslate"><span class="pre">dev-deps</span></code>: build development dependencies, in particular
+<code class="code docutils literal notranslate"><span class="pre">ocamlformat</span></code>, <code class="code docutils literal notranslate"><span class="pre">odoc</span></code> and <code class="code docutils literal notranslate"><span class="pre">merlin</span></code></li>
+<li><code class="code docutils literal notranslate"><span class="pre">doc</span></code>: build documentation with <code class="code docutils literal notranslate"><span class="pre">odoc</span></code></li>
+<li><code class="code docutils literal notranslate"><span class="pre">fmt</span></code>: format the code using <code class="code docutils literal notranslate"><span class="pre">ocamlformat</span></code></li>
+<li><code class="code docutils literal notranslate"><span class="pre">test</span></code>: run tests</li>
+</ul>
 </div>
 </div>
 
@@ -234,7 +220,7 @@ and copy the resulting files (<code class="code docutils literal notranslate"><s
         <a href="license.html" class="btn btn-neutral float-right" title="Copyright and License" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="commands.html" class="btn btn-neutral float-left" title="Sub-commands and Arguments" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="about.html" class="btn btn-neutral float-left" title="About" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
