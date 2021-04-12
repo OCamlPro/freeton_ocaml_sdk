@@ -1,0 +1,32 @@
+[package]
+name = "sodalite"
+version = "0.3.0"
+authors = ["Cody P Schafer <dev@codyps.com>"]
+description = "Tweetnacl in pure rust with no std dependency"
+license = "Apache-2.0 OR MIT"
+homepage = "https://github.com/jmesmon/sodalite"
+repository = "https://github.com/jmesmon/sodalite.git"
+documentation = "https://docs.rs/sodalite/0.2.6/sodalite/"
+readme = "README.md"
+include = ["Cargo.toml", "src/**/*.rs", "README.md", "tests/**/*.rs" ]
+
+keywords = [ "sodium", "cryptography", "nacl", "no_std"]
+categories = [ "cryptography" ]
+
+[badges]
+travis-ci = { repository = "jmesmon/sodalite" }
+appveyor = { repository = "jmesmon/sodalite" }
+
+[features]
+docs = ["rand"]
+bench = ["rand"]
+
+[dependencies]
+rand = { version = "0.7.3", optional = true }
+index-fixed = "0.3"
+
+[dev-dependencies]
+tweetnacl = { path = "tweetnacl", version = "0.2" }
+rand = "0.7.3"
+
+[workspace]
