@@ -106,7 +106,7 @@ pub fn encode_body_ml( args: Vec<String> ) -> ocp::Reply<String> {
         crate::call::encode_body_rs(
             &args[0], //   abi
             &args[1], //   meth
-            &args[3], //   params
+            &args[2], //   params
             ))
 }
 
