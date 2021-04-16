@@ -13,6 +13,7 @@
  (depends
    (ocaml (>= 4.08.0))
    (zarith ( > 1 ))
+   (ez_file ( >= 0.2 ))
    ez_api
    cohttp-lwt-unix
    ppx_deriving_encoding

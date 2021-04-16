@@ -55,6 +55,7 @@ skip = [ "main.ml" ]
 [dependencies]
 cohttp-lwt-unix = ""
 zarith = ">1"
+ez_file = "0.2"
 [dependencies.ez_api]
 libname = "ez_api.encoding ez_api.cohttp_lwt"
 

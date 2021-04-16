@@ -10,23 +10,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
-external encode_body_ml :
-  string array ->
-  string Ton_types.reply = "encode_body_ml"
+val read : string -> Ton_types.ABI.contract
+val write : string -> Ton_types.ABI.contract -> unit
 
-
-let encode_body ~abi ~meth ~params =
-  Ton_types.reply
-    (
-      encode_body_ml [| abi ; meth ; params |]
-    )
-
-let read filename =
-  let json = EzFile.read_file filename in
-  EzEncoding.destruct  Ton_types.ABI.contract_enc json
-
-let write file abi =
-  let json = EzEncoding.construct
-      ~compact:false Ton_types.ABI.contract_enc  abi in
-  EzFile.make_dir ~p:true (Filename.dirname file);
-  EzFile.write_file file json
+(* not yet ready: *)
+val encode_body :
+  abi:string -> meth:string -> params:string -> string
