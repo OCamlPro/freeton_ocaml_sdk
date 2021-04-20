@@ -10,20 +10,20 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open EzAPI
+(* open EzAPI *)
 open Graphql
 
-let dev_base = TYPES.BASE "https://net.ton.dev"
-let base = TYPES.BASE "https://main.ton.dev"
+let dev_base = EzAPI.TYPES.BASE "https://net.ton.dev"
+let base = EzAPI.TYPES.BASE "https://main.ton.dev"
 
 let service
   ?section ?name ?descr ?errors ?params ?security ?register ?input_example ?output_example
-  (output: 'a Json_encoding.encoding) : (query, 'a, 'error, 'security) post_service0 =
-  post_service
+  (output: 'a Json_encoding.encoding) : (query, 'a, 'error, 'security) EzAPI.post_service0 =
+  EzAPI.post_service
     ?section ?name ?descr ?errors ?params ?security ?register ?input_example ?output_example
     ~input:request_encoding
     ~output:Json_encoding.(obj1 (req "data" output))
-    Path.(root // "graphql")
+    EzAPI.Path.(root // "graphql")
 
 
 let debug_graphql = match Sys.getenv "FT_DEBUG_GRAPHQL" with
@@ -45,16 +45,22 @@ let post_lwt url ( req : 'a t ) =
     end;
     EzCohttp_lwt.post0
       url (service req.output)
-      ~input:req.input >|= function
+      ~input:req.input >|= function res ->
+    match res with
     | Error e ->
-        failwith
-          (EzRequest_lwt.string_of_error
-             (fun exn -> Some (Printexc.to_string exn)) e);
+        let s =
+          EzRequest_lwt.string_of_error
+            (fun exn -> Some (Printexc.to_string exn)) e
+        in
+        if debug_graphql then
+          Printf.eprintf "Graphql error: %s\n%!" s;
+
+        Error (Failure s)
     | Ok v ->
         if debug_graphql then
           Printf.eprintf "Server replied: %s\n%!"
             (EzEncoding.construct ~compact:false req.output v);
-        v
+        Ok v
   in
   request ()
 
@@ -85,27 +91,27 @@ let account_info1 = [
 
 let account_info2 =
   account_info1 @ [
-  (* balance_other: [OtherCurrency] *)
-  scalar "boc";
-  scalar "code";
-  scalar "data" ;
-  scalar "data_hash" ;
-]
+    (* balance_other: [OtherCurrency] *)
+    scalar "boc";
+    scalar "code";
+    scalar "data" ;
+    scalar "data_hash" ;
+  ]
 
 let account_info3 =
   account_info2 @ [
-  (*  due_payment(format: BigIntFormat): String *)
-  scalar "last_paid" ;
-  (* last_trans_lt(format: BigIntFormat): String *)
-  scalar "library" ;
-  scalar "library_hash" ;
-  scalar "proof" ;
-  scalar "split_depth" ;
-  scalar "state_hash" ;
-  scalar "tick" ;
-  scalar "tock" ;
-  scalar "workchain_id" ;
-]
+    (*  due_payment(format: BigIntFormat): String *)
+    scalar "last_paid" ;
+    (* last_trans_lt(format: BigIntFormat): String *)
+    scalar "library" ;
+    scalar "library_hash" ;
+    scalar "proof" ;
+    scalar "split_depth" ;
+    scalar "state_hash" ;
+    scalar "tick" ;
+    scalar "tock" ;
+    scalar "workchain_id" ;
+  ]
 
 let account_info ~level =
   match level with
@@ -221,7 +227,8 @@ let message_info1 = [
   scalar "block_id";
   scalar "src";
   scalar "dst";
-  scalar ~args:["format", araw "DEC"] "value"
+  scalar ~args:["format", araw "DEC"] "value";
+  scalar "bounce";
 ]
 
 let message_info2 =
@@ -229,9 +236,16 @@ let message_info2 =
   [
     scalar "boc";
     scalar "body";
-    scalar "body_hash";
-    scalar "bounce";
     scalar "bounced";
+    scalar ~args:["format", araw "DEC"] "fwd_fee";
+    scalar ~args:["format", araw "DEC"] "ihr_fee";
+    scalar ~args:["format", araw "DEC"] "import_fee";
+  ]
+
+let message_info3 =
+  message_info2 @
+  [
+    scalar "body_hash";
     scalar "code";
     scalar "code_hash";
     scalar "created_at";
@@ -239,11 +253,8 @@ let message_info2 =
     scalar "created_lt";
     scalar "data";
     scalar "data_hash";
-    scalar "dst_workchain_id";
-    scalar ~args:["format", araw "DEC"] "fwd_fee";
     scalar "ihr_disabled";
-    scalar ~args:["format", araw "DEC"] "ihr_fee";
-    scalar ~args:["format", araw "DEC"] "import_fee";
+    scalar "dst_workchain_id";
     scalar "library";
     scalar "library_hash";
     scalar "proof";
@@ -253,12 +264,6 @@ let message_info2 =
     scalar "tock";
     fields "src_transaction" [ scalar "id" ];
     fields "dst_transaction" [ scalar "id" ];
-  ]
-
-let message_info3 =
-  message_info2 @
-  [
-
   ]
 
 

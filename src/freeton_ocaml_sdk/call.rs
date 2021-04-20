@@ -11,7 +11,7 @@
 /**************************************************************************/
 
 use crate::ocp;
-use crate::types::{TonClient};
+use crate::types::{TonClient, EncodedMessage};
 use crate::client::{create_client_local};
 use crate::deploy::{load_abi};
 
@@ -48,13 +48,6 @@ use ton_client::tvm::{
 //    run_get,
     //    ParamsOfRunGet
 };
-
-struct EncodedMessage {
-    message_id: String,
-    message: String,
-    expire: Option<u32>,
-//    address: String,
-}
 
 async fn prepare_message(
     ton: TonClient,
@@ -98,10 +91,14 @@ async fn prepare_message(
                  ocp::failwith(
                      format!("failed to create inbound message: {}", e)))?;
 
+    let expire = header.and_then(|h| h.expire);
+    let expire = if let Some(expire) = expire {
+        Some (expire as u64)
+    } else { None };
     Ok(EncodedMessage {
         message: msg.message,
         message_id: msg.message_id,
-        expire: header.and_then(|h| h.expire),
+        expire: expire,
 //        address: addr.to_owned(),
     })
 }
@@ -324,6 +321,27 @@ async fn send_message_and_wait(
         //println!("done");
         Ok(result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({})))
     }
+}
+
+pub async fn prepare_message_rs(
+    ton: TonClient,
+    addr: &str,
+    abi: &str,
+    method: &str,
+    params: &str,
+    keys: Option<KeyPair>
+) -> Result<EncodedMessage, ocp::Error> {
+    let abi = load_abi(abi)?;
+    let msg = prepare_message(
+        ton.clone(),
+        addr,
+        abi.clone(),
+        method,
+        params,
+        None,
+        keys,
+    ).await?;
+    Ok(msg)
 }
 
 pub async fn call_contract_with_result(

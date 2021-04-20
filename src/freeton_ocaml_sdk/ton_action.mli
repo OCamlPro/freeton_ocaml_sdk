@@ -10,6 +10,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(* see EncodedMessage in types.rs *)
+type encoded_message = {
+  enc_message_id : string ;
+  enc_message : string ;
+  enc_expire : int64 option ;
+}
+
 val deploy :
   client:Ton_types.client ->
   tvc_file:string ->
@@ -26,7 +33,8 @@ val call_lwt :
   abi:string ->
   meth:string ->
   params:string ->
-  ?keypair:Ton_types.keypair -> local:bool -> unit -> string Lwt.t
+  ?keypair:Ton_types.keypair -> local:bool -> unit ->
+  ( string, exn ) result Lwt.t
 
 val call_run :
   ?client:Ton_types.client ->
@@ -47,3 +55,15 @@ val update_contract_state :
   unit
 
 val parse_message : string -> string
+
+val prepare_message :
+  client:Ton_types.client ->
+  address:string ->
+  abi:string ->
+  meth:string ->
+  params:string ->
+  ?keypair:Ton_types.keypair ->
+  unit -> encoded_message
+
+(* we should also lift 'send_message' and 'wait_for_transaction' to be
+   able to completely debug a call *)

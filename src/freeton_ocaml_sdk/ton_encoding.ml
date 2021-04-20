@@ -244,8 +244,8 @@ type transactionAction = {
   tot_actions: int option ;
   total_action_fees : z option ;
   total_fwd_fees : z option ;
-  total_msg_size_bits: string option ;
-  total_msg_size_cells: string option ;
+  total_msg_size_bits: int option ;
+  total_msg_size_cells: int option ;
   valid: bool option ;
 } [@@deriving json_encoding {option="option"}]
 
@@ -254,8 +254,8 @@ type transactionBounce = {
   bounce_type_name: string option ;
   fwd_fees : z option ;
   msg_fees : z option ;
-  msg_size_bits: string option ;
-  msg_size_cells: string option ;
+  msg_size_bits: int option ;
+  msg_size_cells: int option ;
   req_fwd_fees : z option ;
 } [@@deriving json_encoding {option="option"}]
 

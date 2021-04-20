@@ -29,10 +29,10 @@ external wait_next_block_ml :
   Ton_types.block Ton_types.reply = "wait_next_block_ml"
 
 (* timeout is in ms *)
-let wait_next_block ~client ~blockid ~address ?timeout () =
+let wait_next_block ~client ~block_id ~address ?timeout () =
   Ton_types.reply
     (
-      wait_next_block_ml client blockid address timeout
+      wait_next_block_ml client block_id address timeout
     )
 
 external decode_message_boc_ml :
