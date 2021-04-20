@@ -173,3 +173,10 @@ pub fn ocaml_of_decoded_message_body( m : ton_client::abi::DecodedMessageBody ) 
     }
 }
 
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
+pub struct EncodedMessage {
+    pub message_id: String,
+    pub message: String,
+    pub expire: Option<u64>,
+//    address: String,
+}

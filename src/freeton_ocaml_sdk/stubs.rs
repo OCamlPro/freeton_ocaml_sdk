@@ -131,6 +131,26 @@ pub fn call_contract_ml(
     )
 }
 
+#[ocaml::func]
+pub fn prepare_message_ml(
+    ton: ocaml::Pointer<TonClientStruct>,
+    args: Vec<String>,
+    keys: Option<types::KeyPair>
+) -> ocp::Reply<types::EncodedMessage> {
+    let ton = crate::types::ton_client_of_ocaml(ton);
+    let keys = keys.map(|keys| types::keypair_of_ocaml(keys));
+    ocp::reply_async(
+        crate::call::prepare_message_rs(
+            ton,
+            &args[0],         // addr
+            &args[1],         // abi
+            &args[2],         // method
+            &args[3],         // params
+            keys
+        )
+    )
+}
+
 
 
 #[ocaml::func]

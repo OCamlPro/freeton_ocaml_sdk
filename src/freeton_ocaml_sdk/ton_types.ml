@@ -34,7 +34,7 @@ type error =
   | ERROR_DEPLOY_FAILED
   | ERROR_TOKIO_RUNTIME_NEW
 
-exception Error of error * string
+exception TonError of error * string
 
 let error_of_code = function
   | 0 -> ERROR_FAILWITH
@@ -58,7 +58,18 @@ let reply r =
       if e.code = 0 then
         failwith e.msg
       else
-        raise (Error (error_of_code e.code, e.msg))
+        raise (TonError (error_of_code e.code, e.msg))
+  | None, None -> assert false
+  | Some _, Some _ -> assert false
+
+let reply_lwt r =
+  match r.result, r.error with
+  | Some r, None -> Lwt.return (Ok r)
+  | None, Some e ->
+      if e.code = 0 then
+        Lwt.return (Error (Failure e.msg))
+      else
+        Lwt.return (Error (TonError (error_of_code e.code, e.msg)))
   | None, None -> assert false
   | Some _, Some _ -> assert false
 

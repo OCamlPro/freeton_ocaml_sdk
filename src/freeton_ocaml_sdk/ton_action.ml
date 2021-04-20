@@ -10,6 +10,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(* see EncodedMessage in types.rs *)
+type encoded_message = {
+  enc_message_id : string ;
+  enc_message : string ;
+  enc_expire : int64 option ;
+}
+
 external deploy_contract_ml :
   Ton_types.client->
   string array ->
@@ -26,6 +33,18 @@ let deploy ~client ~tvc_file ~abi ~params ~keypair
                 initial_data; initial_pubkey |] ~keypair ~wc
     )
 
+external prepare_message_ml :
+  Ton_types.client ->
+  string array ->
+  keypair : Ton_types.keypair option ->
+  encoded_message Ton_types.reply = "prepare_message_ml"
+
+let prepare_message ~client ~address ~abi ~meth ~params ?keypair () =
+  Ton_types.reply (
+    prepare_message_ml client [| address ; abi ; meth ; params |]
+      ~keypair
+  )
+
 external call_contract_ml :
   Ton_types.client ->
   string array ->
@@ -33,9 +52,9 @@ external call_contract_ml :
   local : bool ->
   string Ton_types.reply = "call_contract_ml"
 
-let call ~client ~address ~abi ~meth ~params ?keypair ~boc
+let call_lwt ~client ~address ~abi ~meth ~params ?keypair ~boc
     ~local () =
-  Ton_types.reply (
+  Ton_types.reply_lwt (
     call_contract_ml client [| address ; abi ; meth ; params ; boc |]
       ~keypair
       ~local
@@ -47,33 +66,47 @@ let call_lwt
     (Ton_request.post_lwt server_url
        (Ton_request.account ~level:2 address) )
     (function
-      | [] -> Printf.kprintf failwith "Account %s does not exist" address
-      | _ :: _ :: _ -> assert false
-      | [ acc ] ->
+      | Error err -> Lwt.return (Error err)
+      | Ok [] ->
+          Lwt.return
+            (Error
+               (Failure
+                  (Printf.sprintf "Account %s does not exist" address)))
+      | Ok (_ :: _ :: _) -> assert false
+      | Ok [ acc ] ->
           match acc.acc_boc with
           | None ->
-              Printf.kprintf failwith "Account %s is not initialized" address
+              Lwt.return
+                (Error
+                   (Failure
+                      (Printf.sprintf "Account %s is not initialized" address)))
           | Some boc ->
               let client =
                 match client with
                 | Some client -> client
                 | None -> Ton_client.create server_url
               in
-              let v =
-                call ~client ~address ~abi ~meth ~params ?keypair ~boc
-                  ~local ()
-              in
-              Lwt.return v
+              call_lwt ~client ~address ~abi ~meth ~params ?keypair ~boc
+                ~local ()
     )
+
+let call ~client ~address ~abi ~meth ~params ?keypair ~boc
+    ~local () =
+  Ton_types.reply (
+    call_contract_ml client [| address ; abi ; meth ; params ; boc |]
+      ~keypair
+      ~local
+  )
 
 let call_run ?client ~server_url ~address ~abi ~meth ~params ?keypair ~local () =
   match
     Ton_request.post_run server_url
       (Ton_request.account ~level:2 address)
   with
-  | [] -> Printf.kprintf failwith "Account %s does not exist" address
-  | _ :: _ :: _ -> assert false
-  | [ acc ] ->
+  | Error exn -> raise exn
+  | Ok [] -> Printf.kprintf failwith "Account %s does not exist" address
+  | Ok ( _ :: _ :: _ ) -> assert false
+  | Ok [ acc ] ->
       match acc.acc_boc with
       | None ->
           Printf.kprintf failwith "Account %s is not initialized" address
