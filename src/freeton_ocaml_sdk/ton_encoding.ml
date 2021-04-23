@@ -340,7 +340,11 @@ block(...): Block
   } [@@deriving json_encoding {option="option"}]
 
 
-
+type transaction_with_messages = {
+  tr : transaction ;
+  in_message : message option;
+  out_messages : message list ;
+} [@@deriving json_encoding {option="option"}]
 
 
 
@@ -350,11 +354,27 @@ type transactions = transaction list [@obj1 "transactions"] [@@deriving json_enc
 let string_of_transaction tr =
   EzEncoding.construct ~compact:false transaction_enc tr
 
+let string_of_transactions tr =
+  EzEncoding.construct ~compact:false (list transaction_enc) tr
+
+let string_of_transactions_with_messages tr =
+  EzEncoding.construct ~compact:false
+    ( list transaction_with_messages_enc ) tr
+
 let string_of_account tr =
   EzEncoding.construct ~compact:false account_enc tr
+
+let string_of_accounts tr =
+  EzEncoding.construct ~compact:false (list account_enc) tr
 
 let string_of_message tr =
   EzEncoding.construct ~compact:false message_enc tr
 
+let string_of_messages tr =
+  EzEncoding.construct ~compact:false (list message_enc) tr
+
 let string_of_block tr =
   EzEncoding.construct ~compact:false block_enc tr
+
+let string_of_blocks tr =
+  EzEncoding.construct ~compact:false (list block_enc) tr
