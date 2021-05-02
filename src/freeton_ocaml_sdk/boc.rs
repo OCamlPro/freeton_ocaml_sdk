@@ -25,10 +25,12 @@ pub async fn parse_message_rs(msg : String) -> Result<String, ocp::Error>
     )
         .await
         .map_err(|e|
-                 ocp::failwith(format!("{}", e)))?;
+                 ocp::error(ocp::ERROR_PARSE_MESSAGE_FAILED,
+                            format!("{}", e)))?;
     let json = serde_json::to_string_pretty(& parsed.parsed)
         .map_err(|e|
-                 ocp::failwith(format!("{}", e)))?;
+                 ocp::error(ocp::ERROR_ENCODE_JSON_FAILED,
+                            format!("{}", e)))?;
     Ok(json)
 
 }

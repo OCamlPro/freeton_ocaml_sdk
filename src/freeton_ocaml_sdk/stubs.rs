@@ -55,10 +55,10 @@ pub fn deploy_contract_ml(
 
 #[ocaml::func]
 pub fn generate_keypair_from_mnemonic_ml
-    (mnemonic: String) -> ocp::Reply<types::KeyPair> {
+    (mnemonic: String, path: Option<String>) -> ocp::Reply<types::KeyPair> {
     
     ocp::reply(
-        crate::crypto::generate_keypair_from_mnemonic_rs(&mnemonic))
+        crate::crypto::generate_keypair_from_mnemonic_rs(&mnemonic, path))
 }
 
 #[ocaml::func]

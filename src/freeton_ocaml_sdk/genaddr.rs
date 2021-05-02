@@ -35,8 +35,8 @@ pub async fn generate_address_rs(
 
     let contract = std::fs::read(tvc)
         .map_err(|e|
-                 ocp::failwith(
-                     format!("failed to read smart contract file: {}", e)))?;
+                 ocp::error(ocp::ERROR_READ_TVC_FAILED,
+                     format!("{}", e)))?;
 
     let abi = load_abi(&abi)?;
 
@@ -118,30 +118,35 @@ pub fn update_contract_state_rs(tvc_file: &str,
     let pubkey = hex::decode(&pubkey).unwrap();
     let mut state_init = OpenOptions::new().read(true).write(true).open(tvc_file)
         .map_err(|e|
-                 ocp::failwith(
-                     format!("unable to open contract file: {}", e)))?;
+                 ocp::error(
+                     ocp::ERROR_READ_TVC_FAILED,
+                     format!("{}", e)))?;
 
     let pubkey_object = PublicKey::from_bytes(&pubkey)
         .map_err(|e|
-                 ocp::failwith(
-                     format!("unable to load public key: {}", e)))?;
+                 ocp::error(
+                     ocp::ERROR_PARSE_PUBKEY_FAILED,
+                     format!("{}", e)))?;
 
     let mut contract_image = ton_sdk::ContractImage::from_state_init_and_key(&mut state_init, &pubkey_object)
         .map_err(|e|
-                 ocp::failwith(
-                     format!("unable to load contract image: {}", e)))?;
+                 ocp::error(
+                     ocp::ERROR_LOAD_CONTRACT_IMAGE_FAILED,
+                     format!("{}", e)))?;
     
     if data.is_some() {
         contract_image.update_data(&data.unwrap(), abi)
             .map_err(|e|
-                     ocp::failwith(
-                         format!("unable to update contract image data: {}", e)))?;
+                     ocp::error(
+                         ocp::ERROR_UPDATE_CONTRACT_IMAGE_FAILED,
+                         format!("{}", e)))?;
     }
 
     let vec_bytes = contract_image.serialize()
         .map_err(|e|
-                 ocp::failwith(
-                     format!("unable to serialize contract image: {}", e)))?;
+                 ocp::error(
+                     ocp::ERROR_WRITE_TVC_FILE,
+                     format!("{}", e)))?;
 
     state_init.seek(std::io::SeekFrom::Start(0)).unwrap();
     state_init.write_all(&vec_bytes).unwrap();

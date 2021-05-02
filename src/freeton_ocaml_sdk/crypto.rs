@@ -45,9 +45,10 @@ pub fn generate_mnemonic_rs() -> Result<String, ocp::Error > {
 }
 
 
+// pub const HD_PATH: &str = "m/44'/396'/0'/0/0";
 
 pub fn generate_keypair_from_mnemonic_rs
-    (mnemonic: &str) -> Result<types::KeyPair, ocp::Error> {
+    (mnemonic: &str, hd_path: Option<String>) -> Result<types::KeyPair, ocp::Error> {
     let client = create_client_local()?;
     let hdk_master = hdkey_xprv_from_mnemonic(
         client.clone(),
@@ -57,16 +58,22 @@ pub fn generate_keypair_from_mnemonic_rs
             phrase: mnemonic.to_string(),
         },
     ).map_err(|e|
-              ocp::failwith(format!("{}", e)))?;
+              ocp::error(ocp::ERROR_HDKEY_FROM_MNEMONIC_FAILED,
+                         format!("{}", e)))?;
 
+    let hd_path =
+       if let Some(hd_path) = hd_path { hd_path }
+        else { HD_PATH.to_string() };
     let hdk_root = hdkey_derive_from_xprv_path(
         client.clone(),
         ParamsOfHDKeyDeriveFromXPrvPath {
             xprv: hdk_master.xprv,
-            path: HD_PATH.to_string(),
+            path: hd_path
         },
     ).map_err(|e|
-              ocp::failwith(format!("{}", e)))?;
+              ocp::error(
+                  ocp::ERROR_DERIVE_KEY_FAILED,
+                  format!("{}", e)))?;
 
     let secret = hdkey_secret_from_xprv(
         client.clone(),
@@ -74,7 +81,9 @@ pub fn generate_keypair_from_mnemonic_rs
             xprv: hdk_root.xprv,
         },
     ).map_err(|e|
-              ocp::failwith(format!("{}", e)))?;
+              ocp::error(
+                  ocp::ERROR_SECRET_KEY_FAILED,
+                  format!("{}", e)))?;
 
     let mut keypair: KeyPair = nacl_sign_keypair_from_secret_key(
         client.clone(),
@@ -82,8 +91,9 @@ pub fn generate_keypair_from_mnemonic_rs
             secret: secret.secret,
         },
     ).map_err(|e|
-              ocp::failwith(
-                  format!("failed to get KeyPair from secret key: {}", e)))?;
+              ocp::error(
+                  ocp::ERROR_KEYPAIR_OF_SECRET_FAILED,
+                  format!("{}", e)))?;
 
     // special case if secret contains public key too.
     let secret = hex::decode(&keypair.secret).unwrap();
