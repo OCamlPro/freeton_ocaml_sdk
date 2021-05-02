@@ -16,11 +16,11 @@ external generate_mnemonic_ml: unit -> string Ton_types.reply =
 let generate_mnemonic () = Ton_types.reply (generate_mnemonic_ml ())
 
 external generate_keypair_from_mnemonic :
-  string -> Ton_types.keypair Ton_types.reply =
+  string -> string option -> Ton_types.keypair Ton_types.reply =
   "generate_keypair_from_mnemonic_ml"
 
-let generate_keypair_from_mnemonic m =
-  Ton_types.reply ( generate_keypair_from_mnemonic m )
+let generate_keypair_from_mnemonic ?path m =
+  Ton_types.reply ( generate_keypair_from_mnemonic m path )
 
 external generate_address :
   string array ->
@@ -35,3 +35,11 @@ let generate_address ~tvc_file ~abi ~keypair
   Ton_types.reply ( generate_address
                       [| tvc_file ; abi ; initial_data |]
                       keypair wc )
+
+let std_path list =
+  match list with
+  | [] -> "m/44'/396'"
+  | x :: tail ->
+      Printf.sprintf "m/44'/396'/%s"
+        (String.concat "/"
+           (Printf.sprintf "%d'" x :: List.map string_of_int tail ))

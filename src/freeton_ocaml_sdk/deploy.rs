@@ -72,7 +72,7 @@ pub async fn calc_acc_address(
     )
     .await
         .map_err(|e|
-                 ocp::error(ocp::ERROR_CANNOT_GENERATE_ADDRESS,
+                 ocp::error(ocp::ERROR_GENERATE_ADDRESS_FAILED,
                             format!("{}", e)))?;
     Ok(result.address)
 }
@@ -91,7 +91,7 @@ pub async fn deploy_contract_rs(
     let tvc_bytes = &std::fs::read(tvc)
         .map_err(|e|
                  ocp::error(
-                     ocp::ERROR_CANNOT_READ_TVC_FILE,
+                     ocp::ERROR_READ_TVC_FAILED,
                      format!("{}", e)))?;
 
     let tvc_base64 = base64::encode(&tvc_bytes);

@@ -62,8 +62,8 @@ async fn prepare_message(
 
     let params = serde_json::from_str(&params)
         .map_err(|e|
-                 ocp::failwith(
-                     format!("arguments are not in json format: {}", e)))?;
+                 ocp::error(ocp::ERROR_INVALID_JSON_PARAMS,
+                            format!("arguments not in json: {}", e)))?;
 
 
     let call_set = Some(CallSet {
@@ -88,8 +88,8 @@ async fn prepare_message(
         },
     ).await
         .map_err(|e|
-                 ocp::failwith(
-                     format!("failed to create inbound message: {}", e)))?;
+                 ocp::error(ocp::ERROR_ENCODE_MESSAGE_FAILED,
+                            format!("{}", e)))?;
 
     let expire = header.and_then(|h| h.expire);
     let expire = if let Some(expire) = expire {
@@ -282,7 +282,8 @@ async fn send_message_and_wait(
             },
         ).await
             .map_err(|e|
-                     ocp::failwith(format!("run failed: {:#}", e)))?;
+                     ocp::error(ocp::ERROR_RUN_TVM_FAILED,
+                                   format!("{:#}", e)))?;
         Ok(result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({})))
     } else {
   //      eprintln!("Processing... ");
@@ -301,7 +302,8 @@ async fn send_message_and_wait(
             callback,
         ).await
             .map_err(|e|
-                     ocp::failwith(format!("Failed: {:#}", e)))?;
+                     ocp::error(ocp::ERROR_SEND_MESSAGE_FAILED,
+                                format!("Send Failed: {:#}", e)))?;
 
 //        eprintln!("wait for transaction");
         
@@ -316,7 +318,9 @@ async fn send_message_and_wait(
             callback.clone(),
         ).await
             .map_err(|e|
-                     ocp::failwith(format!("Failed: {:#}", e)))?;
+                     ocp::error(
+                         ocp::ERROR_WAIT_FOR_TRANSACTION_FAILED,
+                         format!("Failed: {:#}", e)))?;
 
         //println!("done");
         Ok(result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({})))
@@ -516,8 +520,8 @@ pub async fn encode_body_rs(abi: &str, func: &str, params: &str) -> Result<Strin
     let abi = load_abi(&abi)?;
     let params = serde_json::from_str(&params)
         .map_err(|e|
-                 ocp::failwith(
-                     format!("arguments are not in json format: {}", e)))?;
+                 ocp::error(ocp::ERROR_INVALID_JSON_PARAMS,
+                     format!("{}", e)))?;
     let client = create_client_local()?;
     ton_client::abi::encode_message_body(
         client.clone(),
@@ -529,6 +533,8 @@ pub async fn encode_body_rs(abi: &str, func: &str, params: &str) -> Result<Strin
             processing_try_index: None,
         },
     ).await
-    .map_err(|e| ocp::failwith(format!("failed to encode body: {}", e)))
+        .map_err(|e| ocp::error(
+            ocp::ERROR_ENCODE_MESSAGE_FAILED,
+            format!("{}", e)))
     .map(|r| r.body)
 }

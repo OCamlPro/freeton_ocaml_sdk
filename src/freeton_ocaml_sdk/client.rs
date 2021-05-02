@@ -90,8 +90,8 @@ pub fn parse_sync_response<R: DeserializeOwned>(response: *const String)
         Ok(value) => {
             if value["error"].is_object() {
                 Err(
-                    ocp::failwith( format!(
-                        "parse_sync_response (1): {}", value) )
+                    ocp::error( ocp::ERROR_REPLY_IS_ERROR,
+                                format!("{}", value) )
                 )
             } else {
                 Ok(serde_json::from_value(value["result"].clone()).unwrap())
@@ -99,8 +99,8 @@ pub fn parse_sync_response<R: DeserializeOwned>(response: *const String)
         }
         Err(err) => {
             Err(
-                ocp::failwith(
-                    format!("parse_sync_response (2): {}", err) ))
+                ocp::error(ocp::ERROR_PARSE_REPLY_FAILED,
+                    format!("{}", err) ))
         }
     }
 }
