@@ -37,7 +37,7 @@ pub fn create_client_local() -> Result<TonClient, ocp::Error> {
         .map_err(|e|
                  ocp::error(
                      ocp::ERROR_TONCLIENT_CREATE,
-                     format!("{}", e)))?;
+                     format!("{:#}", e)))?;
     Ok(Arc::new(cli))
 }
 
@@ -73,7 +73,7 @@ pub fn create_client_rs(server_url: &str) -> Result<TonClient, ocp::Error> {
         .map_err(|e|
                  ocp::error(
                      ocp::ERROR_TONCLIENT_CREATE,
-                     format!("{}", e)))?;
+                     format!("{:#}", e)))?;
     Ok(Arc::new(cli))
 }
 
@@ -91,7 +91,7 @@ pub fn parse_sync_response<R: DeserializeOwned>(response: *const String)
             if value["error"].is_object() {
                 Err(
                     ocp::error( ocp::ERROR_REPLY_IS_ERROR,
-                                format!("{}", value) )
+                                format!("{:#}", value) )
                 )
             } else {
                 Ok(serde_json::from_value(value["result"].clone()).unwrap())
@@ -100,7 +100,7 @@ pub fn parse_sync_response<R: DeserializeOwned>(response: *const String)
         Err(err) => {
             Err(
                 ocp::error(ocp::ERROR_PARSE_REPLY_FAILED,
-                    format!("{}", err) ))
+                    format!("{:#}", err) ))
         }
     }
 }

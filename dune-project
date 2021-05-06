@@ -3,7 +3,7 @@
 (name freeton_ocaml_sdk)
 (allow_approximate_merlin)
 (generate_opam_files false)
-(version 0.2.4)
+(version 0.2.5)
 (formatting (enabled_for ocaml reason))
 
 (package
@@ -13,10 +13,12 @@
  (depends
    (ocaml (>= 4.08.0))
    (zarith ( > 1 ))
+   ezjsonm
    (ez_file ( >= 0.2 ))
    ez_api
    cohttp-lwt-unix
    ppx_deriving_encoding
+   (lwt_ssl ( >= 1.1 ))
    conf-rust-2018
    conf-libssl
    ppx_inline_test

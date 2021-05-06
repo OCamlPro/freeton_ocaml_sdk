@@ -70,6 +70,7 @@ let post_run url req =
 let astring = astring
 let aint = aint
 let aeq name value = [ name, aobj [ "eq", value ] ]
+let acomp name ~comp value = [ name, aobj [ comp, value ] ]
 let alimit n = [ "limit", aint n ]
 let aorder ?(direction="DESC") name =
   [ "orderBy", aobj [ "path", `string name; "direction", `raw direction ] ]
@@ -87,6 +88,7 @@ let account_info1 = [
   scalar "acc_type_name";
   scalar ~args:["format", araw "DEC"] "balance";
   scalar "code_hash";
+  scalar "last_trans_lt";
 ]
 
 let account_info2 =
@@ -102,7 +104,6 @@ let account_info3 =
   account_info2 @ [
     (*  due_payment(format: BigIntFormat): String *)
     scalar "last_paid" ;
-    (* last_trans_lt(format: BigIntFormat): String *)
     scalar "library" ;
     scalar "library_hash" ;
     scalar "proof" ;
@@ -137,7 +138,7 @@ let account ?level id =
 
 
 let ext_blk_ref = [
-  scalar ~args:["format", araw "DEC"] "end_lt";
+  scalar "end_lt";
   scalar "seq_no";
   scalar "root_hash";
   scalar "file_hash" ]
@@ -323,6 +324,8 @@ let transaction_info1 = [
   (*  fields "in_message" message_info; *)
   scalar "in_msg";
   scalar "out_msgs";
+  scalar "lt";
+  scalar "now";
 ]
 
 let transaction_info2 =
@@ -332,9 +335,7 @@ let transaction_info2 =
     scalar "end_status";
     scalar "end_status_name";
     scalar "installed";
-    scalar "lt";
     scalar "new_hash";
-    scalar "now";
     scalar "old_hash";
     scalar "orig_status";
     scalar "orig_status_name";

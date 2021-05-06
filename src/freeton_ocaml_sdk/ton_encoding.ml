@@ -44,7 +44,7 @@ type account = {
   acc_data_hash: string option ;
   (*  due_payment(format: BigIntFormat): String *)
   acc_last_paid: float option ;
-  (* last_trans_lt(format: BigIntFormat): String *)
+  acc_last_trans_lt : string option ;
   acc_library: string option ;
   acc_library_hash: string option ;
   acc_proof: string option ;

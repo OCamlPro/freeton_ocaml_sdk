@@ -122,6 +122,37 @@ let string_of_error = function
 let () =
   Printexc.register_printer (function
       | TonError (error, msg) ->
+          let msg = try
+              let json = Ezjsonm.from_string msg in
+              let b = Buffer.create 10000 in
+              let rec iter indent json =
+                begin
+                  match json with
+                    `O list ->
+                      Printf.bprintf b "{\n";
+                      List.iter (fun (s,v) ->
+                          Printf.bprintf b "%s  %s:" indent s;
+                          iter (indent ^ "  ") v
+                        ) list;
+                      Printf.bprintf b "%s}" indent
+                  | `A list ->
+                      Printf.bprintf b "[\n";
+                      List.iteri (fun i v ->
+                          Printf.bprintf b "%s  %d:" indent i;
+                          iter (indent ^ "  ") v;
+                        ) list;
+                      Printf.bprintf b "%s]" indent
+                  | `Bool bool -> Printf.bprintf b "%b" bool
+                  | `Null -> Printf.bprintf b "null"
+                  | `Float f -> Printf.bprintf b "%f" f
+                  | `String s -> Printf.bprintf b "%s" s
+                end;
+                Printf.bprintf b "\n"
+              in
+              iter "  " json;
+              Buffer.contents b
+            with _ -> msg
+          in
           let s = Printf.sprintf "%s: %s" (string_of_error error) msg in
           Some s
       | _ -> None)

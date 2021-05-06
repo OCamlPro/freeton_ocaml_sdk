@@ -40,7 +40,7 @@ pub fn generate_mnemonic_rs() -> Result<String, ocp::Error > {
     )
         .map_err(|e|
                  ocp::error(ocp::ERROR_MNEMONIC_FROM_RANDOM,
-                             format!("{}", e)))?;
+                             format!("{:#}", e)))?;
     Ok(r.phrase)
 }
 
@@ -59,7 +59,7 @@ pub fn generate_keypair_from_mnemonic_rs
         },
     ).map_err(|e|
               ocp::error(ocp::ERROR_HDKEY_FROM_MNEMONIC_FAILED,
-                         format!("{}", e)))?;
+                         format!("{:#}", e)))?;
 
     let hd_path =
        if let Some(hd_path) = hd_path { hd_path }
@@ -73,7 +73,7 @@ pub fn generate_keypair_from_mnemonic_rs
     ).map_err(|e|
               ocp::error(
                   ocp::ERROR_DERIVE_KEY_FAILED,
-                  format!("{}", e)))?;
+                  format!("{:#}", e)))?;
 
     let secret = hdkey_secret_from_xprv(
         client.clone(),
@@ -83,7 +83,7 @@ pub fn generate_keypair_from_mnemonic_rs
     ).map_err(|e|
               ocp::error(
                   ocp::ERROR_SECRET_KEY_FAILED,
-                  format!("{}", e)))?;
+                  format!("{:#}", e)))?;
 
     let mut keypair: KeyPair = nacl_sign_keypair_from_secret_key(
         client.clone(),
@@ -93,7 +93,7 @@ pub fn generate_keypair_from_mnemonic_rs
     ).map_err(|e|
               ocp::error(
                   ocp::ERROR_KEYPAIR_OF_SECRET_FAILED,
-                  format!("{}", e)))?;
+                  format!("{:#}", e)))?;
 
     // special case if secret contains public key too.
     let secret = hex::decode(&keypair.secret).unwrap();
