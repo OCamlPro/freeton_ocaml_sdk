@@ -17,10 +17,13 @@ let dev_base = EzAPI.TYPES.BASE "https://net.ton.dev"
 let base = EzAPI.TYPES.BASE "https://main.ton.dev"
 
 let service
-  ?section ?name ?descr ?errors ?params ?security ?register ?input_example ?output_example
-  (output: 'a Json_encoding.encoding) : (query, 'a, 'error, 'security) EzAPI.post_service0 =
+    ?section ?name ?descr ?errors ?params ?security ?register
+    ?input_example ?output_example
+    (output: 'a Json_encoding.encoding) :
+  (query, 'a, 'error, 'security) EzAPI.post_service0 =
   EzAPI.post_service
-    ?section ?name ?descr ?errors ?params ?security ?register ?input_example ?output_example
+    ?section ?name ?descr ?errors ?params ?security ?register
+    ?input_example ?output_example
     ~input:request_encoding
     ~output:Json_encoding.(obj1 (req "data" output))
     EzAPI.Path.(root // "graphql")
@@ -472,3 +475,83 @@ EXAMPLE:
 
 
 *)
+
+let (let>) p f = Lwt.bind p f
+
+let iter_past_transactions ~address ~url
+    ?known_transactions ?last_trans_lt ?(level=1) ?(limit=max_int) f =
+
+  let known_transactions = match known_transactions with
+    | None -> Hashtbl.create 1111
+    | Some h -> h
+  in
+
+  let> last_trans_lt = match last_trans_lt with
+    | Some last_trans_lt -> Lwt.return last_trans_lt
+    | None ->
+        let> result = post_lwt url
+            (account ~level:1 address) in
+        match result with
+        | Ok [ { acc_last_trans_lt = Some last_trans_lt ;  _} ] ->
+            Lwt.return last_trans_lt
+        | Ok [] ->
+            Printf.eprintf "No contract event_address\n%!";
+            exit 2
+        | Error exn ->
+            Printf.eprintf "Failed to load event_address last_trans_lt: %s\n%!"
+              (Printexc.to_string exn);
+            exit 2
+        | Ok _ -> assert false
+  in
+
+  let rec iter_new_transactions trs =
+    match trs with
+    | [] -> Lwt.return_unit
+    | tr :: rem_trs ->
+        let> () =
+          if Hashtbl.mem known_transactions tr.Ton_encoding.tr_id then
+            Lwt.return_unit
+          else begin
+            Printf.eprintf "Adding former transaction %s\n%!" tr.tr_id;
+            f tr
+          end
+        in
+        iter_new_transactions rem_trs
+  in
+
+  let rec paginate_transactions limit next last_trans_lt =
+    let req_limit = min limit 10 in
+    let> result = post_lwt url
+        (transactions ~level
+           ~account_addr:address
+           ~limit:req_limit
+           ~order:("lt", None)
+           ~filter:( acomp "lt" ~comp:"lt"
+                       ( astring last_trans_lt))
+           [])
+    in
+    match result with
+    | Ok [] -> iter_new_transactions next
+    | Ok trs -> paginate_transactions2 limit trs next
+    | Error exn ->
+        Printf.eprintf "failed to load new transactions %s\n%!"
+          (Printexc.to_string exn);
+        exit 2
+
+  and paginate_transactions2 limit trs next =
+    match trs with
+    | { tr_id ; tr_lt = Some lt ; _ } :: rem_trs  ->
+        if Hashtbl.mem known_transactions tr_id then
+          paginate_transactions2 0 rem_trs next
+        else
+          let limit = limit - List.length trs in
+          let next = trs @ next in
+          if limit > 0 then
+            paginate_transactions limit next lt
+          else
+            iter_new_transactions next
+    | [] -> iter_new_transactions next
+    | _ -> assert false
+  in
+  let> () = paginate_transactions limit [] last_trans_lt in
+  Lwt.return_unit
