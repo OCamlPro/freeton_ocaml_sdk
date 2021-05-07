@@ -160,6 +160,7 @@ let block_info1 = [
   scalar "tr_count";
   scalar "workchain_id";
   scalar "shard";
+  scalar "start_lt";
 ]
 
 let block_info2 =
@@ -224,9 +225,9 @@ let head ?filter ?level () =
 
 let message_info1 = [
   scalar "id";
-  scalar "msg_type";
+  (*  scalar "msg_type"; *)
   scalar "msg_type_name";
-  scalar "status";
+  (* scalar "status"; *)
   scalar "status_name";
   scalar "block_id";
   scalar "src";
@@ -317,9 +318,9 @@ let transaction_info1 = [
   scalar "id";
   scalar "aborted";
   scalar "account_addr";
-  scalar "tr_type";
+  (* scalar "tr_type"; *)
   scalar "tr_type_name";
-  scalar "status";
+  (* scalar "status"; *)
   scalar "status_name";
   scalar "block_id";
   scalar ~args:["format", araw "DEC"] "total_fees";
@@ -335,14 +336,14 @@ let transaction_info2 =
   transaction_info1 @ [
     scalar "boc" ;
     scalar "destroyed";
-    scalar "end_status";
+    (* scalar "end_status"; *)
     scalar "end_status_name";
     scalar "installed";
     scalar "new_hash";
     scalar "old_hash";
-    scalar "orig_status";
+    (* scalar "orig_status"; *)
     scalar "orig_status_name";
-    scalar "outmsg_cnt";
+    (* scalar "outmsg_cnt"; *)
     scalar "prepare_transaction";
     scalar "prev_trans_hash";
     scalar "prev_trans_lt";
@@ -361,7 +362,7 @@ let transaction_info3 =
       scalar "result_code" ;
       scalar "skipped_actions" ;
       scalar "spec_actions" ;
-      scalar "status_change" ;
+      (* scalar "status_change" ; *)
       scalar "status_change_name" ;
       scalar "success" ;
       scalar "tot_actions" ;
@@ -373,7 +374,7 @@ let transaction_info3 =
 
     ];
     fields "bounce" [
-      scalar "bounce_type" ;
+      (* scalar "bounce_type" ; *)
       scalar "bounce_type_name" ;
       scalar ~args:["format", araw "DEC"] "fwd_fees" ;
       scalar ~args:["format", araw "DEC"] "msg_fees" ;
@@ -383,7 +384,7 @@ let transaction_info3 =
     ];
     fields "compute" [
       scalar "account_activated" ;
-      scalar "compute_type" ;
+      (* scalar "compute_type" ; *)
       scalar "compute_type_name" ;
       scalar "exit_arg" ;
       scalar "exit_code" ;
@@ -393,7 +394,7 @@ let transaction_info3 =
       scalar ~args:["format", araw "DEC"] "gas_used" ;
       scalar "mode" ;
       scalar "msg_state_used" ;
-      scalar "skipped_reason" ;
+      (*      scalar "skipped_reason" ; *)
       scalar "skipped_reason_name" ;
       scalar "success" ;
       scalar "vm_final_state_hash" ;
@@ -406,7 +407,7 @@ let transaction_info3 =
     ];
     scalar "credit_first";
     fields "storage" [
-      scalar "status_change" ;
+      (*      scalar "status_change" ; *)
       scalar "status_change_name" ;
       scalar ~args:["format", araw "DEC"] "storage_fees_collected";
       scalar ~args:["format", araw "DEC"] "storage_fees_due";
@@ -520,7 +521,7 @@ let iter_past_transactions ~address ~url
   in
 
   let rec paginate_transactions limit next last_trans_lt =
-    let req_limit = min limit 10 in
+    let req_limit = min limit 3 in
     let> result = post_lwt url
         (transactions ~level
            ~account_addr:address
@@ -532,7 +533,17 @@ let iter_past_transactions ~address ~url
     in
     match result with
     | Ok [] -> iter_new_transactions next
-    | Ok trs -> paginate_transactions2 limit trs next
+    | Ok trs ->
+        let trs = List.rev trs in
+        (*
+        List.iteri (fun i tr ->
+            Printf.eprintf "%d -> %Ld\n%!" i
+              (match tr.Ton_encoding.tr_lt with
+               | None -> assert false
+               | Some lt -> Int64.of_string lt );
+          ) trs ;
+*)
+        paginate_transactions2 limit trs next
     | Error exn ->
         Printf.eprintf "failed to load new transactions %s\n%!"
           (Printexc.to_string exn);

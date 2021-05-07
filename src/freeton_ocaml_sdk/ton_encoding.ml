@@ -31,7 +31,7 @@ type z = Z.t [@encoding z_enc] [@@deriving json_encoding]
 
 type account = {
   acc_id : string;
-  acc_type : int option; [@key "acc_type"]
+  (* acc_type : int option; [@key "acc_type"] *)
   acc_type_name: string option ; (* AccountStatusEnum *) [@key "acc_type_name"]
   acc_balance : z option;
   (*  balance_other: [OtherCurrency] *)
@@ -78,7 +78,7 @@ type out_message = {
   (* imported: InMsg *)
   out_msg_env_hash: string option ;
   out_msg_id: string option ;
-  out_msg_type: int option ;
+  (* out_msg_type: int option ; *)
   out_msg_type_name: string option ;
   out_next_addr_pfx : string option ;
   out_next_workchain: int option ;
@@ -92,7 +92,7 @@ type in_message = {
   in_ihr_fee : string option ;
   (*  in_msg: MsgEnvelope *)
   in_msg_id: string option ;
-  in_msg_type: int option ;
+  (* in_msg_type: int option ; *)
   in_msg_type_name: string option ;
   (* out_msg: MsgEnvelope *)
   in_proof_created: string option ;
@@ -149,10 +149,12 @@ rand_seed: String
   bl_shard : string option;
   (*
 signatures(...): BlockSignatures
-start_lt(...): String
+*)
+  bl_start_lt : string option ;
+    (*
 state_update: BlockStateUpdate
 *)
-  bl_status : int option;
+  (* bl_status : int option; *)
   bl_status_name : string option;
   bl_tr_count : int option;
   bl_value_flow : block_value_flow option;
@@ -195,7 +197,7 @@ type message = {
   msg_created_lt : string option ;
   msg_data : string option ;
   msg_data_hash : string option ;
-  msg_dst : string;
+  msg_dst : string; [@dft ""]
   msg_dst_transaction : transaction_summary option ;
   (* dst_transaction(...): Transaction *)
   msg_dst_workchain_id: int option ;
@@ -205,15 +207,15 @@ type message = {
   msg_import_fee : z option ;
   msg_library: string option ;
   msg_library_hash: string option ;
-  msg_type : int; [@key "msg_type"]
+  (* msg_msg_type : int; [@key "msg_type"] *)
   msg_msg_type_name: string option ;
   msg_proof: string option ;
   msg_split_depth: int option ;
-  msg_src : string;
+  msg_src : string; [@dft ""]
   msg_src_transaction : transaction_summary option ;
   (* src_transaction(...): Transaction *)
   msg_src_workchain_id: int option ;
-  msg_status : int;
+  (* msg_status : int; *)
   msg_status_name: string option ;
   msg_tick: bool option;
   msg_tock: bool option;
@@ -238,7 +240,7 @@ type transactionAction = {
   result_code: int option ;
   skipped_actions: int option ;
   spec_actions: int option ;
-  status_change: int option ;
+  (* status_change: int option ; *)
   status_change_name: string option ;
   success: bool option ;
   tot_actions: int option ;
@@ -250,7 +252,7 @@ type transactionAction = {
 } [@@deriving json_encoding {option="option"}]
 
 type transactionBounce = {
-  bounce_type: int option ;
+  (* bounce_type: int option ; *)
   bounce_type_name: string option ;
   fwd_fees : z option ;
   msg_fees : z option ;
@@ -261,7 +263,7 @@ type transactionBounce = {
 
 type transactionCompute = {
   account_activated: bool option ;
-  compute_type: int option ;
+  (* compute_type: int option ; *)
   compute_type_name: string option ;
   exit_arg: int option ;
   exit_code: int option ;
@@ -271,7 +273,7 @@ type transactionCompute = {
   gas_used : z option ;
   mode: int option ;
   msg_state_used: bool option ;
-  skipped_reason: int option ;
+  (* skipped_reason: int option ; *)
   skipped_reason_name: string option ;
   success: bool option ;
   vm_final_state_hash: string option ;
@@ -285,7 +287,7 @@ type transactionCredit = {
 } [@@deriving json_encoding {option="option"}]
 
 type transactionStorage = {
-  status_change: int option ;
+  (* status_change: int option ; *)
   status_change_name: string option ;
   storage_fees_collected : z option ;
   storage_fees_due : z option ;
@@ -294,7 +296,7 @@ type transactionStorage = {
 
 type transaction = {
   tr_id : string;
-  tr_aborted: bool;
+  tr_aborted: bool; [@dft false]
   tr_account_addr : string;
   tr_action: transactionAction option ;
   tr_balance_delta : z;
@@ -309,7 +311,7 @@ block(...): Block
   tr_credit: transactionCredit option ;
   tr_credit_first: bool option ;
   tr_destroyed: bool option ;
-  tr_end_status: int option ;
+  (* tr_end_status: int option ; *)
   tr_end_status_name : string option ;
   (* in_message(...): Message //  tr_in_message : message option; *)
   tr_in_msg: string ;
@@ -318,22 +320,22 @@ block(...): Block
   tr_new_hash: string option ;
   tr_now: float option ;
   tr_old_hash: string option ;
-  tr_orig_status: int option ;
+  (* tr_orig_status: int option ; *)
   tr_orig_status_name: string option ;
   (* out_messages(...): [Message] *)
-  tr_out_msgs: string list ;
-  tr_outmsg_cnt: int option ;
+  tr_out_msgs: string list ; [@dft []]
+  (* tr_outmsg_cnt: int option ; *)
   tr_prepare_transaction: string option ;
   tr_prev_trans_hash: string option ;
   tr_prev_trans_lt: string option ;
   tr_proof: string option ;
   (* split_info: TransactionSplitInfo *)
-  tr_status : int;
-  tr_status_name : string option ;
+  (* tr_status : int; *)
+  tr_status_name : string ; [@dft "Finalized"]
   tr_storage : transactionStorage option ;
   tr_total_fees : z;
   (* total_fees_other: [OtherCurrency] *)
-  tr_tr_type : int; [@key "tr_type"]
+  (* tr_tr_type : int; [@key "tr_type"] *)
   tr_tr_type_name: string option ;
   tr_tt : string option ;
   tr_workchain_id: int option ;
