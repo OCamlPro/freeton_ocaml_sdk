@@ -2,7 +2,7 @@
 # Do not modify, or add to the `skip` field of `drom.toml`.
 opam-version: "2.0"
 name: "freeton_ocaml_sdk"
-version: "0.2.4"
+version: "0.2.5"
 license: "LGPL-2.1-only with OCaml-LGPL-linking-exception"
 synopsis:
   "OCaml binding to the TON-SDK and the Graphql API for Free TON blockchain"
@@ -41,10 +41,12 @@ depends: [
   "ocaml" {>= "4.08.0"}
   "dune" {>= "2.6.0"}
   "zarith" {> "1"}
+  "ezjsonm" {}
   "ez_file" {>= "0.2"}
   "ez_api" {}
   "cohttp-lwt-unix" {}
   "ppx_deriving_encoding" {}
+  "lwt_ssl" {>= "1.1"}
   "conf-rust-2018" {}
   "conf-libssl" {}
   "ppx_inline_test" {with-test}

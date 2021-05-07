@@ -26,7 +26,7 @@ pub fn load_abi(abi: &str) -> Result<Abi, ocp::Error> {
         serde_json::from_str::<AbiContract>(abi)
             .map_err(|e| ocp::error(
                 ocp::ERROR_INVALID_JSON_ABI,
-                format!("{}", e)))?,
+                format!("{:#}", e)))?,
     ))
 }
 
@@ -36,7 +36,7 @@ pub fn read_keys(filename: &str) -> Result<KeyPair, ocp::Error> {
         .map_err(|e|
                  ocp::error(
                      ocp::ERROR_CANNOT_READ_KEYPAIR_FILE,
-                     format!("{}", e.to_string())))?;
+                     format!("{:#}", e.to_string())))?;
     let keys: KeyPair = serde_json::from_str(&keys_str).unwrap();
     Ok(keys)
 }
@@ -73,7 +73,7 @@ pub async fn calc_acc_address(
     .await
         .map_err(|e|
                  ocp::error(ocp::ERROR_GENERATE_ADDRESS_FAILED,
-                            format!("{}", e)))?;
+                            format!("{:#}", e)))?;
     Ok(result.address)
 }
 
@@ -92,7 +92,7 @@ pub async fn deploy_contract_rs(
         .map_err(|e|
                  ocp::error(
                      ocp::ERROR_READ_TVC_FAILED,
-                     format!("{}", e)))?;
+                     format!("{:#}", e)))?;
 
     let tvc_base64 = base64::encode(&tvc_bytes);
 
@@ -105,7 +105,7 @@ pub async fn deploy_contract_rs(
         .map_err(|e|
                  ocp::error(
                      ocp::ERROR_INVALID_JSON_INITIAL_DATA,
-                     format!("{}", e)))?;
+                     format!("{:#}", e)))?;
 
     let initial_pubkey =
         if initial_pubkey == "" { None } else { Some (initial_pubkey) };
@@ -114,7 +114,7 @@ pub async fn deploy_contract_rs(
         .map_err(|e|
                  ocp::error(
                      ocp::ERROR_INVALID_JSON_PARAMS,
-                     format!("{}", e)))?;
+                     format!("{:#}", e)))?;
     
     let addr = calc_acc_address(
         &tvc_bytes,

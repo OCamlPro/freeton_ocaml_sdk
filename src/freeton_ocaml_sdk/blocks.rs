@@ -20,12 +20,12 @@ pub async fn find_last_shard_block_rs(
 {
     let address = ton_client::encoding::account_decode(address)
         .map_err(|e| ocp::error(ocp::ERROR_DECODE_ADDRESS_FAILED,
-                                format!("{}",e)))?;
+                                format!("{:#}",e)))?;
 
     let string_id = ton_client::processing::blocks_walking::
     find_last_shard_block(&context, &address).await
         .map_err(|e| ocp::error(ocp::ERROR_FIND_LAST_SHARD_FAILED,
-                                format!("{}",e)))?;
+                                format!("{:#}",e)))?;
 
     Ok( string_id.to_string() )
 }
@@ -50,12 +50,12 @@ pub async fn wait_next_block_rs(
 
     let address = ton_client::encoding::account_decode(address)
         .map_err(|e| ocp::error(ocp::ERROR_DECODE_ADDRESS_FAILED,
-                                format!("{}",e)))?;
+                                format!("{:#}",e)))?;
 
     let block = ton_client::processing::blocks_walking::
     wait_next_block(&context, &blockid, &address, timeout).await
         .map_err(|e| ocp::error(ocp::ERROR_WAIT_NEXT_BLOCK_FAILED,
-                                format!("{}",e)))?;
+                                format!("{:#}",e)))?;
 
     Ok( crate::types::ocaml_of_block( block ) )
 }
@@ -94,7 +94,7 @@ pub async fn decode_message_boc_rs(
                 abi: abi.clone(),
             },
     ).await.map_err(|e| ocp::error(ocp::ERROR_DECODE_MESSAGE_FAILED,
-                                   format!("{}",e)))?;
+                                   format!("{:#}",e)))?;
 
     Ok( crate::types::ocaml_of_decoded_message_body(decode_result) )
 }

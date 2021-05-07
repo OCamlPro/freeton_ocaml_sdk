@@ -63,7 +63,7 @@ async fn prepare_message(
     let params = serde_json::from_str(&params)
         .map_err(|e|
                  ocp::error(ocp::ERROR_INVALID_JSON_PARAMS,
-                            format!("arguments not in json: {}", e)))?;
+                            format!("{:#}", e)))?;
 
 
     let call_set = Some(CallSet {
@@ -89,7 +89,7 @@ async fn prepare_message(
     ).await
         .map_err(|e|
                  ocp::error(ocp::ERROR_ENCODE_MESSAGE_FAILED,
-                            format!("{}", e)))?;
+                            format!("{:#}", e)))?;
 
     let expire = header.and_then(|h| h.expire);
     let expire = if let Some(expire) = expire {
@@ -303,7 +303,7 @@ async fn send_message_and_wait(
         ).await
             .map_err(|e|
                      ocp::error(ocp::ERROR_SEND_MESSAGE_FAILED,
-                                format!("Send Failed: {:#}", e)))?;
+                                format!("{:#}", e)))?;
 
 //        eprintln!("wait for transaction");
         
@@ -320,7 +320,7 @@ async fn send_message_and_wait(
             .map_err(|e|
                      ocp::error(
                          ocp::ERROR_WAIT_FOR_TRANSACTION_FAILED,
-                         format!("Failed: {:#}", e)))?;
+                         format!("{:#}", e)))?;
 
         //println!("done");
         Ok(result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({})))
@@ -521,7 +521,7 @@ pub async fn encode_body_rs(abi: &str, func: &str, params: &str) -> Result<Strin
     let params = serde_json::from_str(&params)
         .map_err(|e|
                  ocp::error(ocp::ERROR_INVALID_JSON_PARAMS,
-                     format!("{}", e)))?;
+                     format!("{:#}", e)))?;
     let client = create_client_local()?;
     ton_client::abi::encode_message_body(
         client.clone(),
@@ -535,6 +535,6 @@ pub async fn encode_body_rs(abi: &str, func: &str, params: &str) -> Result<Strin
     ).await
         .map_err(|e| ocp::error(
             ocp::ERROR_ENCODE_MESSAGE_FAILED,
-            format!("{}", e)))
+            format!("{:#}", e)))
     .map(|r| r.body)
 }

@@ -56,6 +56,8 @@ skip = [ "main.ml" ]
 cohttp-lwt-unix = ""
 zarith = ">1"
 ez_file = "0.2"
+ezjsonm = ""
+
 [dependencies.ez_api]
 libname = "ez_api.encoding ez_api.cohttp_lwt"
 
@@ -64,6 +66,7 @@ libname = "ez_api.encoding ez_api.cohttp_lwt"
 conf-rust-2018 = ""
 ppx_deriving_encoding = ""
 conf-libssl = ""
+lwt_ssl = "1.1"
 
 # package fields (depends on package skeleton)
 [fields]
