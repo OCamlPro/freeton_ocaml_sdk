@@ -13,21 +13,25 @@
 [package]
 edition = "2018"
 name = "ocaml-interop"
-version = "0.5.3"
+version = "0.8.3"
 authors = ["Bruno Deferrari <utizoc@gmail.com>"]
 exclude = [".github/*"]
 description = "Utilities for Rust and OCaml interoperability"
-homepage = "http://github.com/simplestaking/ocaml-interop"
+homepage = "http://github.com/tezedge/ocaml-interop"
 keywords = ["ocaml", "rust", "ffi", "interop"]
 license = "MIT"
-repository = "http://github.com/simplestaking/ocaml-interop"
+repository = "http://github.com/tezedge/ocaml-interop"
 [package.metadata.docs.rs]
 features = ["without-ocamlopt"]
+[dependencies.ocaml-boxroot-sys]
+version = "0.2"
+
 [dependencies.ocaml-sys]
-version = "^0.19"
+version = "^0.20.1"
 
 [dependencies.static_assertions]
 version = "1.1.0"
 
 [features]
-without-ocamlopt = ["ocaml-sys/without-ocamlopt"]
+caml-state = ["ocaml-sys/caml-state"]
+without-ocamlopt = ["ocaml-sys/without-ocamlopt", "ocaml-boxroot-sys/without-ocamlopt"]

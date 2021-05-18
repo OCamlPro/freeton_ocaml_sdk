@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "crc-any"
-version = "2.3.5"
+version = "2.3.9"
 authors = ["Magic Len <len@magiclen.org>"]
 include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE", "benches/bench.rs"]
 description = "To compute CRC values by providing the length of bits, expression, reflection, an initial value and a final xor value. It has many built-in CRC functions."
@@ -42,6 +42,3 @@ alloc = ["debug-helper"]
 default = ["alloc"]
 development = ["std"]
 std = []
-[badges.travis-ci]
-branch = "master"
-repository = "magiclen/crc-any"

@@ -16,6 +16,10 @@
 use std::fmt;
 use Param;
 
+use crate::AbiError;
+
+use ton_types::{error, Result};
+
 /// Function and event param types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParamType {
@@ -91,6 +95,34 @@ impl ParamType {
         }
     }
 
+    pub fn set_components(&mut self, components: Vec<Param>) -> Result<()> {
+        match self {
+            ParamType::Tuple(params) => {
+                if components.len() == 0 {
+                    Err(error!(AbiError::EmptyComponents))
+                } else {
+                    Ok(*params = components)
+                }
+            } 
+            ParamType::Array(array_type) => {
+                array_type.set_components(components)
+            }
+            ParamType::FixedArray(array_type, _) => {
+                array_type.set_components(components)
+            }
+            ParamType::Map(_, value_type) => {
+                value_type.set_components(components)
+            }
+            _ => { 
+                if components.len() != 0 {
+                    Err(error!(AbiError::UnusedComponents))
+                } else {
+                    Ok(())
+                }
+            },
+        }
+    }
+
     /// Returns type bit_len for hashmap key
     pub fn bit_len(&self) -> usize {
         match self {
@@ -105,6 +137,16 @@ impl ParamType {
         match self {
             ParamType::Time | ParamType::Expire | ParamType::PublicKey => abi_version >= 2,
             _ => abi_version >= 1
+        }
+    }
+
+    pub fn get_map_key_size(&self) -> Result<usize> {
+        match self {
+            ParamType::Int(size) | ParamType::Uint(size) => Ok(*size),
+            ParamType::Address => Ok(crate::token::STD_ADDRESS_BIT_LENGTH),
+            _ => Err(error!(AbiError::InvalidData { 
+                msg: "Only integer and std address values can be map keys".to_owned() 
+            }))
         }
     }
 }

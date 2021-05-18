@@ -11,7 +11,6 @@ synopsis = "OCaml binding to the TON-SDK and the Graphql API for Free TON blockc
 
 # description if different from project description
 description = """
-
 The freeton_ocaml_sdk library is a binding to the TON-SDK Rust library
 and the GraphQL API of the FreeTON blockchain. It can be used to build
 application to query the account states, transactions and other blockchain
@@ -42,11 +41,18 @@ kind = "library"
 # whether all modules should be packed/wrapped (default is true)
 pack-modules = false
 
+# whether the package can be silently skipped if missing deps (default is false)
+# optional = true
+
 # module name used to pack modules (if pack-modules is true)
 # pack = "Mylib"
 
+# preprocessing options
+#  preprocess = "per-module (((action (run ./toto.sh %{input-file})) mod))" 
+# preprocess = "pps ppx_deriving_encoding"
+
 # files to skip while updating at package level
-skip = [ "main.ml" ]
+skip = ["main.ml"]
 
 # package library dependencies
 #   [dependencies]
@@ -54,24 +60,32 @@ skip = [ "main.ml" ]
 #   base-unix = { libname = "unix", version = ">=base" } 
 [dependencies]
 cohttp-lwt-unix = ""
-zarith = ">1"
-ez_file = "0.2"
+ez_file = ">=0.2"
 ezjsonm = ""
-
+zarith = ">1"
 [dependencies.ez_api]
 libname = "ez_api.encoding ez_api.cohttp_lwt"
 
 # package tools dependencies
 [tools]
-conf-rust-2018 = ""
-ppx_deriving_encoding = ""
 conf-libssl = ""
-lwt_ssl = "1.1"
+conf-rust-2018 = ""
+lwt_ssl = ">=1.1"
+ppx_deriving_encoding = ""
 
 # package fields (depends on package skeleton)
+#Examples:
+#  dune-stanzas = "(preprocess (pps ppx_deriving_encoding))" 
+#  dune-libraries = "bigstring" 
+#  dune-trailer = "(install (..))" 
+#  opam-trailer = "pin-depends: [..]" 
+#  no-opam-test = "yes" 
+#  no-opam-doc = "yes" 
+#  gen-opam = "some" | "all" 
 [fields]
 c-libraries = "-lssl -lcrypto"
 dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
+no-opam-test = ""
 opam-trailer = '''
 conflicts: [ "ocplib-json-typed" ]
 #pin-depends: [
@@ -79,4 +93,3 @@ conflicts: [ "ocplib-json-typed" ]
 #]
 
 '''
-no-opam-test = ""

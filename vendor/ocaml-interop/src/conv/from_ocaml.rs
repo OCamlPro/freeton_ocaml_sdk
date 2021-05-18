@@ -1,4 +1,4 @@
-// Copyright (c) SimpleStaking and Tezedge Contributors
+// Copyright (c) Viable Systems and TezEdge Contributors
 // SPDX-License-Identifier: MIT
 
 use crate::{
@@ -10,6 +10,12 @@ use crate::{
 pub unsafe trait FromOCaml<T> {
     /// Convert from OCaml value.
     fn from_ocaml(v: OCaml<T>) -> Self;
+}
+
+unsafe impl FromOCaml<()> for () {
+    fn from_ocaml(_v: OCaml<()>) -> Self {
+        ()
+    }
 }
 
 unsafe impl FromOCaml<OCamlInt> for i64 {
@@ -104,54 +110,7 @@ where
     A: FromOCaml<OCamlA>,
 {
     fn from_ocaml(v: OCaml<Option<OCamlA>>) -> Self {
-        if let Some(value) = v.to_option() {
-            Some(A::from_ocaml(value))
-        } else {
-            None
-        }
-    }
-}
-
-unsafe impl<A, B, OCamlA, OCamlB> FromOCaml<(OCamlA, OCamlB)> for (A, B)
-where
-    A: FromOCaml<OCamlA>,
-    B: FromOCaml<OCamlB>,
-{
-    fn from_ocaml(v: OCaml<(OCamlA, OCamlB)>) -> Self {
-        (A::from_ocaml(v.fst()), B::from_ocaml(v.snd()))
-    }
-}
-
-unsafe impl<A, B, C, OCamlA, OCamlB, OCamlC> FromOCaml<(OCamlA, OCamlB, OCamlC)> for (A, B, C)
-where
-    A: FromOCaml<OCamlA>,
-    B: FromOCaml<OCamlB>,
-    C: FromOCaml<OCamlC>,
-{
-    fn from_ocaml(v: OCaml<(OCamlA, OCamlB, OCamlC)>) -> Self {
-        (
-            A::from_ocaml(v.fst()),
-            B::from_ocaml(v.snd()),
-            C::from_ocaml(v.tuple_3()),
-        )
-    }
-}
-
-unsafe impl<A, B, C, D, OCamlA, OCamlB, OCamlC, OCamlD> FromOCaml<(OCamlA, OCamlB, OCamlC, OCamlD)>
-    for (A, B, C, D)
-where
-    A: FromOCaml<OCamlA>,
-    B: FromOCaml<OCamlB>,
-    C: FromOCaml<OCamlC>,
-    D: FromOCaml<OCamlD>,
-{
-    fn from_ocaml(v: OCaml<(OCamlA, OCamlB, OCamlC, OCamlD)>) -> Self {
-        (
-            A::from_ocaml(v.fst()),
-            B::from_ocaml(v.snd()),
-            C::from_ocaml(v.tuple_3()),
-            D::from_ocaml(v.tuple_4()),
-        )
+        v.to_option().map(A::from_ocaml)
     }
 }
 
@@ -170,3 +129,72 @@ where
         vec
     }
 }
+
+// Tuples
+
+macro_rules! tuple_from_ocaml {
+    ($($accessor:ident: $t:ident => $ot:ident),+) => {
+        unsafe impl<$($t),+, $($ot: 'static),+> FromOCaml<($($ot),+)> for ($($t),+)
+        where
+            $($t: FromOCaml<$ot>),+
+        {
+            fn from_ocaml(v: OCaml<($($ot),+)>) -> Self {
+                ($($t::from_ocaml(v.$accessor())),+)
+
+            }
+        }
+    };
+}
+
+tuple_from_ocaml!(
+    fst: OCamlA => A,
+    snd: OCamlB => B);
+tuple_from_ocaml!(
+    fst: OCamlA => A,
+    snd: OCamlB => B,
+    tuple_3: OCamlC => C);
+tuple_from_ocaml!(
+    fst: OCamlA => A,
+    snd: OCamlB => B,
+    tuple_3: OCamlC => C,
+    tuple_4: OCamlD => D);
+tuple_from_ocaml!(
+    fst: OCamlA => A,
+    snd: OCamlB => B,
+    tuple_3: OCamlC => C,
+    tuple_4: OCamlD => D,
+    tuple_5: OCamlE => E);
+tuple_from_ocaml!(
+    fst: OCamlA => A,
+    snd: OCamlB => B,
+    tuple_3: OCamlC => C,
+    tuple_4: OCamlD => D,
+    tuple_5: OCamlE => E,
+    tuple_6: OCamlF => F);
+tuple_from_ocaml!(
+    fst: OCamlA => A,
+    snd: OCamlB => B,
+    tuple_3: OCamlC => C,
+    tuple_4: OCamlD => D,
+    tuple_5: OCamlE => E,
+    tuple_6: OCamlF => F,
+    tuple_7: OCamlG => G);
+tuple_from_ocaml!(
+    fst: OCamlA => A,
+    snd: OCamlB => B,
+    tuple_3: OCamlC => C,
+    tuple_4: OCamlD => D,
+    tuple_5: OCamlE => E,
+    tuple_6: OCamlF => F,
+    tuple_7: OCamlG => G,
+    tuple_8: OCamlH => H);
+tuple_from_ocaml!(
+    fst: OCamlA => A,
+    snd: OCamlB => B,
+    tuple_3: OCamlC => C,
+    tuple_4: OCamlD => D,
+    tuple_5: OCamlE => E,
+    tuple_6: OCamlF => F,
+    tuple_7: OCamlG => G,
+    tuple_8: OCamlH => H,
+    tuple_9: OCamlI => I);

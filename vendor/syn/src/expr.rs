@@ -1322,6 +1322,7 @@ pub(crate) mod parsing {
                 let rhs = if input.is_empty()
                     || input.peek(Token![,])
                     || input.peek(Token![;])
+                    || input.peek(Token![.]) && !input.peek(Token![..])
                     || !allow_struct.0 && input.peek(token::Brace)
                 {
                     None
@@ -1523,7 +1524,7 @@ pub(crate) mod parsing {
     // <atom> ? ...
     #[cfg(feature = "full")]
     fn trailer_expr(
-        outer_attrs: Vec<Attribute>,
+        mut attrs: Vec<Attribute>,
         input: ParseStream,
         allow_struct: AllowStruct,
     ) -> Result<Expr> {
@@ -1531,7 +1532,7 @@ pub(crate) mod parsing {
         let mut e = trailer_helper(input, atom)?;
 
         let inner_attrs = e.replace_attrs(Vec::new());
-        let attrs = private::attrs(outer_attrs, inner_attrs);
+        attrs.extend(inner_attrs);
         e.replace_attrs(attrs);
         Ok(e)
     }
@@ -1547,7 +1548,13 @@ pub(crate) mod parsing {
                     paren_token: parenthesized!(content in input),
                     args: content.parse_terminated(Expr::parse)?,
                 });
-            } else if input.peek(Token![.]) && !input.peek(Token![..]) {
+            } else if input.peek(Token![.])
+                && !input.peek(Token![..])
+                && match e {
+                    Expr::Range(_) => false,
+                    _ => true,
+                }
+            {
                 let mut dot_token: Token![.] = input.parse()?;
 
                 let await_token: Option<token::Await> = input.parse()?;
@@ -2134,7 +2141,7 @@ pub(crate) mod parsing {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for ExprForLoop {
         fn parse(input: ParseStream) -> Result<Self> {
-            let outer_attrs = input.call(Attribute::parse_outer)?;
+            let mut attrs = input.call(Attribute::parse_outer)?;
             let label: Option<Label> = input.parse()?;
             let for_token: Token![for] = input.parse()?;
 
@@ -2145,11 +2152,11 @@ pub(crate) mod parsing {
 
             let content;
             let brace_token = braced!(content in input);
-            let inner_attrs = content.call(Attribute::parse_inner)?;
+            attr::parsing::parse_inner(&content, &mut attrs)?;
             let stmts = content.call(Block::parse_within)?;
 
             Ok(ExprForLoop {
-                attrs: private::attrs(outer_attrs, inner_attrs),
+                attrs,
                 label,
                 for_token,
                 pat,
@@ -2164,17 +2171,17 @@ pub(crate) mod parsing {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for ExprLoop {
         fn parse(input: ParseStream) -> Result<Self> {
-            let outer_attrs = input.call(Attribute::parse_outer)?;
+            let mut attrs = input.call(Attribute::parse_outer)?;
             let label: Option<Label> = input.parse()?;
             let loop_token: Token![loop] = input.parse()?;
 
             let content;
             let brace_token = braced!(content in input);
-            let inner_attrs = content.call(Attribute::parse_inner)?;
+            attr::parsing::parse_inner(&content, &mut attrs)?;
             let stmts = content.call(Block::parse_within)?;
 
             Ok(ExprLoop {
-                attrs: private::attrs(outer_attrs, inner_attrs),
+                attrs,
                 label,
                 loop_token,
                 body: Block { brace_token, stmts },
@@ -2186,13 +2193,13 @@ pub(crate) mod parsing {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for ExprMatch {
         fn parse(input: ParseStream) -> Result<Self> {
-            let outer_attrs = input.call(Attribute::parse_outer)?;
+            let mut attrs = input.call(Attribute::parse_outer)?;
             let match_token: Token![match] = input.parse()?;
             let expr = Expr::parse_without_eager_brace(input)?;
 
             let content;
             let brace_token = braced!(content in input);
-            let inner_attrs = content.call(Attribute::parse_inner)?;
+            attr::parsing::parse_inner(&content, &mut attrs)?;
 
             let mut arms = Vec::new();
             while !content.is_empty() {
@@ -2200,7 +2207,7 @@ pub(crate) mod parsing {
             }
 
             Ok(ExprMatch {
-                attrs: private::attrs(outer_attrs, inner_attrs),
+                attrs,
                 match_token,
                 expr: Box::new(expr),
                 brace_token,
@@ -2480,18 +2487,18 @@ pub(crate) mod parsing {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for ExprWhile {
         fn parse(input: ParseStream) -> Result<Self> {
-            let outer_attrs = input.call(Attribute::parse_outer)?;
+            let mut attrs = input.call(Attribute::parse_outer)?;
             let label: Option<Label> = input.parse()?;
             let while_token: Token![while] = input.parse()?;
             let cond = Expr::parse_without_eager_brace(input)?;
 
             let content;
             let brace_token = braced!(content in input);
-            let inner_attrs = content.call(Attribute::parse_inner)?;
+            attr::parsing::parse_inner(&content, &mut attrs)?;
             let stmts = content.call(Block::parse_within)?;
 
             Ok(ExprWhile {
-                attrs: private::attrs(outer_attrs, inner_attrs),
+                attrs,
                 label,
                 while_token,
                 cond: Box::new(cond),
@@ -2620,13 +2627,12 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     fn expr_struct_helper(
         input: ParseStream,
-        outer_attrs: Vec<Attribute>,
+        mut attrs: Vec<Attribute>,
         path: Path,
     ) -> Result<ExprStruct> {
         let content;
         let brace_token = braced!(content in input);
-        let inner_attrs = content.call(Attribute::parse_inner)?;
-        let attrs = private::attrs(outer_attrs, inner_attrs);
+        attr::parsing::parse_inner(&content, &mut attrs)?;
 
         let mut fields = Punctuated::new();
         while !content.is_empty() {
@@ -2699,16 +2705,16 @@ pub(crate) mod parsing {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for ExprBlock {
         fn parse(input: ParseStream) -> Result<Self> {
-            let outer_attrs = input.call(Attribute::parse_outer)?;
+            let mut attrs = input.call(Attribute::parse_outer)?;
             let label: Option<Label> = input.parse()?;
 
             let content;
             let brace_token = braced!(content in input);
-            let inner_attrs = content.call(Attribute::parse_inner)?;
+            attr::parsing::parse_inner(&content, &mut attrs)?;
             let stmts = content.call(Block::parse_within)?;
 
             Ok(ExprBlock {
-                attrs: private::attrs(outer_attrs, inner_attrs),
+                attrs,
                 label,
                 block: Block { brace_token, stmts },
             })
@@ -2725,6 +2731,7 @@ pub(crate) mod parsing {
                 if input.is_empty()
                     || input.peek(Token![,])
                     || input.peek(Token![;])
+                    || input.peek(Token![.]) && !input.peek(Token![..])
                     || !allow_struct.0 && input.peek(token::Brace)
                 {
                     None

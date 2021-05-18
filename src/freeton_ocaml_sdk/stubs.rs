@@ -155,10 +155,10 @@ pub fn prepare_message_ml(
 
 #[ocaml::func]
 pub fn create_client_ml( server_url : &str )
-                           -> ocp::Reply< ocaml::Pointer<TonClientStruct> >
+                           -> ocp::Reply< TonClientStruct >
 {
     let client = crate::client::create_client_rs ( server_url )
-        .map(|client| crate::types::ocaml_of_ton_client( gc, client));
+        .map(|client| crate::types::ocaml_of_ton_client( client));
     ocp::reply( client )
 }
 

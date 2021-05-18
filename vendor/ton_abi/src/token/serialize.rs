@@ -83,6 +83,28 @@ impl TokenValue {
         })
     }
 
+    fn max_bit_size(&self) -> usize {
+        match self {
+            TokenValue::Uint(i) => i.size,
+            TokenValue::Int(i) => i.size,
+            TokenValue::Bool(_) => 1,
+            TokenValue::Array(_) => 33,
+            TokenValue::FixedArray(_) => 1,
+            TokenValue::Cell(_) => 0,
+            TokenValue::Map(_, _) => 1,
+            TokenValue::Address(_) => 591,
+            TokenValue::Bytes(_) | TokenValue::FixedBytes(_) => 0,
+            TokenValue::Gram(_) => 128,
+            TokenValue::Time(_) => 64,
+            TokenValue::Expire(_) => 32,
+            TokenValue::PublicKey(_) => 256,
+            TokenValue::Tuple(tokens) => {
+                tokens
+                    .iter()
+                    .fold(0, |acc, token| acc + token.value.max_bit_size())
+            }
+        }
+    }
 
     pub fn write_to_cells(&self, abi_version: u8) -> Result<Vec<BuilderData>> {
         match self {
@@ -165,12 +187,21 @@ impl TokenValue {
     fn put_array_into_dictionary(array: &[TokenValue], abi_version: u8) -> Result<HashmapE> {
         let mut map = HashmapE::with_bit_len(32);
 
+        let value_len = array.get(0)
+            .map(|value| value.max_bit_size())
+            .unwrap_or_default();
+        let value_in_ref = Self::value_in_ref(32, value_len);
+
         for i in 0..array.len() {
             let index = (i as u32).write_to_new_cell()?;
 
             let data = Self::pack_cells_into_chain(array[i].write_to_cells(abi_version)?, abi_version)?;
 
-            map.set(index.into(), &data.into())?;
+            if value_in_ref {
+                map.set_builder(index.into(), &data)?;
+            } else {
+                map.setref(index.into(), &data.into_cell()?)?;
+            }
         }
 
         Ok(map)
@@ -220,13 +251,19 @@ impl TokenValue {
         Ok(vec![builder])
     }
 
+    fn value_in_ref(key_len: usize, value_len: usize) -> bool {
+        super::MAX_HASH_MAP_INFO_ABOUT_KEY + key_len + value_len <= 1023
+    }
+
     fn write_map(key_type: &ParamType, value: &HashMap<String, TokenValue>, abi_version: u8) -> Result<Vec<BuilderData>> {
-        let bit_len = match key_type {
-            ParamType::Int(size) | ParamType::Uint(size) => *size,
-            ParamType::Address => super::STD_ADDRESS_BIT_LENGTH,
-            _ => fail!(AbiError::InvalidData { msg: "Only integer and std address values can be map keys".to_owned() } )
-        };
-        let mut hashmap = HashmapE::with_bit_len(bit_len);
+        let key_len = key_type.get_map_key_size()?;
+        let value_len = value.values()
+            .next()
+            .map(|value| value.max_bit_size())
+            .unwrap_or_default();
+        let value_in_ref = Self::value_in_ref(key_len, value_len);
+
+        let mut hashmap = HashmapE::with_bit_len(key_len);
 
         for (key, value) in value.iter() {
             let key = Tokenizer::tokenize_parameter(key_type, &key.as_str().into())?;
@@ -243,7 +280,12 @@ impl TokenValue {
 
             let data = Self::pack_cells_into_chain(value.write_to_cells(abi_version)?, abi_version)?;
 
-            hashmap.set(key_vec.pop().unwrap().into(), &data.into())?;
+            let slice_key = key_vec.pop().unwrap().into();
+            if value_in_ref {
+                hashmap.set_builder(slice_key, &data)?;
+            } else {
+                hashmap.setref(slice_key, &data.into_cell()?)?;
+            }
         }
 
         let mut builder = BuilderData::new();

@@ -15,7 +15,7 @@
 //!
 //! ## Minimum Supported Rust Version
 //!
-//! Rust **1.41** or higher.
+//! Rust **1.47** or higher.
 //!
 //! Minimum supported Rust version may be changed in the future, but such
 //! changes will be accompanied with a minor version bump.
@@ -56,7 +56,7 @@
 //! }
 //!
 //! pub struct HelloVerifier<V> {
-//!     pub verifier: V
+//!     pub verify_key: V
 //! }
 //!
 //! impl<V> HelloVerifier<V>
@@ -68,7 +68,7 @@
 //!         person: &str,
 //!         signature: &ed25519::Signature
 //!     ) -> Result<(), ed25519::Error> {
-//!         self.verifier.verify(format_message(person).as_bytes(), signature)
+//!         self.verify_key.verify(format_message(person).as_bytes(), signature)
 //!     }
 //! }
 //!
@@ -161,7 +161,7 @@
 //!
 //! ```
 //! use ring_compat::signature::{
-//!     ed25519::{Signature, SigningKey, VerifyKey},
+//!     ed25519::{Signature, SigningKey, VerifyingKey},
 //!     Signer, Verifier
 //! };
 //! #
@@ -222,7 +222,7 @@
 //!
 //! /// `HelloVerifier` defined above instantiated with *ring*
 //! /// as the signature verification provider.
-//! pub type RingHelloVerifier = HelloVerifier<VerifyKey>;
+//! pub type RingHelloVerifier = HelloVerifier<VerifyingKey>;
 //!
 //! let verifier = RingHelloVerifier { verify_key };
 //! assert!(verifier.verify(person, &signature).is_ok());
@@ -249,7 +249,7 @@
 #![no_std]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/meta/master/logo_small.png",
-    html_root_url = "https://docs.rs/ed25519/1.0.3"
+    html_root_url = "https://docs.rs/ed25519/1.1.1"
 )]
 #![forbid(unsafe_code)]
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]

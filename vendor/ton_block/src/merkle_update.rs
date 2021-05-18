@@ -247,7 +247,7 @@ impl MerkleUpdate {
             Ok(old_root.clone())
         } else {
             let new_root: Cell =
-                self.traverse_on_apply(&self.new, &old_cells, 0).into();
+                self.traverse_on_apply(&self.new, &old_cells, &mut HashMap::new(), 0).into();
 
             // constructed tree's hash have to coinside with self.new_hash
             if new_root.repr_hash() != self.new_hash {
@@ -285,8 +285,9 @@ impl MerkleUpdate {
     fn traverse_on_apply(&self,
         update_cell: &Cell,
         old_cells: &HashMap<UInt256, Cell>,
+        new_cells: &mut HashMap<UInt256, Cell>,
         merkle_depth: u8
-    ) -> BuilderData {
+    ) -> Cell {
 
         // We will recursively construct new skeleton for new cells 
         // and connect unchanged branches to it
@@ -305,7 +306,14 @@ impl MerkleUpdate {
         for update_child in update_cell.clone_references().iter() {
             let new_child = match update_child.cell_type() {
                 CellType::Ordinary | CellType::MerkleProof | CellType::MerkleUpdate => {
-                    self.traverse_on_apply(update_child, old_cells, child_merkle_depth)
+                    let new_child_hash = update_child.hash(child_merkle_depth as usize);
+                    if let Some(c) = new_cells.get(&new_child_hash) {
+                        c.clone()
+                    } else {
+                        let c = self.traverse_on_apply(update_child, old_cells, new_cells, child_merkle_depth);
+                        new_cells.insert(new_child_hash, c.clone());
+                        c
+                    }
                 },
                 CellType::PrunedBranch => {
                     // if this pruned branch is related to current update
@@ -313,10 +321,10 @@ impl MerkleUpdate {
                     if mask & (1 << child_merkle_depth) != 0 {
                         // connect branch from old bag instead pruned
                         let new_child_hash = Cell::hash(&update_child, update_child.level() as usize - 1);
-                        BuilderData::from(old_cells.get(&new_child_hash).unwrap())
+                        old_cells.get(&new_child_hash).unwrap().clone()
                     } else {
                         // else - just copy this cell (like an ordinary)
-                        BuilderData::from(update_child)
+                        update_child.clone()
                     }
                 },
                 CellType::LibraryReference => {
@@ -325,7 +333,7 @@ impl MerkleUpdate {
                 _ => panic!("Unknown cell type!")
             };
             child_mask |= new_child.level_mask();
-            new_cell.append_reference(new_child);
+            new_cell.append_reference_cell(new_child);
         }
 
         new_cell.set_level_mask(if update_cell.is_merkle() {
@@ -337,7 +345,7 @@ impl MerkleUpdate {
         // Copy data from update to constructed cell
         new_cell.append_bytestring(&SliceData::from(update_cell)).unwrap();
 
-        new_cell
+        new_cell.into()
     }
 
     fn traverse_new_on_create(

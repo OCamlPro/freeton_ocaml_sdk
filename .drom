@@ -2,7 +2,7 @@
 
 # hash of toml configuration files
 # used for generation of all files
-f4c82a1efecac1fa6cee855661099bd3:.
+a63293afcf57b1877e79b3d22a8062f7:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -27,7 +27,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for CHANGES.md
 # file CHANGES.md
-89ca23b529aeb519ef8305b8d63963aa:CHANGES.md
+c01d7bf19acabacbb082b452bbd79d57:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
@@ -65,6 +65,11 @@ e739f3026aa997af4026bc428f4c9ef6:docs/favicon.png
 c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 # end context for docs/style.css
 
+# begin context for drom.toml
+# file drom.toml
+19f4b9de078cfecda5ee33874bab630f:drom.toml
+# end context for drom.toml
+
 # begin context for dune
 # file dune
 0d57afa9756f983af2551804954af609:dune
@@ -72,12 +77,12 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-7f8bab406c8e5f3f7889fab5acb517ba:dune-project
+f828c893ec834dcea4c1e17fd456f39e:dune-project
 # end context for dune-project
 
 # begin context for freeton_ocaml_sdk.opam
 # file freeton_ocaml_sdk.opam
-a442704b9dc1094e8cef541599dc4ef7:freeton_ocaml_sdk.opam
+6829f53c1f82654e9564728b3953a60f:freeton_ocaml_sdk.opam
 # end context for freeton_ocaml_sdk.opam
 
 # begin context for scripts/after.sh
@@ -114,6 +119,11 @@ a562548bd6cc8b0a733aa335c58c5908:sphinx/conf.py
 # file src/freeton_ocaml_sdk/dune
 dfc8483152295295023a75cbaac5b1b9:src/freeton_ocaml_sdk/dune
 # end context for src/freeton_ocaml_sdk/dune
+
+# begin context for src/freeton_ocaml_sdk/package.toml
+# file src/freeton_ocaml_sdk/package.toml
+0f07b2f84ef72e8c35405e41b728533f:src/freeton_ocaml_sdk/package.toml
+# end context for src/freeton_ocaml_sdk/package.toml
 
 # begin context for test/expect-tests/dune
 # file test/expect-tests/dune

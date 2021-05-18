@@ -11,7 +11,7 @@
 /**************************************************************************/
 
 
-use ocaml::FromValue;
+use ocaml::{FromValue, Raw, Value};
 
 use std::sync::Arc;
 use ton_client::{ClientContext};
@@ -22,13 +22,17 @@ pub struct TonClientStruct {
     pub client : TonClient 
 }
 
-unsafe extern "C" fn client_finalizer(v: ocaml::Value) {
-    let ptr: ocaml::Pointer<TonClientStruct> = ocaml::Pointer::from_value(v);
+unsafe extern "C" fn client_finalizer(v: Raw) {
+    let v = Value::new(v);
+    let ptr = ocaml::Pointer::<TonClientStruct>::from_value(v);
     eprintln!("drop_in_place on TonClient");
     ptr.drop_in_place()
 }
 
-ocaml::custom_finalize!(TonClientStruct, client_finalizer);
+ocaml::custom!(TonClientStruct {
+    finalize: client_finalizer
+});
+
 
 pub fn ton_client_of_ocaml( mut ton: ocaml::Pointer<TonClientStruct> )
                             -> TonClient
@@ -36,12 +40,10 @@ pub fn ton_client_of_ocaml( mut ton: ocaml::Pointer<TonClientStruct> )
     Arc::clone(&ton.as_mut().client)
 }
 
-pub fn ocaml_of_ton_client( gc : & ocaml::Runtime, client: TonClient ) ->
-    ocaml::Pointer<TonClientStruct>
+pub fn ocaml_of_ton_client( client: TonClient ) ->
+    TonClientStruct
 {
-    ocaml::Pointer::alloc_custom(gc,
-                                 TonClientStruct { client: client })
-        
+    TonClientStruct { client: client } 
 }
 
 #[derive(ocaml::IntoValue, ocaml::FromValue)]

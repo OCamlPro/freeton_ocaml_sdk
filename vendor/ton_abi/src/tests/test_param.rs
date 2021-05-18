@@ -57,9 +57,9 @@ fn test_encode_internal_output() {
     let func: Function = Function {
         abi_version: 2,
         name: "func".to_string(),
-        header: [].to_vec(),
-        inputs: [].to_vec(),
-        outputs: [].to_vec(),
+        header: vec![],
+        inputs: vec![],
+        outputs: vec![],
         input_id: 0,
         output_id: 0,
     };
@@ -180,6 +180,45 @@ fn test_tuples_array_deserialization() {
                 )
             },
         ]))),
+    });
+}
+
+#[test]
+fn test_tuples_array_map_map() {
+    let s = r#"{
+        "components":[
+            {
+                "name": "a",
+                "type": "uint256"
+            },
+            {
+                "name": "b",
+                "type": "uint256"
+            }
+        ],
+        "name": "d",
+        "type": "map(uint32,map(uint32,tuple[][5]))"
+    }"#;
+
+    let deserialized: Param = serde_json::from_str(s).unwrap();
+
+    assert_eq!(deserialized, Param {
+        name: "d".to_owned(),
+        kind: ParamType::Map(
+                Box::new(ParamType::Uint(32)),
+                Box::new(ParamType::Map(
+                    Box::new(ParamType::Uint(32)),
+                    Box::new(ParamType::FixedArray(
+                        Box::new(ParamType::Array(
+                            Box::new(ParamType::Tuple(vec![
+                                Param { name: "a".to_owned(), kind: ParamType::Uint(256) },
+                                Param { name: "b".to_owned(), kind: ParamType::Uint(256) },
+                            ]))
+                        )),
+                        5
+                    )),
+                ))
+            ),
     });
 }
 

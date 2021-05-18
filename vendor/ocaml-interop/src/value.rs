@@ -1,12 +1,18 @@
-// Copyright (c) SimpleStaking and Tezedge Contributors
+// Copyright (c) Viable Systems and TezEdge Contributors
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    error::OCamlFixnumConversionError, memory::OCamlCell, mlvalues::*, FromOCaml, OCamlRef,
-    OCamlRuntime,
+    boxroot::BoxRoot,
+    error::OCamlFixnumConversionError,
+    memory::{alloc_box, OCamlCell},
+    mlvalues::*,
+    FromOCaml, OCamlRef, OCamlRuntime,
 };
+use core::any::Any;
+use core::borrow::Borrow;
 use core::{marker::PhantomData, ops::Deref, slice, str};
 use ocaml_sys::{caml_string_length, int_val, val_int};
+use std::pin::Pin;
 
 /// Representation of OCaml values.
 pub struct OCaml<'a, T: 'a> {
@@ -91,6 +97,10 @@ impl<'a, T> OCaml<'a, T> {
         unsafe { OCamlCell::create_ref(ptr) }
     }
 
+    pub fn root(self) -> BoxRoot<T> {
+        BoxRoot::new(self)
+    }
+
     /// Gets the raw representation for this value reference (pointer or int).
     ///
     /// # Safety
@@ -109,6 +119,36 @@ impl<'a, T> OCaml<'a, T> {
     {
         RustT::from_ocaml(*self)
     }
+
+    /// Meant to match Data_custom_val from mlvalues.h
+    ///
+    /// **Experimental**
+    ///
+    /// # Safety
+    ///
+    /// Casts to an arbitrary pointer type, take care before
+    /// dereferencing
+    ///
+    /// Similar to raw(), the resulting pointer can become invalid
+    /// after any call into the OCaml runtime, for example allocating
+    /// OCaml values or calling OCaml functions
+    pub unsafe fn custom_ptr_val<U>(&self) -> *const U {
+        ocaml_sys::field(self.raw, 1) as *const U
+    }
+}
+
+impl<'a, T: 'static> OCaml<'a, DynBox<T>> {
+    /// Build an OCaml value wrapping a Rust value
+    ///
+    /// The returned value will be opaque to the OCaml side, though you
+    /// can provide functions using it and expose them to OCaml.
+    ///
+    /// It will be dropped if it stops being referenced by the GC.
+    ///
+    /// **Experimental**
+    pub fn box_value(cr: &'a mut OCamlRuntime, v: T) -> Self {
+        alloc_box(cr, v)
+    }
 }
 
 impl OCaml<'static, ()> {
@@ -118,6 +158,19 @@ impl OCaml<'static, ()> {
             _marker: PhantomData,
             raw: UNIT,
         }
+    }
+}
+
+// Be careful about not deriving anything on OCaml to
+// uphold the Borrow contract on Eq/Ord/Hash
+impl<'a, A: 'static> Borrow<A> for OCaml<'a, DynBox<A>> {
+    fn borrow(&self) -> &A {
+        Pin::get_ref(Pin::as_ref(
+            unsafe { self.custom_ptr_val::<Pin<Box<dyn Any>>>().as_ref() }
+                .expect("Custom block contains null pointer"),
+        ))
+        .downcast_ref::<A>()
+        .expect("DynBox of wrong type, cannot downcast")
     }
 }
 
@@ -314,60 +367,6 @@ impl<'a, A, Err> OCaml<'a, Result<A, Err>> {
     }
 }
 
-impl<'a, A, B> OCaml<'a, (A, B)> {
-    pub fn to_tuple(&self) -> (OCaml<'a, A>, OCaml<'a, B>) {
-        (self.fst(), self.snd())
-    }
-
-    pub fn fst(&self) -> OCaml<'a, A> {
-        unsafe { self.field(0) }
-    }
-
-    pub fn snd(&self) -> OCaml<'a, B> {
-        unsafe { self.field(1) }
-    }
-}
-
-impl<'a, A, B, C> OCaml<'a, (A, B, C)> {
-    pub fn to_tuple(&self) -> (OCaml<'a, A>, OCaml<'a, B>, OCaml<'a, C>) {
-        (self.fst(), self.snd(), self.tuple_3())
-    }
-
-    pub fn fst(&self) -> OCaml<'a, A> {
-        unsafe { self.field(0) }
-    }
-
-    pub fn snd(&self) -> OCaml<'a, B> {
-        unsafe { self.field(1) }
-    }
-
-    pub fn tuple_3(&self) -> OCaml<'a, C> {
-        unsafe { self.field(2) }
-    }
-}
-
-impl<'a, A, B, C, D> OCaml<'a, (A, B, C, D)> {
-    pub fn to_tuple(&self) -> (OCaml<'a, A>, OCaml<'a, B>, OCaml<'a, C>, OCaml<'a, D>) {
-        (self.fst(), self.snd(), self.tuple_3(), self.tuple_4())
-    }
-
-    pub fn fst(&self) -> OCaml<'a, A> {
-        unsafe { self.field(0) }
-    }
-
-    pub fn snd(&self) -> OCaml<'a, B> {
-        unsafe { self.field(1) }
-    }
-
-    pub fn tuple_3(&self) -> OCaml<'a, C> {
-        unsafe { self.field(2) }
-    }
-
-    pub fn tuple_4(&self) -> OCaml<'a, D> {
-        unsafe { self.field(3) }
-    }
-}
-
 impl<'a, A> OCaml<'a, OCamlList<A>> {
     /// Returns an OCaml nil (empty list) value.
     pub fn nil() -> Self {
@@ -409,3 +408,75 @@ impl<'a, A> OCaml<'a, OCamlList<A>> {
         }
     }
 }
+
+// Tuples
+
+macro_rules! impl_tuple {
+    ($($n:tt: $accessor:ident -> $t:ident),+) => {
+        impl<'a, $($t),+> OCaml<'a, ($($t),+)>
+        {
+            pub fn to_tuple(&self) -> ($(OCaml<'a, $t>),+) {
+                ($(self.$accessor()),+)
+            }
+
+            $(
+                pub fn $accessor(&self) -> OCaml<'a, $t> {
+                    unsafe { self.field($n) }
+                }
+            )+
+        }
+    };
+}
+
+impl_tuple!(
+    0: fst -> A,
+    1: snd -> B);
+impl_tuple!(
+    0: fst -> A,
+    1: snd -> B,
+    2: tuple_3 -> C);
+impl_tuple!(
+    0: fst -> A,
+    1: snd -> B,
+    2: tuple_3 -> C,
+    3: tuple_4 -> D);
+impl_tuple!(
+    0: fst -> A,
+    1: snd -> B,
+    2: tuple_3 -> C,
+    3: tuple_4 -> D,
+    4: tuple_5 -> E);
+impl_tuple!(
+    0: fst -> A,
+    1: snd -> B,
+    2: tuple_3 -> C,
+    3: tuple_4 -> D,
+    4: tuple_5 -> E,
+    5: tuple_6 -> F);
+impl_tuple!(
+    0: fst -> A,
+    1: snd -> B,
+    2: tuple_3 -> C,
+    3: tuple_4 -> D,
+    4: tuple_5 -> E,
+    5: tuple_6 -> F,
+    6: tuple_7 -> G);
+impl_tuple!(
+    0: fst -> A,
+    1: snd -> B,
+    2: tuple_3 -> C,
+    3: tuple_4 -> D,
+    4: tuple_5 -> E,
+    5: tuple_6 -> F,
+    6: tuple_7 -> G,
+    7: tuple_8 -> H);
+impl_tuple!(
+    0: fst -> A,
+    1: snd -> B,
+    2: tuple_3 -> C,
+    3: tuple_4 -> D,
+    4: tuple_5 -> E,
+    5: tuple_6 -> F,
+    6: tuple_7 -> G,
+    7: tuple_8 -> H,
+    8: tuple_9 -> I);
