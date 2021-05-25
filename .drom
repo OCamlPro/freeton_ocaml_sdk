@@ -2,7 +2,7 @@
 
 # hash of toml configuration files
 # used for generation of all files
-a63293afcf57b1877e79b3d22a8062f7:.
+4397188581fd42f89eb258ab78097d52:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -27,7 +27,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for CHANGES.md
 # file CHANGES.md
-c01d7bf19acabacbb082b452bbd79d57:CHANGES.md
+a7e22ebdd6b8c4528d0a86c1c7a701df:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
@@ -77,12 +77,12 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-f828c893ec834dcea4c1e17fd456f39e:dune-project
+57a0aac80ffe1b843799d8ab734651b4:dune-project
 # end context for dune-project
 
 # begin context for freeton_ocaml_sdk.opam
 # file freeton_ocaml_sdk.opam
-6829f53c1f82654e9564728b3953a60f:freeton_ocaml_sdk.opam
+a20107b5059d127777897e3013c185bc:freeton_ocaml_sdk.opam
 # end context for freeton_ocaml_sdk.opam
 
 # begin context for scripts/after.sh

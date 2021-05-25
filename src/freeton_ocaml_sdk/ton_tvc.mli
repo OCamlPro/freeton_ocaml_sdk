@@ -10,14 +10,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val generate_mnemonic : unit -> string
+val read : string -> Ton_types.state_init
 
-val generate_keypair_from_mnemonic : ?path:string -> string -> Ton_types.keypair
+(* returns "None" or base64 encoding of data *)
+val data : Ton_types.state_init -> string
 
-val generate_address :
-  tvc_file:string -> abi:string ->
-  ?keypair:Ton_types.keypair ->
-  ?pubkey:string ->
-  ?wc:int -> ?initial_data:string -> unit -> string
+(* returns "None" or base64 encoding of code *)
+val code : Ton_types.state_init -> string
 
-val std_path : int list -> string
+(* returns hex encoding of code hash *)
+val code_hash : Ton_types.state_init -> string

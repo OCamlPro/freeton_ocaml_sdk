@@ -12,7 +12,7 @@
 
 use crate::ocp;
 use crate::types;
-use crate::types::{TonClientStruct};
+use crate::types::{TonClientStruct, StateInitStruct};
 
 #[ocaml::func]
 pub fn generate_mnemonic_ml() -> ocp::Reply<String> {
@@ -64,7 +64,6 @@ pub fn generate_keypair_from_mnemonic_ml
 #[ocaml::func]
 pub fn generate_address_ml(
     args: Vec<String>,
-    keys: types::KeyPair,
     wc: i16,
 ) -> ocp::Reply<String> {
     ocp::reply_async(
@@ -72,7 +71,7 @@ pub fn generate_address_ml(
             &args[0], //   tvc
             &args[1], //   abi
             wc as i32,
-            types::keypair_of_ocaml(keys),
+            args[3].clone(), // pubkey
             args[2].clone(), //   initial_data 
             ))
 }
@@ -204,5 +203,44 @@ pub fn decode_message_boc_ml(
     let ton = crate::types::ton_client_of_ocaml(ton);
     ocp::reply_async(
         crate::blocks::decode_message_boc_rs( ton, message_boc, abi ) )
+}
+
+
+#[ocaml::func]
+pub fn tvc_load_ml( contract_file: String )
+                    -> ocp::Reply<StateInitStruct>
+{
+    ocp::reply(
+        Ok( crate::types::ocaml_of_ton_state_init
+            (crate::tvc::load_from_file( &contract_file ) ))
+    )
+}
+
+
+#[ocaml::func]
+pub fn tvc_data_ml( state:  ocaml::Pointer<StateInitStruct> )
+                    -> ocp::Reply<String>
+{
+    ocp::reply(
+        Ok( crate::tvc::state_init_data(
+            &crate::types::state_init_of_ocaml ( state ))))
+}
+
+#[ocaml::func]
+pub fn tvc_code_ml( state:  ocaml::Pointer<StateInitStruct> )
+                    -> ocp::Reply<String>
+{
+    ocp::reply(
+        Ok( crate::tvc::state_init_code(
+            &crate::types::state_init_of_ocaml ( state ))))
+}
+
+#[ocaml::func]
+pub fn tvc_code_hash_ml( state:  ocaml::Pointer<StateInitStruct> )
+                    -> ocp::Reply<String>
+{
+    ocp::reply(
+        Ok( crate::tvc::state_init_code_hash(
+            &crate::types::state_init_of_ocaml ( state ))))
 }
 

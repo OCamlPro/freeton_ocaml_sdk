@@ -192,6 +192,8 @@ type keypair = {
  *)
 type client
 
+type state_init
+
 type shard_descr = {
   workchain_id: int32 ;
   shard: int64 ;

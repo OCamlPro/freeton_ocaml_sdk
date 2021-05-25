@@ -13,6 +13,13 @@
 
 use ocaml::{FromValue, Raw, Value};
 
+
+/*********************************************************************
+
+           OCaml pointer for TonClient
+
+*********************************************************************/
+
 use std::sync::Arc;
 use ton_client::{ClientContext};
 
@@ -46,6 +53,46 @@ pub fn ocaml_of_ton_client( client: TonClient ) ->
     TonClientStruct { client: client } 
 }
 
+/*********************************************************************
+
+           OCaml pointer for StateInit
+
+*********************************************************************/
+
+pub struct StateInitStruct {
+    pub state_init : ton_block::StateInit 
+}
+
+unsafe extern "C" fn state_init_finalizer(v: Raw) {
+    let v = Value::new(v);
+    let ptr = ocaml::Pointer::<StateInitStruct>::from_value(v);
+    eprintln!("drop_in_place on StateInit");
+    ptr.drop_in_place()
+}
+
+ocaml::custom!(StateInitStruct {
+    finalize: state_init_finalizer
+});
+
+
+pub fn state_init_of_ocaml( st: ocaml::Pointer<StateInitStruct> )
+                            -> ton_block::StateInit
+{
+    st.as_ref().state_init.clone()
+}
+
+pub fn ocaml_of_ton_state_init( state_init: ton_block::StateInit ) ->
+    StateInitStruct
+{
+    StateInitStruct { state_init: state_init } 
+}
+
+/*********************************************************************
+
+           OCaml pointer for ton_client::crypto::KeyPair
+
+*********************************************************************/
+
 #[derive(ocaml::IntoValue, ocaml::FromValue)]
 pub struct KeyPair {
     public: String,
@@ -75,25 +122,16 @@ pub fn ocaml_of_keypair(keys: ton_client::crypto::KeyPair) -> KeyPair
     }
 }
 
+/*********************************************************************
+
+           OCaml pointer for ton_sdk::ShardDescr
+
+*********************************************************************/
+
 #[derive(ocaml::IntoValue, ocaml::FromValue)]
 pub struct ShardDescr {
     pub workchain_id: i32,
     pub shard: u64,
-}
-
-#[derive(ocaml::IntoValue, ocaml::FromValue)]
-pub struct MsgDescr {
-    pub msg_id: Option<String>,  // MessageId
-    pub transaction_id: Option<String>, // TransactionId
-}
-
-#[derive(ocaml::IntoValue, ocaml::FromValue)]
-pub struct Block {
-    pub id: String,
-    pub gen_utime: u64,
-    pub after_split: bool,
-    pub shard_descr: ShardDescr,
-    pub in_msg_descr: Vec<MsgDescr>,
 }
 
 pub fn ocaml_of_shard_descr( s : ton_sdk::ShardDescr ) -> ShardDescr
@@ -104,12 +142,39 @@ pub fn ocaml_of_shard_descr( s : ton_sdk::ShardDescr ) -> ShardDescr
     }
 }
 
+/*********************************************************************
+
+           OCaml pointer for ton_sdk::MsgDescr
+
+*********************************************************************/
+
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
+pub struct MsgDescr {
+    pub msg_id: Option<String>,  // MessageId
+    pub transaction_id: Option<String>, // TransactionId
+}
+
 pub fn ocaml_of_msg_descr( m : &ton_sdk::MsgDescr ) -> MsgDescr
 {
     MsgDescr {
         msg_id: m.msg_id.as_ref().map(|id| id.to_string() ),
         transaction_id: m.transaction_id.as_ref().map(|id| id.to_string() )
     }
+}
+
+/*********************************************************************
+
+           OCaml pointer for ton_sdk::Block
+
+*********************************************************************/
+
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
+pub struct Block {
+    pub id: String,
+    pub gen_utime: u64,
+    pub after_split: bool,
+    pub shard_descr: ShardDescr,
+    pub in_msg_descr: Vec<MsgDescr>,
 }
 
 pub fn ocaml_of_block( b : ton_sdk::Block ) -> Block
@@ -125,6 +190,12 @@ pub fn ocaml_of_block( b : ton_sdk::Block ) -> Block
 }
 
 
+
+/*********************************************************************
+
+           OCaml pointer for ton_client::abi::DecodedMessageBody
+
+*********************************************************************/
 
 // pub enum MessageBodyType {
     /// Message contains the input of the ABI function.

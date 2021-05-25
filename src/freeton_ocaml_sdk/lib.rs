@@ -21,6 +21,7 @@ mod call ;
 mod deploy ;
 mod genaddr ;
 mod boc ;
+mod tvc ;
 
 mod stubs ;
 

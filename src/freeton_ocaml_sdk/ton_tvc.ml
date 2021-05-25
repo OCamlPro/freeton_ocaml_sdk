@@ -10,14 +10,20 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val generate_mnemonic : unit -> string
+external read_ml : string ->
+  Ton_types.state_init Ton_types.reply = "tvc_load_ml"
 
-val generate_keypair_from_mnemonic : ?path:string -> string -> Ton_types.keypair
+let read filename = Ton_types.reply @@ read_ml filename
 
-val generate_address :
-  tvc_file:string -> abi:string ->
-  ?keypair:Ton_types.keypair ->
-  ?pubkey:string ->
-  ?wc:int -> ?initial_data:string -> unit -> string
 
-val std_path : int list -> string
+external data_ml :
+  Ton_types.state_init -> string Ton_types.reply = "tvc_data_ml"
+let data state = Ton_types.reply @@ data_ml state
+
+external code_ml :
+  Ton_types.state_init -> string Ton_types.reply = "tvc_code_ml"
+let code state = Ton_types.reply @@ code_ml state
+
+external code_hash_ml :
+  Ton_types.state_init -> string Ton_types.reply = "tvc_code_hash_ml"
+let code_hash state = Ton_types.reply @@ code_hash_ml state
