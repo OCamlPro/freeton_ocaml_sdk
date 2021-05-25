@@ -29,7 +29,7 @@ pub async fn generate_address_rs(
     tvc: &str,
     abi: &str,
     wc: i32,
-    keys: ton_client::crypto::KeyPair,
+    pubkey: String,
     initial_data: String,
 ) -> Result<String, ocp::Error> {
 
@@ -53,7 +53,7 @@ pub async fn generate_address_rs(
     let result = calc_acc_address(
         &contract,
         wc,
-        keys.public.clone(),
+        pubkey,
         initial_data_json.clone(),
         abi.clone()
     ).await?;

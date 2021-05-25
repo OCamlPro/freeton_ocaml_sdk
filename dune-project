@@ -3,13 +3,13 @@
 (name freeton_ocaml_sdk)
 (allow_approximate_merlin)
 (generate_opam_files false)
-(version 0.3.0)
+(version 0.3.1)
 (formatting (enabled_for ocaml reason))
 
 (package
  (name freeton_ocaml_sdk)
  (synopsis "OCaml binding to the TON-SDK and the Graphql API for Free TON blockchain")
- (description "\nThe freeton_ocaml_sdk library is a binding to the TON-SDK Rust library\nand the GraphQL API of the FreeTON blockchain. It can be used to build\napplication to query the account states, transactions and other blockchain\ndata. to deploy and call smart contracts.\n\nThe FreeTON blockchain is the open-source version of the Telegram Open\nNetwork. FreeTON is one of the only blockchains with dynamic sharding\nfor unlimited scalability and immediate finality for real-time\napplications. It also uses Proof-of-Stake with delegation through\nsmart contracts. Smart contracts are written in dialects of Solidity\nand C++ with asynchonous external calls.\n\n")
+ (description "The freeton_ocaml_sdk library is a binding to the TON-SDK Rust library\nand the GraphQL API of the FreeTON blockchain. It can be used to build\napplication to query the account states, transactions and other blockchain\ndata. to deploy and call smart contracts.\n\nThe FreeTON blockchain is the open-source version of the Telegram Open\nNetwork. FreeTON is one of the only blockchains with dynamic sharding\nfor unlimited scalability and immediate finality for real-time\napplications. It also uses Proof-of-Stake with delegation through\nsmart contracts. Smart contracts are written in dialects of Solidity\nand C++ with asynchonous external calls.\n\n")
  (depends
    (ocaml (>= 4.08.0))
    (zarith ( > 1 ))
@@ -25,5 +25,6 @@
    ppx_expect
    odoc
    ocamlformat
- ))
+  )
+ )
 

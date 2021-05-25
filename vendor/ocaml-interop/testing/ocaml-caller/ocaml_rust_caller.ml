@@ -1,4 +1,4 @@
-(* Copyright (c) SimpleStaking and Tezedge Contributors
+(* Copyright (c) Viable Systems and TezEdge Contributors
    SPDX-License-Identifier: MIT *)
 
 (* Unknown/UnknownBlock are not defined on Rust side to test the failure case *)
@@ -20,6 +20,8 @@ type movement_polymorphic =
   | `UnkownBlock of int ]
 
 module Rust = struct
+  external tests_teardown : unit -> unit = "ocaml_interop_teardown"
+
   external twice : int -> int = "rust_twice"
 
   external twice_boxed_i64 : int64 -> int64 = "rust_twice_boxed_i64"
@@ -192,4 +194,5 @@ let () =
           test_case "Rust.string_of_polymorphic_movement" `Quick
             test_interpret_polymorphic_movement;
         ] );
-    ]
+    ];
+  Rust.tests_teardown ()

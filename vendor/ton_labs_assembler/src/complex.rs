@@ -111,6 +111,10 @@ fn compile_callref<T: Writer>(engine: &mut Engine<T>, par: &Vec<&str>, destinati
     return compile_ref(engine, par, destination, &[0xDB, 0x3C], pos);
 }
 
+fn compile_jmpref<T: Writer>(engine: &mut Engine<T>, par: &Vec<&str>, destination: &mut T, pos: DbgPos) -> CompileResult {
+    return compile_ref(engine, par, destination, &[0xDB, 0x3D], pos);
+}
+
 fn compile_ifref<T: Writer>(engine: &mut Engine<T>, par: &Vec<&str>, destination: &mut T, pos: DbgPos) -> CompileResult {
     return compile_ref(engine, par, destination, &[0xE3, 0x00], pos);
 }
@@ -137,6 +141,10 @@ fn compile_ifelseref<T: Writer>(engine: &mut Engine<T>, par: &Vec<&str>, destina
 
 fn compile_pushref<T: Writer>(engine: &mut Engine<T>, par: &Vec<&str>, destination: &mut T, pos: DbgPos) -> CompileResult {
     return compile_ref(engine, par, destination, &[0x88], pos);
+}
+
+fn compile_pushrefslice<T: Writer>(engine: &mut Engine<T>, par: &Vec<&str>, destination: &mut T, pos: DbgPos) -> CompileResult {
+    return compile_ref(engine, par, destination, &[0x89], pos);
 }
 
 fn compile_pushrefcont<T: Writer>(engine: &mut Engine<T>, par: &Vec<&str>, destination: &mut T, pos: DbgPos) -> CompileResult {
@@ -617,6 +625,7 @@ impl<T: Writer> Engine<T> {
         self.COMPILE_ROOT.insert("IFREFELSE",      compile_ifrefelse);
         self.COMPILE_ROOT.insert("IFELSEREF",      compile_ifelseref);
         self.COMPILE_ROOT.insert("JMPDICT",        Engine::JMP);
+        self.COMPILE_ROOT.insert("JMPREF",         compile_jmpref);
         self.COMPILE_ROOT.insert("LOGSTR",         compile_logstr);
         self.COMPILE_ROOT.insert("LSHIFT",         Div::<Signaling>::lshift);
         self.COMPILE_ROOT.insert("LSHIFTDIV",      Div::<Signaling>::lshiftdiv);
@@ -648,6 +657,7 @@ impl<T: Writer> Engine<T> {
         self.COMPILE_ROOT.insert("PUSHREF",        compile_pushref);
         self.COMPILE_ROOT.insert("PUSHREFCONT",    compile_pushrefcont);
         self.COMPILE_ROOT.insert("PUSHSLICE",      compile_pushslice);
+        self.COMPILE_ROOT.insert("PUSHREFSLICE",   compile_pushrefslice);
         self.COMPILE_ROOT.insert("SETCONTARGS",    compile_setcontargs);
         self.COMPILE_ROOT.insert("SWAP",           compile_xchg);
         self.COMPILE_ROOT.insert("QLSHIFT",        Div::<Quiet>::lshift);

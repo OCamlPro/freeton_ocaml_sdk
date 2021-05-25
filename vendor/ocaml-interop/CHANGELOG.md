@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.3] - 2021-04-30
+
+### Added
+
+- Conversion from/to unit (`()`) values.
+
+## [0.8.2] - 2021-04-27
+
+### Fixed
+
+- Breakage when building 0.8.1 on arm64 (by @zshipko).
+
+## [0.8.1] - 2021-04-25
+
+### Added
+
+- `custom_ptr_val` method to `OCaml<T>` to obtain pointers to values embedded in OCaml custom blocks (by @g2p). Experimental API.
+- `DynBox<T>`, support for custom OCaml values that wrap Rust values (by @g2p). Experimental API.
+
+### Changed
+
+- There is no longer a need to `ocaml_interop_setup` from OCaml programs.
+
+## [0.8.0] - 2021-04-07
+
+### Added
+
+- Support for allocating OCaml polymorphic variants.
+- `impl_to_ocaml_polymorphic_variant!` macro.
+- `ocaml_alloc_polymorphic_variant!` macro.
+- `caml_state` feature flag that gets forwarded to `ocaml-sys`.
+
+## [0.7.2] - 2021-03-18
+
+### Changed
+
+- Bumped `ocaml-sys` dependency to at least `0.20.1`.
+
+## [0.7.1] - 2021-03-18
+
+### Changed
+
+- Bumped `ocaml-boxroot-sys` dependency to `0.2` that includes a `without-ocamlopt` feature flag.
+
+## [0.7.0] - 2021-03-16
+
+### Removed
+
+- `BoxRoot::from_raw` method.
+- `BoxRoot::get_raw` method.
+
+## [0.6.0] - 2021-03-15
+
+### Added
+
+- New BoxRoot type for rooted values, implemented by: https://gitlab.com/ocaml-rust/ocaml-boxroot
+- `to_boxroot(cr)` method to `ToOCaml` trait.
+- Support for OCaml tuples of up to 10 elements (until now tuples containing up to 4 elements were supported)
+- `ocaml_interop_setup` and `ocaml_interop_teardown` functions that must be called by OCaml programs before calling Rust code.
+
+### Changed
+
+- Rooted values (both local and global roots) are now handled by BoxRoot.
+
+### Removed
+
+- `ocaml_frame!` macro. BoxRoot replaces the need for opening new local root frames.
+- `to_ocaml!` macro. Without local roots this has no advantage for `value.to_ocaml(cr)`.
+
+
 ## [0.5.3] - 2021-01-26
 
 ### Security
@@ -127,14 +197,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `OCaml<f64>` is no longer a valid representation for OCaml floats, use `OCaml<OCamlFloat>` instead.
 - `keep` method in GC handles and `OCaml<T>` values was removed. The `keep` method in root variables should be used instead, or the third optional parameter of the `to_ocaml!` macro.
 
-[Unreleased]: https://github.com/simplestaking/ocaml-interop/compare/v0.5.3...HEAD
-[0.5.3]: https://github.com/simplestaking/ocaml-interop/compare/v0.5.2...v0.5.3
-[0.5.2]: https://github.com/simplestaking/ocaml-interop/compare/v0.5.1...v0.5.2
-[0.5.1]: https://github.com/simplestaking/ocaml-interop/compare/v0.5.0...v0.5.1
-[0.5.0]: https://github.com/simplestaking/ocaml-interop/compare/v0.4.4...v0.5.0
-[0.4.4]: https://github.com/simplestaking/ocaml-interop/compare/v0.4.3...v0.4.4
-[0.4.3]: https://github.com/simplestaking/ocaml-interop/compare/v0.4.2...v0.4.3
-[0.4.2]: https://github.com/simplestaking/ocaml-interop/compare/v0.4.1...v0.4.2
-[0.4.1]: https://github.com/simplestaking/ocaml-interop/compare/v0.4.0...v0.4.1
-[0.4.0]: https://github.com/simplestaking/ocaml-interop/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/simplestaking/ocaml-interop/compare/v0.2.4...v0.3.0
+[Unreleased]: https://github.com/tezedge/ocaml-interop/compare/v0.8.3...HEAD
+[0.8.3]: https://github.com/tezedge/ocaml-interop/compare/v0.8.2...v0.8.3
+[0.8.2]: https://github.com/tezedge/ocaml-interop/compare/v0.8.1...v0.8.2
+[0.8.1]: https://github.com/tezedge/ocaml-interop/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/tezedge/ocaml-interop/compare/v0.7.2...v0.8.0
+[0.7.2]: https://github.com/tezedge/ocaml-interop/compare/v0.7.1...v0.7.2
+[0.7.1]: https://github.com/tezedge/ocaml-interop/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/tezedge/ocaml-interop/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/tezedge/ocaml-interop/compare/v0.5.3...v0.6.0
+[0.5.3]: https://github.com/tezedge/ocaml-interop/compare/v0.5.2...v0.5.3
+[0.5.2]: https://github.com/tezedge/ocaml-interop/compare/v0.5.1...v0.5.2
+[0.5.1]: https://github.com/tezedge/ocaml-interop/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/tezedge/ocaml-interop/compare/v0.4.4...v0.5.0
+[0.4.4]: https://github.com/tezedge/ocaml-interop/compare/v0.4.3...v0.4.4
+[0.4.3]: https://github.com/tezedge/ocaml-interop/compare/v0.4.2...v0.4.3
+[0.4.2]: https://github.com/tezedge/ocaml-interop/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/tezedge/ocaml-interop/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/tezedge/ocaml-interop/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/tezedge/ocaml-interop/compare/v0.2.4...v0.3.0

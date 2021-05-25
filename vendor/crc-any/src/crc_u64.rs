@@ -10,6 +10,7 @@ use heapless::Vec as HeaplessVec;
 
 use crate::constants::crc_u64::*;
 
+#[allow(clippy::upper_case_acronyms)]
 /// This struct can help you compute a CRC-64 (or CRC-x where **x** is equal or less than `64`) value.
 pub struct CRCu64 {
     by_table: bool,
@@ -243,6 +244,7 @@ impl CRCu64 {
         for (i, e) in lookup_table.iter_mut().enumerate() {
             let mut v = i as u64;
 
+            #[allow(clippy::branches_sharing_code)]
             for _ in 0..8u8 {
                 if v & 1 != 0 {
                     v >>= 1;
@@ -268,6 +270,7 @@ impl CRCu64 {
         for (i, e) in lookup_table.iter_mut().enumerate() {
             let mut v = i as u64;
 
+            #[allow(clippy::branches_sharing_code)]
             for _ in 0..bits {
                 if v & mask1 == 0 {
                     v <<= 1;
@@ -349,6 +352,7 @@ impl CRCu64 {
     /// # use crc_any::CRCu64;
     /// let mut crc = CRCu64::crc40gsm();
     /// crc.digest(b"123456789");
+    /// # #[cfg(features = "alloc")]
     /// assert_eq!("0xD4164FC646", &crc.to_string());
     /// ```
     pub fn crc40gsm() -> CRCu64 {
@@ -373,6 +377,7 @@ impl CRCu64 {
     /// # use crc_any::CRCu64;
     /// let mut crc = CRCu64::crc64();
     /// crc.digest(b"123456789");
+    /// # #[cfg(features = "alloc")]
     /// assert_eq!("0x6C40DF5F0B497347", &crc.to_string());
     /// ```
     pub fn crc64() -> CRCu64 {
@@ -397,6 +402,7 @@ impl CRCu64 {
     /// # use crc_any::CRCu64;
     /// let mut crc = CRCu64::crc64iso();
     /// crc.digest(b"123456789");
+    /// # #[cfg(features = "alloc")]
     /// assert_eq!("0xB90956C775A41001", &crc.to_string());
     /// ```
     pub fn crc64iso() -> CRCu64 {
@@ -421,6 +427,7 @@ impl CRCu64 {
     /// # use crc_any::CRCu64;
     /// let mut crc = CRCu64::crc64we();
     /// crc.digest(b"123456789");
+    /// # #[cfg(features = "alloc")]
     /// assert_eq!("0x62EC59E3F1A4F00A", &crc.to_string());
     /// ```
     pub fn crc64we() -> CRCu64 {
@@ -445,6 +452,7 @@ impl CRCu64 {
     /// # use crc_any::CRCu64;
     /// let mut crc = CRCu64::crc64jones();
     /// crc.digest(b"123456789");
+    /// # #[cfg(features = "alloc")]
     /// assert_eq!("0xE9C6D914C4B8D9CA", &crc.to_string());
     /// ```
     pub fn crc64jones() -> CRCu64 {

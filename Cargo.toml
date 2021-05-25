@@ -9,7 +9,7 @@ crate-type = ["staticlib", "cdylib"]
 path = "src/freeton_ocaml_sdk/lib.rs"
 
 [dependencies]
-ocaml = "0.20"
+ocaml = "0.21"
 ton_abi = { git = "https://github.com/tonlabs/ton-labs-abi.git" }
 
 # ton_client = { git = 'https://github.com/tonlabs/TON-SDK.git' }
@@ -38,3 +38,57 @@ num-bigint = "0.2.2"
 
 
 
+[build]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+target-dir = "_build/target"
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source."https://github.com/lefessan/TON-SDK.git"]
+git = "https://github.com/lefessan/TON-SDK.git"
+branch = "pub"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tonlabs/bip39-rs.git"]
+git = "https://github.com/tonlabs/bip39-rs.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tonlabs/lockfree.git"]
+git = "https://github.com/tonlabs/lockfree.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tonlabs/sodalite.git"]
+git = "https://github.com/tonlabs/sodalite.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tonlabs/ton-labs-abi.git"]
+git = "https://github.com/tonlabs/ton-labs-abi.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tonlabs/ton-labs-assembler.git"]
+git = "https://github.com/tonlabs/ton-labs-assembler.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tonlabs/ton-labs-block-json.git"]
+git = "https://github.com/tonlabs/ton-labs-block-json.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tonlabs/ton-labs-block.git"]
+git = "https://github.com/tonlabs/ton-labs-block.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tonlabs/ton-labs-executor.git"]
+git = "https://github.com/tonlabs/ton-labs-executor.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tonlabs/ton-labs-types.git"]
+git = "https://github.com/tonlabs/ton-labs-types.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/tonlabs/ton-labs-vm.git"]
+git = "https://github.com/tonlabs/ton-labs-vm.git"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"

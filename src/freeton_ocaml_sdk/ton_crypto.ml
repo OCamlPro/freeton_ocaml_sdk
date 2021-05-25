@@ -24,17 +24,20 @@ let generate_keypair_from_mnemonic ?path m =
 
 external generate_address :
   string array ->
-  Ton_types.keypair ->
   int ->
   string Ton_types.reply =
   "generate_address_ml"
 
-let generate_address ~tvc_file ~abi ~keypair
+let generate_address ~tvc_file ~abi
+    ?keypair
+    ?(pubkey = match keypair with
+      | None -> assert false
+      | Some keypair -> keypair.Ton_types.public)
     ?(wc = 0)
     ?(initial_data = "") () =
   Ton_types.reply ( generate_address
-                      [| tvc_file ; abi ; initial_data |]
-                      keypair wc )
+                      [| tvc_file ; abi ; initial_data ; pubkey |]
+                      wc )
 
 let std_path list =
   match list with

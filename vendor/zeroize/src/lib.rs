@@ -22,11 +22,11 @@
 //!
 //! ## Minimum Supported Rust Version
 //!
-//! Requires Rust **1.44** or newer.
+//! Requires Rust **1.47** or newer.
 //!
 //! In the future, we reserve the right to change MSRV (i.e. MSRV is out-of-scope
 //! for this crate's SemVer guarantees), however when we do it will be accompanied
-//! with a minor version bump.
+//! by a minor version bump.
 //!
 //! ## Usage
 //!
@@ -208,8 +208,8 @@
 
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc(html_root_url = "https://docs.rs/zeroize/1.2.0")]
-#![warn(missing_docs, rust_2018_idioms, trivial_casts, unused_qualifications)]
+#![doc(html_root_url = "https://docs.rs/zeroize/1.3.0")]
+#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 
 #[cfg(feature = "alloc")]
 #[cfg_attr(test, macro_use)]
@@ -225,7 +225,7 @@ mod x86;
 use core::{ops, ptr, slice::IterMut, sync::atomic};
 
 #[cfg(feature = "alloc")]
-use alloc::{string::String, vec::Vec};
+use alloc::{boxed::Box, string::String, vec::Vec};
 
 /// Trait for securely erasing types from memory
 pub trait Zeroize {
@@ -296,10 +296,38 @@ where
     Z: Zeroize,
 {
     fn zeroize(&mut self) {
-        match self {
-            Some(value) => value.zeroize(),
-            None => (),
+        if let Some(value) = self {
+            value.zeroize();
+
+            // Ensures self is None and that the value was dropped. Without the take, the drop
+            // of the (zeroized) value isn't called, which might lead to a leak or other
+            // unexpected behavior. For example, if this were Option<Vec<T>>, the above call to
+            // zeroize would not free the allocated memory, but the the `take` call will.
+            self.take();
         }
+
+        // Ensure that if the `Option` were previously `Some` but a value was copied/moved out
+        // that the remaining space in the `Option` is zeroized.
+        //
+        // Safety:
+        //
+        // The memory pointed to by `self` is valid for `mem::size_of::<Self>()` bytes.
+        // It is also properly aligned, because `u8` has an alignment of `1`.
+        unsafe {
+            volatile_set(self as *mut _ as *mut u8, 0, core::mem::size_of::<Self>());
+        }
+
+        // Ensures self is overwritten with the default bit pattern. volatile_write can't be
+        // used because Option<Z> is not copy.
+        //
+        // Safety:
+        //
+        // self is safe to replace with the default, which the take() call above should have
+        // already done semantically. Any value which needed to be dropped will have been
+        // done so by take().
+        unsafe { ptr::write_volatile(self, Option::default()) }
+
+        atomic_fence();
     }
 }
 
@@ -370,6 +398,19 @@ where
         }
 
         self.clear();
+    }
+}
+
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+impl<Z> Zeroize for Box<[Z]>
+where
+    Z: Zeroize,
+{
+    /// Unlike `Vec`, `Box<[Z]>` cannot reallocate, so we can be sure that we are not leaving
+    /// values on the heap.
+    fn zeroize(&mut self) {
+        self.iter_mut().zeroize();
     }
 }
 

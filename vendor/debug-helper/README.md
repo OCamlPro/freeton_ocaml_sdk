@@ -1,7 +1,7 @@
 Debug Helper
 ====================
 
-[![Build Status](https://travis-ci.org/magiclen/debug-helper.svg?branch=master)](https://travis-ci.org/magiclen/debug-helper)
+[![CI](https://github.com/magiclen/debug-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/magiclen/debug-helper/actions/workflows/ci.yml)
 
 This crate provides declarative macros to help you implement the `Debug` trait manually.
 

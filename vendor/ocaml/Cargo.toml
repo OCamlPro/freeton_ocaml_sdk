@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "ocaml"
-version = "0.20.1"
+version = "0.21.0"
 authors = ["Zach Shipko <zachshipko@gmail.com>"]
 description = "OCaml bindings for Rust"
 documentation = "https://docs.rs/ocaml"
@@ -28,18 +28,21 @@ version = "0.2"
 optional = true
 
 [dependencies.ndarray]
-version = "^0.14.0"
+version = "^0.15.1"
 optional = true
 
+[dependencies.ocaml-boxroot-sys]
+version = "0.2"
+
 [dependencies.ocaml-derive]
-version = "0.20"
+version = "0.21"
 optional = true
 
 [dependencies.ocaml-interop]
-version = "0.5"
+version = "0.8"
 
 [dependencies.ocaml-sys]
-version = "0.20"
+version = "0.21"
 
 [features]
 bigarray-ext = ["ndarray"]
@@ -48,4 +51,4 @@ default = ["derive"]
 derive = ["ocaml-derive"]
 link = ["ocaml-sys/link"]
 no-std = ["cstr_core/alloc"]
-without-ocamlopt = ["ocaml-sys/without-ocamlopt", "ocaml-interop/without-ocamlopt"]
+without-ocamlopt = ["ocaml-sys/without-ocamlopt", "ocaml-interop/without-ocamlopt", "ocaml-boxroot-sys/without-ocamlopt"]

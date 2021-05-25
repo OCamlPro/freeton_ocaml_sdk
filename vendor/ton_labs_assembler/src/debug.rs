@@ -26,7 +26,13 @@ impl Line {
     pub fn new(text: &str, filename: &str, line: usize) -> Self {
         Line {
             text: String::from(text),
-            pos: DbgPos { filename: String::from(filename), line: line }
+            pos: DbgPos { filename: String::from(filename), line: line, line_code: line }
+        }
+    }
+    pub fn new_extended(text: &str, filename: &str, line: usize, line_code: usize) -> Self {
+        Line {
+            text: String::from(text),
+            pos: DbgPos { filename: String::from(filename), line, line_code }
         }
     }
 }
@@ -43,6 +49,8 @@ pub fn lines_to_string(lines: &Lines) -> String {
 pub struct DbgPos {
     pub filename: String,
     pub line: usize,
+    #[serde(skip)]
+    pub line_code: usize,
 }
 
 impl std::fmt::Display for DbgPos {
@@ -58,7 +66,7 @@ impl std::fmt::Display for DbgPos {
 
 impl Default for DbgPos {
     fn default() -> Self {
-        Self { filename: String::from(""), line: 0 }
+        Self { filename: String::new(), line: 0, line_code: 0 }
     }
 }
 #[derive(Clone)]

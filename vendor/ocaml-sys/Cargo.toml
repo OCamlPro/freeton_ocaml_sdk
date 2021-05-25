@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "ocaml-sys"
-version = "0.20.1"
+version = "0.21.0"
 authors = ["Zach Shipko <zachshipko@gmail.com>"]
 description = "Low-level OCaml bindings for Rust"
 documentation = "https://docs.rs/ocaml-sys"
@@ -22,8 +22,8 @@ license = "ISC"
 repository = "https://github.com/zshipko/ocaml-rs"
 [package.metadata.docs.rs]
 features = ["without-ocamlopt", "caml-state"]
-[dependencies.cty]
-version = "0.2"
+[dependencies.chlorine]
+version = "1.0"
 
 [features]
 caml-state = []

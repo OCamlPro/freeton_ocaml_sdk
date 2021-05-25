@@ -1,126 +1,21 @@
-// Copyright (c) SimpleStaking and Tezedge Contributors
+// Copyright (c) Viable Systems and TezEdge Contributors
 // SPDX-License-Identifier: MIT
 
 use crate::{
     conv::FromOCaml,
-    mlvalues::{tag, Intnat, OCamlBytes, OCamlFloat, OCamlInt32, OCamlInt64, OCamlList, RawOCaml},
+    mlvalues::{tag, DynBox, OCamlBytes, OCamlFloat, OCamlInt32, OCamlInt64, OCamlList, RawOCaml},
     runtime::OCamlRuntime,
     value::OCaml,
 };
-use core::{cell::UnsafeCell, marker::PhantomData, ptr};
+use core::{any::Any, cell::UnsafeCell, marker::PhantomData, mem, pin::Pin, ptr};
 pub use ocaml_sys::{
     caml_alloc, local_roots as ocaml_sys_local_roots, set_local_roots as ocaml_sys_set_local_roots,
     store_field,
 };
 use ocaml_sys::{
     caml_alloc_string, caml_alloc_tuple, caml_copy_double, caml_copy_int32, caml_copy_int64,
-    string_val,
+    custom_operations, string_val,
 };
-
-// Structure representing a block in the list of OCaml's GC local roots.
-#[repr(C)]
-struct CamlRootsBlock {
-    next: *mut CamlRootsBlock,
-    ntables: Intnat,
-    nitems: Intnat,
-    local_roots: *mut RawOCaml,
-    // NOTE: in C this field is defined instead, but we only need a single pointer
-    // tables: [*mut RawOCaml; 5],
-}
-
-impl Default for CamlRootsBlock {
-    fn default() -> Self {
-        CamlRootsBlock {
-            next: ptr::null_mut(),
-            ntables: 0,
-            nitems: 0,
-            local_roots: ptr::null_mut(),
-            // NOTE: to mirror C's definition this would be
-            // tables: [ptr::null_mut(); 5],
-        }
-    }
-}
-
-// Overrides for ocaml-sys functions of the same name but using ocaml-interop's CamlRootBlocks representation.
-unsafe fn local_roots() -> *mut CamlRootsBlock {
-    ocaml_sys_local_roots() as *mut CamlRootsBlock
-}
-
-unsafe fn set_local_roots(roots: *mut CamlRootsBlock) {
-    ocaml_sys_set_local_roots(roots as *mut ocaml_sys::CamlRootsBlock)
-}
-
-// OCaml GC frame handle
-#[derive(Default)]
-pub struct GCFrame<'gc> {
-    _marker: PhantomData<&'gc i32>,
-    block: CamlRootsBlock,
-}
-
-// Impl
-
-impl<'gc> GCFrame<'gc> {
-    #[doc(hidden)]
-    pub fn initialize(&mut self, frame_local_roots: &[UnsafeCell<RawOCaml>]) -> &mut Self {
-        self.block.local_roots = frame_local_roots[0].get();
-        self.block.ntables = 1;
-        unsafe {
-            self.block.next = local_roots();
-            set_local_roots(&mut self.block);
-        };
-        self
-    }
-}
-
-impl<'gc> Drop for GCFrame<'gc> {
-    fn drop(&mut self) {
-        unsafe {
-            assert!(
-                local_roots() == &mut self.block,
-                "OCaml local roots corrupted"
-            );
-            set_local_roots(self.block.next);
-        }
-    }
-}
-
-pub struct OCamlRawRoot<'a> {
-    cell: &'a UnsafeCell<RawOCaml>,
-}
-
-impl<'a> OCamlRawRoot<'a> {
-    #[doc(hidden)]
-    pub unsafe fn reserve<'gc>(_gc: &GCFrame<'gc>) -> OCamlRawRoot<'gc> {
-        assert_eq!(&_gc.block as *const _, local_roots());
-        let block = &mut *local_roots();
-        let locals: *const UnsafeCell<RawOCaml> =
-            &*(block.local_roots as *const UnsafeCell<RawOCaml>);
-        let cell = &*locals.offset(block.nitems);
-        block.nitems += 1;
-        OCamlRawRoot { cell }
-    }
-
-    /// Roots an [`OCaml`] value.
-    pub fn keep<'tmp, T>(&'tmp mut self, val: OCaml<T>) -> OCamlRef<'tmp, T> {
-        unsafe {
-            let cell = self.cell.get();
-            *cell = val.raw();
-            &*(cell as *const OCamlCell<T>)
-        }
-    }
-
-    /// Roots a [`RawOCaml`] value and attaches a type to it.
-    ///
-    /// # Safety
-    ///
-    /// This method is unsafe because there is no way to validate that the [`RawOCaml`] value
-    /// is of the correct type.
-    pub unsafe fn keep_raw<T>(&mut self, val: RawOCaml) -> OCamlRef<T> {
-        let cell = self.cell.get();
-        *cell = val;
-        &*(cell as *const OCamlCell<T>)
-    }
-}
 
 pub struct OCamlCell<T> {
     cell: UnsafeCell<RawOCaml>,
@@ -152,7 +47,7 @@ impl<T> OCamlCell<T> {
     ///
     /// # Safety
     ///
-    /// This method is unsafe, because the RawOCaml value obtained will not be tracked.
+    /// The [`RawOCaml`] value obtained may become invalid after the OCaml GC runs.
     pub unsafe fn get_raw(&self) -> RawOCaml {
         *self.cell.get()
     }
@@ -194,7 +89,10 @@ pub fn alloc_double(cr: &mut OCamlRuntime, d: f64) -> OCaml<OCamlFloat> {
 // small values (like tuples and conses are) without going through `caml_modify` to get
 // a little bit of extra performance.
 
-pub fn alloc_some<'a, A>(cr: &'a mut OCamlRuntime, value: OCamlRef<A>) -> OCaml<'a, Option<A>> {
+pub fn alloc_some<'a, 'b, A>(
+    cr: &'a mut OCamlRuntime,
+    value: OCamlRef<'b, A>,
+) -> OCaml<'a, Option<A>> {
     unsafe {
         let ocaml_some = caml_alloc(1, tag::SOME);
         store_field(ocaml_some, 0, value.get_raw());
@@ -202,55 +100,19 @@ pub fn alloc_some<'a, A>(cr: &'a mut OCamlRuntime, value: OCamlRef<A>) -> OCaml<
     }
 }
 
-pub fn alloc_tuple<'a, F, S>(
-    cr: &'a mut OCamlRuntime,
-    fst: OCamlRef<F>,
-    snd: OCamlRef<S>,
-) -> OCaml<'a, (F, S)> {
-    unsafe {
-        let ocaml_tuple = caml_alloc_tuple(2);
-        store_field(ocaml_tuple, 0, fst.get_raw());
-        store_field(ocaml_tuple, 1, snd.get_raw());
-        OCaml::new(cr, ocaml_tuple)
-    }
+#[doc(hidden)]
+pub unsafe fn alloc_tuple<T>(cr: &mut OCamlRuntime, size: usize) -> OCaml<T> {
+    let ocaml_tuple = caml_alloc_tuple(size);
+    OCaml::new(cr, ocaml_tuple)
 }
 
-pub fn alloc_tuple_3<'a, F, S, T3>(
+/// List constructor
+///
+/// Build a new list from a head and a tail list.
+pub fn alloc_cons<'a, 'b, A>(
     cr: &'a mut OCamlRuntime,
-    fst: OCamlRef<F>,
-    snd: OCamlRef<S>,
-    elt3: OCamlRef<T3>,
-) -> OCaml<'a, (F, S, T3)> {
-    unsafe {
-        let ocaml_tuple = caml_alloc_tuple(3);
-        store_field(ocaml_tuple, 0, fst.get_raw());
-        store_field(ocaml_tuple, 1, snd.get_raw());
-        store_field(ocaml_tuple, 2, elt3.get_raw());
-        OCaml::new(cr, ocaml_tuple)
-    }
-}
-
-pub fn alloc_tuple_4<'a, F, S, T3, T4>(
-    cr: &'a mut OCamlRuntime,
-    fst: OCamlRef<F>,
-    snd: OCamlRef<S>,
-    elt3: OCamlRef<T3>,
-    elt4: OCamlRef<T4>,
-) -> OCaml<'a, (F, S, T3, T4)> {
-    unsafe {
-        let ocaml_tuple = caml_alloc_tuple(4);
-        store_field(ocaml_tuple, 0, fst.get_raw());
-        store_field(ocaml_tuple, 1, snd.get_raw());
-        store_field(ocaml_tuple, 2, elt3.get_raw());
-        store_field(ocaml_tuple, 3, elt4.get_raw());
-        OCaml::new(cr, ocaml_tuple)
-    }
-}
-
-pub fn alloc_cons<'a, A>(
-    cr: &'a mut OCamlRuntime,
-    head: OCamlRef<A>,
-    tail: OCamlRef<OCamlList<A>>,
+    head: OCamlRef<'b, A>,
+    tail: OCamlRef<'b, OCamlList<A>>,
 ) -> OCaml<'a, OCamlList<A>> {
     unsafe {
         let ocaml_cons = caml_alloc(2, tag::CONS);
@@ -258,4 +120,56 @@ pub fn alloc_cons<'a, A>(
         store_field(ocaml_cons, 1, tail.get_raw());
         OCaml::new(cr, ocaml_cons)
     }
+}
+
+const BOX_OPS_DYN_DROP: custom_operations = custom_operations {
+    identifier: "_rust_box_dyn_drop\0".as_ptr() as *const ocaml_sys::Char,
+    finalize: Some(drop_box_dyn),
+    compare: None,
+    hash: None,
+    serialize: None,
+    deserialize: None,
+    compare_ext: None,
+    fixed_length: ptr::null(),
+};
+
+extern "C" fn drop_box_dyn(oval: RawOCaml) {
+    unsafe {
+        let box_ptr = ocaml_sys::field(oval, 1) as *mut Pin<Box<dyn Any>>;
+        ptr::drop_in_place(box_ptr);
+    }
+}
+
+// Notes by @g2p:
+//
+// Implementation notes: is it possible to reduce indirection?
+// Could we also skip the finalizer?
+//
+// While putting T immediately inside the custom block as field(1)
+// is tempting, GC would misalign it (UB) when moving.  Put a pointer to T instead.
+// That optimisation would only work when alignment is the same as OCaml,
+// meaning size_of<uintnat>.  It would also need to use different types.
+//
+// Use Any for now.  This allows safe downcasting when converting back to Rust.
+//
+// mem::needs_drop can be used to detect drop glue.
+// This could be used to skip the finalizer, but only when there's no box.
+// Using a lighter finalizer won't work either, the GlobalAllocator trait needs
+// to know the layout before freeing the referenced block.
+// malloc won't use that info, but other allocators would.
+//
+// Also: caml_register_custom_operations is only useful for Marshall serialization,
+// skip it
+
+/// Allocate a `DynBox` for a value of type `A`.
+pub fn alloc_box<A: 'static>(cr: &mut OCamlRuntime, data: A) -> OCaml<DynBox<A>> {
+    let oval;
+    // A fatter Box, points to data then to vtable
+    type B = Pin<Box<dyn Any>>;
+    unsafe {
+        oval = ocaml_sys::caml_alloc_custom(&BOX_OPS_DYN_DROP, mem::size_of::<B>(), 0, 1);
+        let box_ptr = ocaml_sys::field(oval, 1) as *mut B;
+        std::ptr::write(box_ptr, Box::pin(data));
+    }
+    unsafe { OCaml::new(cr, oval) }
 }

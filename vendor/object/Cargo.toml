@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "object"
-version = "0.23.0"
+version = "0.24.0"
 authors = ["Nick Fitzgerald <fitzgen@gmail.com>", "Philip Craig <philipjcraig@gmail.com>"]
 exclude = ["/.coveralls.yml", "/.travis.yml"]
 description = "A unified interface for reading and writing object file formats."
@@ -88,7 +88,7 @@ default = ["read", "compression"]
 elf = []
 macho = []
 pe = ["coff"]
-read = ["read_core", "archive", "coff", "elf", "macho", "pe", "wasm", "unaligned"]
+read = ["read_core", "archive", "coff", "elf", "macho", "pe", "unaligned"]
 read_core = []
 rustc-dep-of-std = ["core", "compiler_builtins", "alloc"]
 std = []

@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "debug-helper"
-version = "0.3.10"
+version = "0.3.11"
 authors = ["Magic Len <len@magiclen.org>"]
 include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
 description = "This crate provides declarative macros to help you implement the `Debug` trait manually."
@@ -25,6 +25,3 @@ license = "MIT"
 repository = "https://github.com/magiclen/debug-helper"
 
 [dependencies]
-[badges.travis-ci]
-branch = "master"
-repository = "magiclen/debug-helper"

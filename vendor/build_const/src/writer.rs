@@ -1,6 +1,6 @@
 use std::env;
 use std::fs;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::io;
 use std::io::Write;
 use std::path::Path;
@@ -138,7 +138,7 @@ impl ConstValueWriter {
     /// `add_array` depends on `Debug` being implemented for each item in such a way that it
     /// accurately represents the item's creation. Sometimes that cannot be relied on and
     /// `add_array_raw` has to be used instead.
-    pub fn add_array_raw(&mut self, name: &str, ty: &str, raw_values: &[&str]) {
+    pub fn add_array_raw<S: AsRef<str> + Display>(&mut self, name: &str, ty: &str, raw_values: &[S]) {
         write_array_raw(&mut self.f, name, ty, raw_values);
     }
 
@@ -180,8 +180,8 @@ pub fn write_array<T: Debug, W: Write>(w: &mut W, name: &str, ty: &str, values: 
 /// Write an array of raw values and return the array's full type representation.
 /// 
 /// This can be used to create nested array constant types.
-pub fn write_array_raw<W: Write>(
-        w: &mut W, name: &str, ty: &str, raw_values: &[&str]
+pub fn write_array_raw<W: Write, S: AsRef<str> + Display>(
+        w: &mut W, name: &str, ty: &str, raw_values: &[S]
     ) 
     -> String
 {
@@ -191,7 +191,7 @@ pub fn write_array_raw<W: Write>(
         add_value_raw instead."
     );
     let full_ty = write_array_header(w, name, ty, raw_values.len());
-    for &v in raw_values {
+    for v in raw_values {
         write_array_item_raw(w, v);
     }
     write_array_end(w);
@@ -207,7 +207,7 @@ fn write_array_header<W: Write>(w: &mut W, name: &str, ty: &str, len: usize) -> 
     full_ty
 }
 
-fn write_array_item_raw<W: Write>(w: &mut W, raw_item: &str) {
+fn write_array_item_raw<W: Write, S: AsRef<str> + Display>(w: &mut W, raw_item: S) {
     write!(w, "    {},\n", raw_item).unwrap()
 }
 

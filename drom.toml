@@ -3,7 +3,7 @@ drom-version = "0.1"
 
 [project]
 authors = ["Fabrice Le Fessant <fabrice.le_fessant@ocamlpro.com>"]
-ci-systems = ["ubuntu-latest"]
+ci-systems = ["ubuntu-latest" ]
 copyright = "OCamlPro SAS"
 edition = "4.10.0"
 github-organization = "ocamlpro"
@@ -11,7 +11,7 @@ license = "LGPL2"
 min-edition = "4.08.0"
 name = "freeton_ocaml_sdk"
 synopsis = "The freeton_ocaml_sdk library is a binding over TON-SDK for Free TON"
-version = "0.3.0"
+version = "0.3.1"
 
 # keys that you could also define:
 # odoc-target = "...odoc-target..."
@@ -24,14 +24,12 @@ version = "0.3.0"
 # homepage = "...homepage..."
 
 [project]
-description = """
-This project implements an OCaml-Rust binding to the TON-SDK, and a
+description = """This project implements an OCaml-Rust binding to the TON-SDK, and a
 Graphql client to interact with the node.
 """
 
 [project]
-skip = [ "sphinx/index.rst", "sphinx/install.rst",
- "src/freeton_ocaml_sdk/index.mld", "src/freeton_ocaml_sdk/lib.rs"]
+skip = ["sphinx/index.rst", "sphinx/install.rst", "src/freeton_ocaml_sdk/index.mld", "src/freeton_ocaml_sdk/lib.rs"]
 
 # project-wide library dependencies (not for package-specific deps)
 [dependencies]
@@ -66,11 +64,11 @@ share-dirs = ["share"]
 
 # project-wide fields (depends on project skeleton)
 [fields]
-dot-gitignore-trailer = """
-# commit Cargo.lock in the repository to force same versions
+dot-gitignore-trailer = """# commit Cargo.lock in the repository to force same versions
 # Cargo.lock
 """
 
 [[package]]
 dir = "src/freeton_ocaml_sdk"
 # edit 'src/freeton_ocaml_sdk/package.toml' for package-specific options
+
