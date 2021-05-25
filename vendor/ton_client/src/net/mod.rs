@@ -12,38 +12,44 @@
 */
 
 pub use batch::{batch_query, ParamsOfBatchQuery, ResultOfBatchQuery};
+pub(crate) use endpoint::Endpoint;
 pub use errors::{Error, ErrorCode};
 pub use queries::{
-    aggregate_collection, query, query_collection, wait_for_collection, ParamsOfQuery,
-    ParamsOfWaitForCollection, ResultOfAggregateCollection, ResultOfQuery, ResultOfQueryCollection,
-    ResultOfWaitForCollection,
+    aggregate_collection, query, query_collection, query_counterparties, wait_for_collection,
+    ParamsOfQuery, ParamsOfWaitForCollection, ResultOfAggregateCollection, ResultOfQuery,
+    ResultOfQueryCollection, ResultOfWaitForCollection,
 };
-pub(crate) use server_link::{ServerLink, MAX_TIMEOUT};
+pub(crate) use server_link::{EndpointStat, ServerLink, MAX_TIMEOUT};
 pub use subscriptions::{
     subscribe_collection, unsubscribe, ParamsOfSubscribeCollection, ResultOfSubscribeCollection,
     ResultOfSubscription, SubscriptionResponseType,
 };
 pub use ton_gql::{
-    AggregationFn, FieldAggregation, GraphQLOperationEvent, OrderBy,
-    ParamsOfAggregateCollection, ParamsOfQueryCollection, ParamsOfQueryOperation, PostRequest,
+    AggregationFn, FieldAggregation, GraphQLQueryEvent, OrderBy, ParamsOfAggregateCollection,
+    ParamsOfQueryCollection, ParamsOfQueryCounterparties, ParamsOfQueryOperation, PostRequest,
     SortDirection,
 };
+pub use transaction_tree::{
+    query_transaction_tree, MessageNode, ParamsOfQueryTransactionTree,
+    ResultOfQueryTransactionTree, TransactionNode,
+};
 pub use types::{
-    NetworkConfig, BLOCKS_TABLE_NAME, CONTRACTS_TABLE_NAME, MESSAGES_TABLE_NAME,
-    TRANSACTIONS_TABLE_NAME,
+    NetworkConfig, ACCOUNTS_COLLECTION, BLOCKS_COLLECTION, MESSAGES_COLLECTION,
+    TRANSACTIONS_COLLECTION,
 };
 
 use crate::client::ClientContext;
 use crate::error::ClientResult;
 
 pub(crate) mod batch;
+mod endpoint;
 mod errors;
 mod gql;
 pub(crate) mod queries;
-mod server_info;
 mod server_link;
 pub(crate) mod subscriptions;
 mod ton_gql;
+pub(crate) mod transaction_tree;
 mod types;
 mod websocket_link;
 
@@ -85,7 +91,7 @@ pub async fn find_last_shard_block(
     let address = crate::encoding::account_decode(&params.address)?;
 
     let block_id =
-        crate::processing::blocks_walking::find_last_shard_block(&context, &address).await?;
+        crate::processing::blocks_walking::find_last_shard_block(&context, &address, None).await?;
 
     Ok(ResultOfFindLastShardBlock {
         block_id: block_id.to_string(),
@@ -104,7 +110,7 @@ pub async fn fetch_endpoints(context: std::sync::Arc<ClientContext>) -> ClientRe
     let client = context.get_server_link()?;
 
     Ok(EndpointsSet {
-        endpoints: client.fetch_endpoints().await?,
+        endpoints: client.fetch_endpoint_addresses().await?,
     })
 }
 
@@ -124,4 +130,24 @@ pub async fn set_endpoints(
         .await;
 
     Ok(())
+}
+
+#[derive(Serialize, Deserialize, ApiType, Default, Clone)]
+pub struct ResultOfGetEndpoints {
+    /// Current query endpoint
+    pub query: String,
+    /// List of all endpoints used by client
+    pub endpoints: Vec<String>,
+}
+
+/// Requests the list of alternative endpoints from server
+#[api_function]
+pub async fn get_endpoints(
+    context: std::sync::Arc<ClientContext>,
+) -> ClientResult<ResultOfGetEndpoints> {
+    let server_link = context.get_server_link()?;
+    Ok(ResultOfGetEndpoints {
+        query: server_link.get_query_endpoint().await?.query_url.clone(),
+        endpoints: server_link.get_all_endpoint_addresses().await?,
+    })
 }

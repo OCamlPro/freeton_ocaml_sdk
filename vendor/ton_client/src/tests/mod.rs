@@ -12,7 +12,9 @@
 */
 
 use super::{tc_destroy_string, tc_read_string, tc_request, tc_request_sync};
-use crate::abi::{Abi, CallSet, DeploySet, ParamsOfEncodeMessage, ResultOfEncodeMessage, Signer, encode_message};
+use crate::abi::{
+    encode_message, Abi, CallSet, DeploySet, ParamsOfEncodeMessage, ResultOfEncodeMessage, Signer,
+};
 use crate::boc::{ParamsOfParse, ResultOfParse};
 use crate::client::*;
 use crate::crypto::{
@@ -64,7 +66,11 @@ impl log::Log for SimpleLogger {
     }
 
     fn log(&self, record: &log::Record) {
-        println!("{} {}", chrono::prelude::Utc::now().timestamp_millis(), record.args());
+        println!(
+            "{} {}",
+            chrono::prelude::Utc::now().timestamp_millis(),
+            record.args()
+        );
     }
 
     fn flush(&self) {}
@@ -111,6 +117,7 @@ impl TestRuntime {
 lazy_static::lazy_static! {
     static ref TEST_RUNTIME: Mutex<TestRuntime> = Mutex::new(TestRuntime::new());
 }
+
 
 pub(crate) struct TestClient {
     config: ClientConfig,
@@ -246,14 +253,12 @@ impl TestClient {
     }
 
     async fn calc_giver_address(&self, keys: KeyPair) -> String {
-        self.encode_message(
-            ParamsOfEncodeMessage {
-                abi: Self::giver_abi(),
-                deploy_set: DeploySet::some_with_tvc(Self::tvc(GIVER_V2, None)),
-                signer: Signer::Keys { keys },
-                ..Default::default()
-            }
-        )
+        self.encode_message(ParamsOfEncodeMessage {
+            abi: Self::giver_abi(),
+            deploy_set: DeploySet::some_with_tvc(Self::tvc(GIVER_V2, None)),
+            signer: Signer::Keys { keys },
+            ..Default::default()
+        })
         .await
         .unwrap()
         .address
@@ -269,7 +274,8 @@ impl TestClient {
 
     pub fn giver_keys() -> KeyPair {
         if let Ok(secret) = std::env::var(GIVER_SECRET_VAR) {
-            let secret_key = ed25519_dalek::SecretKey::from_bytes(&hex::decode(&secret).unwrap()).unwrap();
+            let secret_key =
+                ed25519_dalek::SecretKey::from_bytes(&hex::decode(&secret).unwrap()).unwrap();
             let public_key = ed25519_dalek::PublicKey::from(&secret_key);
             KeyPair {
                 public: hex::encode(public_key.to_bytes()),
@@ -277,14 +283,22 @@ impl TestClient {
             }
         } else {
             KeyPair {
-                public: "2ada2e65ab8eeab09490e3521415f45b6e42df9c760a639bcf53957550b25a16".to_owned(),
-                secret: "172af540e43a524763dd53b26a066d472a97c4de37d5498170564510608250c3".to_owned(),
+                public: "2ada2e65ab8eeab09490e3521415f45b6e42df9c760a639bcf53957550b25a16"
+                    .to_owned(),
+                secret: "172af540e43a524763dd53b26a066d472a97c4de37d5498170564510608250c3"
+                    .to_owned(),
             }
         }
     }
 
-    pub fn network_address() -> String {
-        std::env::var("TON_NETWORK_ADDRESS").unwrap_or(DEFAULT_NETWORK_ADDRESS.into())
+    pub fn endpoints() -> Vec<String> {
+        std::env::var("TON_NETWORK_ADDRESS")
+            .unwrap_or(DEFAULT_NETWORK_ADDRESS.into())
+            .split(",")
+            .map(|x| x.trim())
+            .filter(|x| !x.is_empty())
+            .map(|x| x.to_string())
+            .collect()
     }
 
     pub fn node_se() -> bool {
@@ -317,6 +331,13 @@ impl TestClient {
         )
     }
 
+    pub fn icon(name: &str, abi_version: Option<u8>) -> String {
+        let image_base64 = base64::encode(
+            &std::fs::read(format!("{}{}.png", Self::contracts_path(abi_version), name)).unwrap(),
+        );
+        format!("data:image/png;base64,{}", image_base64)
+    }
+
     pub fn package(name: &str, abi_version: Option<u8>) -> (Abi, String) {
         (Self::abi(name, abi_version), Self::tvc(name, abi_version))
     }
@@ -329,7 +350,7 @@ impl TestClient {
     pub(crate) fn new() -> Self {
         Self::new_with_config(json!({
             "network": {
-                "server_address": Self::network_address()
+                "endpoints": TestClient::endpoints(),
             }
         }))
     }
@@ -425,7 +446,7 @@ impl TestClient {
         {
             (request.callback)(params_json, response_type).await
         } else {
-            panic!(format!("Unsupported response type: {}", response_type));
+            panic!("Unsupported response type: {}", response_type);
         }
 
         if finished {
@@ -599,21 +620,22 @@ impl TestClient {
     }
 
     pub(crate) async fn get_tokens_from_giver_async(&self, account: &str, value: Option<u64>) {
-        let run_result = self.net_process_function(
-            self.giver_address().await,
-            Self::giver_abi(),
-            "sendTransaction",
-            json!({
-                "dest": account.to_string(),
-                "value": value.unwrap_or(500_000_000u64),
-                "bounce": false
-            }),
-            Signer::Keys {
-                keys: Self::giver_keys(),
-            },
-        )
-        .await
-        .unwrap();
+        let run_result = self
+            .net_process_function(
+                self.giver_address().await,
+                Self::giver_abi(),
+                "sendTransaction",
+                json!({
+                    "dest": account.to_string(),
+                    "value": value.unwrap_or(500_000_000u64),
+                    "bounce": false
+                }),
+                Signer::Keys {
+                    keys: Self::giver_keys(),
+                },
+            )
+            .await
+            .unwrap();
 
         // wait for tokens reception
         for message in run_result.out_messages.iter() {
@@ -623,7 +645,9 @@ impl TestClient {
                     ParamsOfParse {
                         boc: message.clone(),
                     },
-                ).await.unwrap();
+                )
+                .await
+                .unwrap();
             let message: ton_sdk::Message = serde_json::from_value(parsed.parsed).unwrap();
             if ton_sdk::MessageType::Internal == message.msg_type() {
                 let _: ResultOfWaitForCollection = self
@@ -694,16 +718,17 @@ impl TestClient {
     }
 
     pub async fn resolve_app_request(&self, app_request_id: u32, result: impl Serialize) {
-        self
-            .request_async::<_, ()>(
-                "client.resolve_app_request",
-                ParamsOfResolveAppRequest {
-                    app_request_id,
-                    result: AppRequestResult::Ok { 
-                        result: json!(result)
-                    }
+        self.request_async::<_, ()>(
+            "client.resolve_app_request",
+            ParamsOfResolveAppRequest {
+                app_request_id,
+                result: AppRequestResult::Ok {
+                    result: json!(result),
                 },
-            ).await.unwrap();
+            },
+        )
+        .await
+        .unwrap();
     }
 }
 

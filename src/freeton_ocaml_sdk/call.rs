@@ -314,6 +314,7 @@ async fn send_message_and_wait(
                 message: msg.clone(),
                 shard_block_id: result.shard_block_id,
                 send_events: true,
+                sending_endpoints: Some ( result.sending_endpoints )
             },
             callback.clone(),
         ).await

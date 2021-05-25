@@ -300,6 +300,7 @@ impl<T: Writer> Engine<T> {
         INDEX3 i = parse_const_u2;
                j = parse_const_u2;
                k = parse_const_u2            => 0x6F, 0xC0 | (i << 4) | (j << 2) | k
+        INITCODEHASH                         => 0xF8, 0x2B
         ISNAN                                => 0xC4
         ISNEG                                => 0xC1, 0x00
         ISNPOS                               => 0xC1, 0x01
@@ -805,6 +806,14 @@ impl<T: Writer> Engine<T> {
         XLOADQ                               => 0xD7, 0x3B
         XOR                                  => 0xB2
         ZERO                                 => 0x70
+        ZEROROTRIF                           => 0x6F, 0xA2
+        ZEROROTRIF2                          => 0x6F, 0xA6
+        ZEROROTRIFNOT                        => 0x6F, 0xA3
+        ZEROROTRIFNOT2                       => 0x6F, 0xA7
+        ZEROSWAPIF                           => 0x6F, 0xA0
+        ZEROSWAPIF2                          => 0x6F, 0xA4
+        ZEROSWAPIFNOT                        => 0x6F, 0xA1
+        ZEROSWAPIFNOT2                       => 0x6F, 0xA5
     }
 
     pub fn add_simple_commands(&mut self) {
