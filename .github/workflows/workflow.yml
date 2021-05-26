@@ -76,7 +76,9 @@ jobs:
         env:
           LDFLAGS: -L/usr/local/Cellar/openssl@1.1/1.1.1k/lib
           CPPFLAGS: -I/usr/local/Cellar/openssl@1.1/1.1.1k/include
-        run: make build
+        run: |
+          export LD_LIBRARY_PATH=/usr/local/Cellar/openssl@1.1/1.1.1k/lib:$LD_LIBRARY_PATH
+          make build
         if: matrix.os == 'macos-latest'
 
       - name: run test suite
