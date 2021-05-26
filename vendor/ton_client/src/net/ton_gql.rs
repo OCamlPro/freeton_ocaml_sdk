@@ -14,9 +14,13 @@
 
 use serde_json::Value;
 
-use crate::error::ClientError;
+use crate::error::{ClientError, ClientResult};
 use crate::net::gql::GraphQLMessageFromClient;
 use crate::net::ParamsOfWaitForCollection;
+use serde::{de::Error, Deserialize, Deserializer};
+
+const COUNTERPARTIES_COLLECTION: &str = "counterparties";
+const FETCH_ADDITIONAL_TIMEOUT: u32 = 5000;
 
 #[derive(Serialize, Deserialize, Clone, ApiType)]
 pub enum SortDirection {
@@ -63,13 +67,13 @@ pub struct PostRequest {
 pub struct ParamsOfAggregateCollection {
     /// Collection name (accounts, blocks, transactions, messages, block_signatures)
     pub collection: String,
-    /// Collection filter.
+    /// Collection filter
     pub filter: Option<serde_json::Value>,
     /// Projection (result) string
     pub fields: Option<Vec<FieldAggregation>>,
 }
 
-#[derive(Serialize, Deserialize, ApiType, Default, Clone)]
+#[derive(Serialize, ApiType, Default, Clone)]
 pub struct ParamsOfQueryCollection {
     /// Collection name (accounts, blocks, transactions, messages, block_signatures)
     pub collection: String,
@@ -83,12 +87,63 @@ pub struct ParamsOfQueryCollection {
     pub limit: Option<u32>,
 }
 
+#[derive(Deserialize)]
+struct ParamsOfQueryCollectionFix {
+    pub collection: String,
+    pub filter: Option<serde_json::Value>,
+    pub result: String,
+    pub order: Option<Vec<OrderBy>>,
+    #[serde(rename = "orderBy")]
+    pub order_by: Option<Vec<OrderBy>>,
+    pub limit: Option<u32>,
+}
+
+impl<'de> Deserialize<'de> for ParamsOfQueryCollection {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let verified = ParamsOfQueryCollectionFix::deserialize(deserializer);
+        match verified {
+            Ok(verified) => {
+                if verified.order_by.is_none() {
+                    Ok(Self {
+                        collection: verified.collection,
+                        filter: verified.filter,
+                        result: verified.result,
+                        order: verified.order,
+                        limit: verified.limit,
+                    })
+                } else {
+                    Err(D::Error::custom(
+                        "Invalid parameter name \"orderBy\"`. Valid name is \"order\".",
+                    ))
+                }
+            }
+            Err(err) => Err(err),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, ApiType, Default, Clone)]
+pub struct ParamsOfQueryCounterparties {
+    /// Account address
+    pub account: String,
+    /// Projection (result) string
+    pub result: String,
+    /// Number of counterparties to return
+    pub first: Option<u32>,
+    /// `cursor` field of the last received result
+    pub after: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, ApiType, Clone)]
 #[serde(tag = "type")]
 pub enum ParamsOfQueryOperation {
     QueryCollection(ParamsOfQueryCollection),
     WaitForCollection(ParamsOfWaitForCollection),
     AggregateCollection(ParamsOfAggregateCollection),
+    QueryCounterparties(ParamsOfQueryCounterparties),
 }
 
 impl ParamsOfQueryOperation {
@@ -97,6 +152,7 @@ impl ParamsOfQueryOperation {
             ParamsOfQueryOperation::AggregateCollection(p) => &p.collection,
             ParamsOfQueryOperation::QueryCollection(p) => &p.collection,
             ParamsOfQueryOperation::WaitForCollection(p) => &p.collection,
+            ParamsOfQueryOperation::QueryCounterparties(_) => COUNTERPARTIES_COLLECTION,
         }
     }
 
@@ -126,6 +182,7 @@ impl ParamsOfQueryOperation {
             }
             ParamsOfQueryOperation::QueryCollection(p) => p.collection.clone(),
             ParamsOfQueryOperation::WaitForCollection(p) => p.collection.clone(),
+            ParamsOfQueryOperation::QueryCounterparties(_) => COUNTERPARTIES_COLLECTION.to_owned(),
         }
     }
 
@@ -134,11 +191,12 @@ impl ParamsOfQueryOperation {
             ParamsOfQueryOperation::AggregateCollection(_) => "",
             ParamsOfQueryOperation::QueryCollection(p) => &p.result,
             ParamsOfQueryOperation::WaitForCollection(p) => &p.result,
+            ParamsOfQueryOperation::QueryCounterparties(p) => &p.result,
         }
     }
 }
 
-struct QueryOperationBuilder {
+pub(crate) struct QueryOperationBuilder {
     is_batch: bool,
     default_wait_for_timeout: u32,
     param_count: u32,
@@ -147,10 +205,11 @@ struct QueryOperationBuilder {
     header: String,
     body: String,
     variables: Option<Value>,
+    timeout: Option<u32>,
 }
 
 impl QueryOperationBuilder {
-    fn new(is_batch: bool, default_wait_for_timeout: u32) -> Self {
+    pub fn new(is_batch: bool, default_wait_for_timeout: u32) -> Self {
         Self {
             is_batch,
             default_wait_for_timeout,
@@ -160,17 +219,18 @@ impl QueryOperationBuilder {
             header: String::new(),
             body: String::new(),
             variables: None,
+            timeout: None,
         }
     }
 
-    fn add_operations(&mut self, params: &[ParamsOfQueryOperation]) {
+    pub fn add_operations(&mut self, params: &[ParamsOfQueryOperation]) {
         for op in params {
             self.add_op(op);
         }
     }
 
-    fn build(self) -> GraphQLOperation {
-        GraphQLOperation {
+    pub fn build(self) -> GraphQLQuery {
+        GraphQLQuery {
             query: format!(
                 "{}{} {{{}\n}}",
                 self.header,
@@ -178,20 +238,14 @@ impl QueryOperationBuilder {
                 self.body
             ),
             variables: self.variables,
+            timeout: self.timeout.map(|x| x + FETCH_ADDITIONAL_TIMEOUT),
+            is_batch: self.is_batch,
         }
     }
 
-    fn add_op(&mut self, op: &ParamsOfQueryOperation) {
-        let query_name = op.query_name();
+    fn start_op(&mut self, name: &str) {
         if self.op_count == 0 {
-            self.header = format!(
-                "query {}",
-                if self.is_batch {
-                    "batch".to_string()
-                } else {
-                    query_name
-                }
-            );
+            self.header = format!("query {}", if self.is_batch { "batch" } else { name });
         }
         self.add_body("\n    ");
         self.op_count += 1;
@@ -199,7 +253,22 @@ impl QueryOperationBuilder {
         if self.is_batch {
             self.add_body(&format!("q{}: ", self.op_count));
         }
-        self.add_body(op.query_name().as_str());
+        self.add_body(name);
+    }
+
+    fn end_op(&mut self, result: &str) {
+        if self.op_param_count > 0 {
+            self.add_body(")");
+        }
+        if !result.is_empty() {
+            self.add_body(" { ");
+            self.add_body(result);
+            self.add_body(" }");
+        }
+    }
+
+    fn add_op(&mut self, op: &ParamsOfQueryOperation) {
+        self.start_op(&op.query_name());
         let filter_type = op.doc_type() + "Filter";
         match op {
             ParamsOfQueryOperation::AggregateCollection(ref p) => {
@@ -216,17 +285,22 @@ impl QueryOperationBuilder {
                     Some(1),
                     Some(p.timeout.unwrap_or(self.default_wait_for_timeout)),
                 );
+                self.timeout = match (self.timeout, p.timeout) {
+                    (Some(a), Some(b)) => Some(a.max(b)),
+                    (None, Some(b)) => Some(b),
+                    _ => self.timeout,
+                };
+            }
+            ParamsOfQueryOperation::QueryCounterparties(ref p) => {
+                self.add_query_counterparties_op_params(&p.account, &p.first, &p.after);
             }
         }
-        if self.op_param_count > 0 {
-            self.add_body(")");
-        }
-        let result = op.query_result();
-        if !result.is_empty() {
-            self.add_body(" { ");
-            self.add_body(result);
-            self.add_body(" }");
-        }
+        self.end_op(&op.query_result());
+    }
+
+    fn add_info(&mut self) {
+        self.start_op("info");
+        self.end_op("version time");
     }
 
     fn add_agg_op_params(
@@ -275,6 +349,21 @@ impl QueryOperationBuilder {
         }
     }
 
+    fn add_query_counterparties_op_params(
+        &mut self,
+        account: &str,
+        first: &Option<u32>,
+        after: &Option<String>,
+    ) {
+        self.add_op_param("account", "String!", &Value::from(account));
+        if let Some(first) = first {
+            self.add_op_param("first", "Int", &Value::from(*first));
+        }
+        if let Some(after) = after.as_ref() {
+            self.add_op_param("after", "String", &Value::from(after.as_str()));
+        }
+    }
+
     fn add_op_param(&mut self, name: &str, type_decl: &str, value: &Value) {
         self.add_header(if self.param_count == 0 { "(" } else { "," });
         self.param_count += 1;
@@ -302,19 +391,77 @@ impl QueryOperationBuilder {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct GraphQLOperation {
+pub(crate) struct GraphQLQuery {
     pub query: String,
     pub variables: Option<Value>,
+    pub timeout: Option<u32>,
+    pub is_batch: bool,
 }
 
-impl GraphQLOperation {
+impl GraphQLQuery {
     pub fn build(
         params: &[ParamsOfQueryOperation],
+        include_info: bool,
         default_wait_for_timeout: u32,
-    ) -> GraphQLOperation {
-        let mut builder = QueryOperationBuilder::new(params.len() > 1, default_wait_for_timeout);
+    ) -> GraphQLQuery {
+        let param_count = params.len() + if include_info { 1 } else { 0 };
+        let mut builder = QueryOperationBuilder::new(param_count > 1, default_wait_for_timeout);
         builder.add_operations(params);
+        if include_info {
+            builder.add_info();
+        }
         builder.build()
+    }
+
+    pub fn get_result(
+        &self,
+        params: &[ParamsOfQueryOperation],
+        index: usize,
+        result: &Value,
+    ) -> ClientResult<Value> {
+        let param = params.get(index);
+        let result_name = if self.is_batch {
+            format!("q{}", index + 1)
+        } else if let Some(param) = param {
+            param.query_name()
+        } else {
+            "info".to_string()
+        };
+        let mut result_data = &result["data"][result_name.as_str()];
+        if result_data.is_null() {
+            return Err(crate::net::Error::invalid_server_response(format!(
+                "Missing data.{} in: {}",
+                result_name,
+                result
+            )));
+        }
+        if let Some(ParamsOfQueryOperation::WaitForCollection(_)) = param {
+            result_data = &result_data[0];
+            if result_data.is_null() {
+                return Err(crate::net::Error::wait_for_timeout());
+            }
+        }
+        Ok(result_data.clone())
+    }
+
+    pub fn get_results(
+        &self,
+        params: &[ParamsOfQueryOperation],
+        result: &Value,
+    ) -> ClientResult<Vec<Value>> {
+        let mut results = Vec::new();
+        for i in 0..params.len() {
+            results.push(self.get_result(params, i, result)?);
+        }
+        Ok(results)
+    }
+
+    pub fn get_server_info(
+        &self,
+        params: &[ParamsOfQueryOperation],
+        result: &Value,
+    ) -> ClientResult<Value> {
+        self.get_result(params, params.len(), result)
     }
 
     pub fn get_start_message(&self, id: String) -> GraphQLMessageFromClient {
@@ -338,19 +485,29 @@ impl GraphQLOperation {
         let variables = Some(json!({
             "filter" : filter,
         }));
-        Self { query, variables }
+        Self {
+            query,
+            variables,
+            timeout: None,
+            is_batch: false,
+        }
     }
 
     pub fn with_post_requests(requests: &[PostRequest]) -> Self {
         let query = "mutation postRequests($requests:[Request]){postRequests(requests:$requests)}"
             .to_owned();
         let variables = Some(json!({ "requests": serde_json::json!(requests) }));
-        Self { query, variables }
+        Self {
+            query,
+            variables,
+            timeout: None,
+            is_batch: false,
+        }
     }
 }
 
 #[derive(Debug)]
-pub enum GraphQLOperationEvent {
+pub enum GraphQLQueryEvent {
     Id(u32),
     Data(Value),
     Error(ClientError),

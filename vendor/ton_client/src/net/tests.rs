@@ -2,15 +2,15 @@ use tokio::sync::Mutex;
 
 use crate::abi::{CallSet, DeploySet, ParamsOfEncodeMessage, Signer};
 use crate::error::ClientError;
-use crate::net::{
-    Error, ParamsOfQueryCollection,
-    ParamsOfSubscribeCollection, ParamsOfWaitForCollection, ResultOfQueryCollection,
-    ResultOfSubscribeCollection, ResultOfSubscription, ResultOfWaitForCollection,
-};
 use crate::processing::ParamsOfProcessMessage;
-use crate::tests::{TestClient, HELLO};
+use crate::tests::{TestClient, EVENTS, HELLO, SUBSCRIBE, TEST_DEBOT, TEST_DEBOT_TARGET};
 
 use super::*;
+use crate::client::NetworkMock;
+use crate::ClientConfig;
+use serde_json::Value;
+use std::collections::HashSet;
+use std::sync::Arc;
 
 #[tokio::test(core_threads = 2)]
 async fn batch_query() {
@@ -180,6 +180,8 @@ async fn wait_for() {
         assert!(transactions.result["now"].as_u64().unwrap() > now as u64);
     });
 
+    tokio::time::delay_for(tokio::time::Duration::from_secs(1)).await;
+
     let client = TestClient::new();
 
     client
@@ -190,10 +192,64 @@ async fn wait_for() {
 }
 
 #[tokio::test(core_threads = 2)]
+async fn message_sending_addresses() {
+    let client = ClientContext::new(ClientConfig {
+        network: NetworkConfig {
+            endpoints: Some(vec![
+                "a".into(),
+                "b".into(),
+                "c".into(),
+                "d".into(),
+                "e".into(),
+                "f".into(),
+                "g".into(),
+                "h".into(),
+            ]),
+            ..Default::default()
+        },
+        ..Default::default()
+    })
+    .unwrap();
+    let link = client.get_server_link().unwrap();
+    link.update_stat(
+        &vec!["a".to_string(), "e".to_string()],
+        EndpointStat::MessageUndelivered,
+    )
+    .await;
+    let bad: HashSet<_> = vec!["a".to_string(), "e".to_string()]
+        .iter()
+        .cloned()
+        .collect();
+    for _ in 0..100 {
+        let addresses = link.get_addresses_for_sending().await;
+        let tail: HashSet<_> = addresses[addresses.len() - 2..].iter().cloned().collect();
+        assert_eq!(tail, bad);
+    }
+    link.update_stat(
+        &vec!["a".to_string(), "e".to_string()],
+        EndpointStat::MessageDelivered,
+    )
+    .await;
+    let mut a_good = false;
+    let mut e_good = false;
+    for _ in 0..100 {
+        let addresses = link.get_addresses_for_sending().await;
+        let tail: HashSet<_> = addresses[addresses.len() - 2..].iter().cloned().collect();
+        if !tail.contains("a") {
+            a_good = true;
+        }
+        if !tail.contains("e") {
+            e_good = true;
+        }
+    }
+    assert!(a_good && e_good)
+}
+
+#[tokio::test(core_threads = 2)]
 async fn subscribe_for_transactions_with_addresses() {
     let client = TestClient::new_with_config(json!({
         "network": {
-            "server_address": TestClient::network_address(),
+            "endpoints": TestClient::endpoints(),
         }
     }));
     let subscription_client = TestClient::new();
@@ -209,7 +265,10 @@ async fn subscribe_for_transactions_with_addresses() {
         address: None,
         call_set: CallSet::some_with_function("constructor"),
     };
-    let msg = subscription_client.encode_message(deploy_params.clone()).await.unwrap();
+    let msg = subscription_client
+        .encode_message(deploy_params.clone())
+        .await
+        .unwrap();
     let transactions = std::sync::Arc::new(Mutex::new(vec![]));
     let transactions_copy1 = transactions.clone();
     let transactions_copy2 = transactions.clone();
@@ -218,6 +277,7 @@ async fn subscribe_for_transactions_with_addresses() {
     let notifications_copy2 = notifications.clone();
     let address1 = msg.address.clone();
     let address2 = msg.address.clone();
+    println!("Account address {}", address1);
 
     let callback1 = move |result: serde_json::Value, response_type: SubscriptionResponseType| {
         let result = match response_type {
@@ -234,6 +294,10 @@ async fn subscribe_for_transactions_with_addresses() {
         async move {
             match result {
                 Ok(result) => {
+                    println!(
+                        "Transaction 1 {}, {}",
+                        result.result["id"], result.result["status"]
+                    );
                     assert_eq!(result.result["account_addr"], address1);
                     transactions_copy.lock().await.push(result.result);
                 }
@@ -253,7 +317,7 @@ async fn subscribe_for_transactions_with_addresses() {
                     "account_addr": { "eq": msg.address.clone() },
                     "status": { "eq": ton_sdk::json_helper::transaction_status_to_u8(ton_block::TransactionProcessingStatus::Finalized) }
                 })),
-                result: "id account_addr".to_owned(),
+                result: "id account_addr status".to_owned(),
             },
             callback1
         ).await.unwrap();
@@ -307,6 +371,10 @@ async fn subscribe_for_transactions_with_addresses() {
         async move {
             match result {
                 Ok(result) => {
+                    println!(
+                        "Transaction 2 {}, {}",
+                        result.result["id"], result.result["status"]
+                    );
                     assert_eq!(result.result["account_addr"], address2);
                     transactions_copy.lock().await.push(result.result);
                 }
@@ -326,7 +394,7 @@ async fn subscribe_for_transactions_with_addresses() {
                     "account_addr": { "eq": msg.address.clone() },
                     "status": { "eq": ton_sdk::json_helper::transaction_status_to_u8(ton_block::TransactionProcessingStatus::Finalized) }
                 })),
-                result: "id account_addr".to_owned(),
+                result: "id account_addr status".to_owned(),
             },
             callback2
         ).await.unwrap();
@@ -373,7 +441,14 @@ async fn subscribe_for_transactions_with_addresses() {
     std::thread::sleep(std::time::Duration::from_millis(5000));
 
     // check that third transaction is now received after resume
-    let transactions = transactions.lock().await;
+    let transactions = transactions.lock().await.clone();
+    println!(
+        "{:?}",
+        transactions
+            .iter()
+            .map(|x| x["id"].to_string())
+            .collect::<Vec<String>>()
+    );
     assert_eq!(transactions.len(), 3);
     assert_ne!(transactions[0]["id"], transactions[2]["id"]);
     // and both subscriptions received notification about resume
@@ -501,4 +576,551 @@ async fn test_wait_resume() {
     let _: () = client.request_async("net.resume", ()).await.unwrap();
 
     assert!(duration.await.unwrap() > timeout as u128);
+}
+
+#[tokio::test(core_threads = 2)]
+async fn test_query_counterparties() {
+    if TestClient::node_se() {
+        return;
+    }
+
+    let client = TestClient::new();
+
+    let account = client.giver_address().await;
+
+    let counterparties1: ResultOfQueryCollection = client
+        .request_async(
+            "net.query_counterparties",
+            ParamsOfQueryCounterparties {
+                account: account.clone(),
+                first: Some(5),
+                after: None,
+                result: "counterparty last_message_id cursor".to_owned(),
+            },
+        )
+        .await
+        .unwrap();
+
+    assert!(counterparties1.result.len() <= 5);
+
+    if counterparties1.result.len() == 5 {
+        let counterparties2: ResultOfQueryCollection = client
+            .request_async(
+                "net.query_counterparties",
+                ParamsOfQueryCounterparties {
+                    account: account.clone(),
+                    first: Some(5),
+                    after: Some(
+                        counterparties1.result[4]["cursor"]
+                            .as_str()
+                            .unwrap()
+                            .to_owned(),
+                    ),
+                    result: "counterparty last_message_id cursor".to_owned(),
+                },
+            )
+            .await
+            .unwrap();
+
+        assert_ne!(counterparties1.result, counterparties2.result);
+    }
+}
+
+async fn query_block_id(client: &Arc<ClientContext>) -> String {
+    crate::net::query_collection(
+        client.clone(),
+        ParamsOfQueryCollection {
+            collection: "blocks".to_string(),
+            result: "id".to_string(),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap()
+    .result[0]["id"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+async fn get_query_url(client: &Arc<ClientContext>) -> String {
+    let mut url = client
+        .get_server_link()
+        .unwrap()
+        .get_query_endpoint()
+        .await
+        .unwrap()
+        .query_url
+        .clone();
+    if let Some(stripped) = url.strip_prefix("http://") {
+        url = stripped.to_string();
+    }
+    if let Some(stripped) = url.strip_prefix("https://") {
+        url = stripped.to_string();
+    }
+    if let Some(stripped) = url.strip_suffix("/graphql") {
+        url = stripped.to_string();
+    }
+    url
+}
+
+#[tokio::test(core_threads = 2)]
+async fn retry_query_on_network_errors() {
+    let client = Arc::new(
+        ClientContext::new(ClientConfig {
+            network: NetworkConfig {
+                endpoints: Some(vec!["a".into()]),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .unwrap(),
+    );
+
+    let now = client.env.now_ms();
+    NetworkMock::build()
+        .url("a")
+        .election(now, 1000)
+        .repeat(2)
+        .network_err()
+        .election(now, 1000)
+        .blocks("1")
+        .repeat(5)
+        .network_err()
+        .election(now, 1000)
+        .blocks("2")
+        .reset_client(&client)
+        .await;
+    assert_eq!(query_block_id(&client).await, "1");
+    assert_eq!(query_block_id(&client).await, "2");
+}
+
+#[tokio::test(core_threads = 2)]
+async fn querying_endpoint_selection() {
+    let client = Arc::new(
+        ClientContext::new(ClientConfig {
+            network: NetworkConfig {
+                endpoints: Some(vec!["a".into(), "b".into()]),
+                network_retries_count: 3,
+                max_latency: 1000,
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .unwrap(),
+    );
+
+    // Check for the fastest
+    let now = client.env.now_ms();
+    NetworkMock::build()
+        .url("a")
+        .delay(200)
+        .election(now, 500) // looser
+        .url("b")
+        .delay(100)
+        .election(now, 500) // winner
+        .reset_client(&client)
+        .await;
+    assert_eq!(get_query_url(&client).await, "b");
+
+    println!("\nSkip endpoint with bad latency\n");
+    let now = client.env.now_ms();
+    NetworkMock::build()
+        .url("a")
+        .delay(100)
+        .election(now, 1500) // looser
+        .url("b")
+        .delay(200)
+        .election(now, 500) // winner
+        .reset_client(&client)
+        .await;
+    assert_eq!(get_query_url(&client).await, "b");
+
+    println!("\nSelect when all have bad latency\n");
+    let now = client.env.now_ms();
+    NetworkMock::build()
+        .url("a")
+        .delay(200)
+        .election(now, 1500) // winner (slower but better latency)
+        .url("b")
+        .delay(100)
+        .election(now, 2000) // looser (faster but worse latency)
+        .reset_client(&client)
+        .await;
+    assert_eq!(get_query_url(&client).await, "a");
+
+    println!("\nFailed Network\n");
+    let client = Arc::new(
+        ClientContext::new(ClientConfig {
+            network: NetworkConfig {
+                endpoints: Some(vec!["a".into()]),
+                network_retries_count: 2,
+                max_latency: 1000,
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .unwrap(),
+    );
+    NetworkMock::build()
+        .url("a")
+        .repeat(3)
+        .network_err()
+        .reset_client(&client)
+        .await;
+    let result = crate::net::query_collection(
+        client.clone(),
+        ParamsOfQueryCollection {
+            collection: "blocks".to_string(),
+            result: "id id".to_string(),
+            ..Default::default()
+        },
+    )
+    .await;
+
+    assert_eq!(
+        match &result {
+            Ok(_) => "ok",
+            Err(e) => &e.message,
+        },
+        "Query failed: Can not send http request: Network error"
+    );
+}
+
+#[tokio::test(core_threads = 2)]
+async fn latency_detection_with_queries() {
+    let client = Arc::new(
+        ClientContext::new(ClientConfig {
+            network: NetworkConfig {
+                endpoints: Some(vec!["a".into(), "b".into()]),
+                network_retries_count: 3,
+                max_latency: 600,
+                latency_detection_interval: 100,
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .unwrap(),
+    );
+
+    // Check for the fastest
+    let now = client.env.now_ms();
+    NetworkMock::build()
+        .url("a")
+        .delay(10)
+        .election(now, 500) // winner
+        .url("b")
+        .delay(20)
+        .election_loose(now) // looser
+        .url("a")
+        .delay(200)
+        .blocks("1") // query
+        .ok(&json!({
+            "data": {
+                "q1": [{
+                    "id": "2",
+                }],
+                "q2": {
+                    "version": "0.39.0",
+                    "time": 1000,
+                },
+            }
+        })
+        .to_string()) // query with latency checking, returns bad latency
+        .metrics(1000, 900)
+        .url("a")
+        .delay(20)
+        .election_loose(now) // looser
+        .url("b")
+        .delay(10)
+        .election(now, 500) // winner
+        .url("b")
+        .blocks("2") // retry query
+        .reset_client(&client)
+        .await;
+
+    assert_eq!(get_query_url(&client).await, "a");
+    assert_eq!(query_block_id(&client).await, "1");
+    assert_eq!(query_block_id(&client).await, "2");
+    assert_eq!(NetworkMock::get_len(&client).await, 0);
+    assert_eq!(get_query_url(&client).await, "b");
+}
+
+#[tokio::test(core_threads = 2)]
+async fn latency_detection_with_websockets() {
+    let client = Arc::new(
+        ClientContext::new(ClientConfig {
+            network: NetworkConfig {
+                endpoints: Some(vec!["a".into(), "b".into()]),
+                network_retries_count: 3,
+                max_latency: 600,
+                latency_detection_interval: 100,
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .unwrap(),
+    );
+
+    // Check for the fastest
+    let now = client.env.now_ms();
+    NetworkMock::build()
+        .url("a")
+        .delay(10)
+        .election(now, 500) // winner
+        .url("b")
+        .delay(20)
+        .election_loose(now) // looser
+        .url("a")
+        .delay(100)
+        .ws_ack()
+        .delay(200)
+        .ws_ka()
+        .url("b")
+        .delay(10)
+        .ws_ack()
+        .url("a")
+        .delay(20)
+        .metrics(now, 700) // check latency, bad
+        .delay(20)
+        .election_loose(now) // looser
+        .url("b")
+        .delay(10)
+        .election(now, 500) // winner
+        .reset_client(&client)
+        .await;
+
+    assert_eq!(get_query_url(&client).await, "a");
+    let subscription = subscribe_collection(
+        client.clone(),
+        ParamsOfSubscribeCollection {
+            collection: "blocks".to_string(),
+            filter: None,
+            result: "id".to_string(),
+        },
+        |_| async {},
+    )
+    .await
+    .unwrap();
+    let _ = client.env.set_timer(2000).await;
+    unsubscribe(client.clone(), subscription).await.unwrap();
+    assert_eq!(NetworkMock::get_len(&client).await, 0);
+    assert_eq!(get_query_url(&client).await, "b");
+    client.get_server_link().unwrap().suspend().await;
+}
+
+#[tokio::test(core_threads = 2)]
+async fn get_endpoints() {
+    let client = Arc::new(
+        ClientContext::new(ClientConfig {
+            network: NetworkConfig {
+                endpoints: Some(vec!["a".into(), "b".into()]),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .unwrap(),
+    );
+
+    // Check for the fastest
+    let now = client.env.now_ms();
+    NetworkMock::build()
+        .url("a")
+        .delay(10)
+        .election(now, 500) // winner
+        .url("b")
+        .delay(20)
+        .election_loose(now) // looser
+        .reset_client(&client)
+        .await;
+
+    let result = crate::net::get_endpoints(client.clone()).await.unwrap();
+    assert_eq!(NetworkMock::get_len(&client).await, 0);
+    assert_eq!(result.query, "https://a/graphql");
+    assert_eq!(result.endpoints, vec!["a".to_string(), "b".to_string()]);
+}
+
+fn collect(loaded_messages: &Vec<Value>, messages: &mut Vec<Value>, transactions: &mut Vec<Value>) {
+    for message in loaded_messages {
+        messages.push(message.clone());
+        let tr = &message["dst_transaction"];
+        if tr.is_object() {
+            transactions.push(tr.clone());
+            if let Some(out_messages) = tr["out_messages"].as_array() {
+                collect(out_messages, messages, transactions);
+            }
+        }
+    }
+}
+
+#[tokio::test(core_threads = 2)]
+async fn transaction_tree() {
+    let client = Arc::new(
+        ClientContext::new(ClientConfig {
+            network: NetworkConfig {
+                endpoints: Some(TestClient::endpoints()),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .unwrap(),
+    );
+    let messages = query_collection(
+        client.clone(),
+        ParamsOfQueryCollection {
+            collection: MESSAGES_COLLECTION.to_string(),
+            filter: Some(json!({
+                "msg_type": { "eq": 1 },
+            })),
+            result: r#"
+            id dst
+            dst_transaction { id aborted
+              out_messages { id dst msg_type_name
+                dst_transaction { id aborted
+                  out_messages { id dst msg_type_name
+                    dst_transaction { id aborted
+                    }
+                  }
+                }
+              }
+            }
+        "#
+            .to_string(),
+            order: None,
+            limit: None,
+        },
+    )
+    .await
+    .unwrap();
+
+    let abi_registry = vec![
+        TestClient::giver_abi(),
+        TestClient::abi(SUBSCRIBE, None),
+        TestClient::abi(HELLO, None),
+        TestClient::abi(EVENTS, None),
+        TestClient::abi(TEST_DEBOT, None),
+        TestClient::abi(TEST_DEBOT_TARGET, None),
+    ];
+
+    let mut has_decoded_bodies = false;
+    for message in messages.result {
+        let result = query_transaction_tree(
+            client.clone(),
+            ParamsOfQueryTransactionTree {
+                in_msg: message["id"].as_str().unwrap().to_string(),
+                abi_registry: Some(abi_registry.clone()),
+            },
+        )
+        .await
+        .unwrap();
+        let mut ref_messages = Vec::new();
+        let mut ref_transactions = Vec::new();
+        collect(&vec![message], &mut ref_messages, &mut ref_transactions);
+        let ref_message_ids = ref_messages
+            .iter()
+            .map(|x| x["id"].as_str().unwrap().to_string())
+            .collect::<HashSet<String>>();
+        let ref_transaction_ids = ref_transactions
+            .iter()
+            .map(|x| x["id"].as_str().unwrap().to_string())
+            .collect::<HashSet<String>>();
+        let actual_message_ids = result
+            .messages
+            .iter()
+            .map(|x| x.id.clone())
+            .collect::<HashSet<String>>();
+        let actual_transaction_ids = result
+            .transactions
+            .iter()
+            .map(|x| x.id.clone())
+            .collect::<HashSet<String>>();
+
+        assert_eq!(ref_message_ids, actual_message_ids);
+        assert_eq!(ref_transaction_ids, actual_transaction_ids);
+        for msg in result.messages {
+            if msg.decoded_body.is_some() {
+                has_decoded_bodies = true;
+            }
+        }
+    }
+    assert!(has_decoded_bodies);
+}
+
+#[tokio::test(core_threads = 2)]
+async fn order_by_fallback() {
+    let params: ParamsOfQueryCollection = serde_json::from_str(
+        r#"
+        {
+            "collection": "messages",
+            "result": "id",
+            "order": [{"path": "id", "direction": "ASC"}]
+        }
+        "#,
+    )
+    .unwrap();
+    assert_eq!(params.order.unwrap()[0].path, "id");
+    assert!(serde_json::from_str::<ParamsOfQueryCollection>(
+        r#"
+        {
+            "collection": "messages",
+            "result": "id",
+            "orderBy": [{"path": "id", "direction": "ASC"}]
+        }
+        "#,
+    ).is_err());
+    assert!(serde_json::from_str::<ParamsOfQueryCollection>(
+        r#"
+        {
+            "collection": "messages",
+            "result": "id",
+            "orderBy": [
+                {"path": "id1", "direction": "ASC"}
+            ],
+            "order": [
+                {"path": "id", "direction": "ASC"}
+            ]
+        }
+        "#,
+    )
+    .is_err());
+    let client = TestClient::new();
+
+    let result: ClientResult<ResultOfQueryCollection> = client
+        .request_async(
+            "net.query_collection",
+            json!({
+                "collection": "messages",
+                "result": "id",
+                "limit": 1,
+            }),
+        )
+        .await;
+    assert!(result.is_ok());
+    let result: ClientResult<ResultOfQueryCollection> = client
+        .request_async(
+            "net.query_collection",
+            json!({
+                "collection": "messages",
+                "result": "id",
+                "limit": 1,
+                "order": [{"path":"id", "direction":"ASC"}],
+            }),
+        )
+        .await;
+    assert!(result.is_ok());
+    let result: ClientResult<ResultOfQueryCollection> = client
+        .request_async(
+            "net.query_collection",
+            json!({
+                "collection": "messages",
+                "result": "id",
+                "limit": 1,
+                "orderBy": [{"path":"id", "direction":"ASC"}],
+            }),
+        )
+        .await;
+    if let Err(err) = &result {
+        println!("{:?}", err);
+    }
+    assert!(result.is_err());
 }

@@ -350,6 +350,8 @@ fn register_net(handlers: &mut RuntimeHandlers) {
     module.register_type::<crate::net::ParamsOfQueryOperation>();
     module.register_type::<crate::net::FieldAggregation>();
     module.register_type::<crate::net::AggregationFn>();
+    module.register_type::<crate::net::TransactionNode>();
+    module.register_type::<crate::net::MessageNode>();
 
     module.register_async_fn(crate::net::query, crate::net::queries::query_api);
     module.register_async_fn(
@@ -384,6 +386,15 @@ fn register_net(handlers: &mut RuntimeHandlers) {
     );
     module.register_async_fn_no_args(crate::net::fetch_endpoints, crate::net::fetch_endpoints_api);
     module.register_async_fn(crate::net::set_endpoints, crate::net::set_endpoints_api);
+    module.register_async_fn_no_args(crate::net::get_endpoints, crate::net::get_endpoints_api);
+    module.register_async_fn(
+        crate::net::query_counterparties,
+        crate::net::queries::query_counterparties_api
+    );
+    module.register_async_fn(
+        crate::net::transaction_tree::query_transaction_tree,
+        crate::net::transaction_tree::query_transaction_tree_api
+    );
     module.register();
 }
 
@@ -454,6 +465,14 @@ fn register_utils(handlers: &mut RuntimeHandlers) {
         crate::utils::calc_storage_fee,
         crate::utils::calc_storage_fee::calc_storage_fee_api,
     );
+    module.register_sync_fn(
+        super::utils::compress_zstd,
+        super::utils::compress_zstd_api
+    );
+    module.register_sync_fn(
+        super::utils::decompress_zstd,
+        super::utils::decompress_zstd_api
+    );
     module.register();
 }
 
@@ -469,14 +488,15 @@ fn register_debot(handlers: &mut RuntimeHandlers) {
     module.register_type::<crate::debot::DebotHandle>();
     module.register_type::<crate::debot::DebotAction>();
     module.register_type::<crate::debot::DebotHandle>();
+    module.register_type::<crate::debot::DebotInfo>();
+    module.register_type::<crate::debot::DebotActivity>();
+    module.register_type::<crate::debot::Spending>();
     module.register_async_fn_with_app_object(
-        crate::json_interface::debot::start,
-        crate::json_interface::debot::start_api,
+        crate::json_interface::debot::init,
+        crate::json_interface::debot::init_api,
     );
-    module.register_async_fn_with_app_object(
-        crate::json_interface::debot::fetch,
-        crate::json_interface::debot::fetch_api,
-    );
+    module.register_async_fn(crate::debot::start, crate::debot::start_api);
+    module.register_async_fn(crate::debot::fetch, crate::debot::fetch_api);
     module.register_async_fn(crate::debot::execute, crate::debot::execute_api);
     module.register_async_fn(crate::debot::send, crate::debot::send_api);
     module.register_sync_fn(crate::debot::remove, crate::debot::remove_api);

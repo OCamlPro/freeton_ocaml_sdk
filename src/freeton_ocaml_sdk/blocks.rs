@@ -23,7 +23,7 @@ pub async fn find_last_shard_block_rs(
                                 format!("{:#}",e)))?;
 
     let string_id = ton_client::processing::blocks_walking::
-    find_last_shard_block(&context, &address).await
+    find_last_shard_block_pub(&context, &address).await
         .map_err(|e| ocp::error(ocp::ERROR_FIND_LAST_SHARD_FAILED,
                                 format!("{:#}",e)))?;
 
