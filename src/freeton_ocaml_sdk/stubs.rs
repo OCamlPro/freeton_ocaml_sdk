@@ -244,3 +244,12 @@ pub fn tvc_code_hash_ml( state:  ocaml::Pointer<StateInitStruct> )
             &crate::types::state_init_of_ocaml ( state ))))
 }
 
+#[ocaml::func]
+pub fn encode_internal_message_ml( p:  crate::sdk::EncodeInternalMessage )
+                    -> ocp::Reply< crate::sdk::SdkMessage >
+{
+    ocp::reply(
+        crate::sdk::encode_internal_message
+            ( p ))
+}
+

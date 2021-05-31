@@ -95,8 +95,8 @@ pub fn ocaml_of_ton_state_init( state_init: ton_block::StateInit ) ->
 
 #[derive(ocaml::IntoValue, ocaml::FromValue)]
 pub struct KeyPair {
-    public: String,
-    secret: Option<String>,
+    pub public: String,
+    pub secret: Option<String>,
 }
 
 pub fn keypair_of_ocaml(keys: KeyPair) -> ton_client::crypto::KeyPair

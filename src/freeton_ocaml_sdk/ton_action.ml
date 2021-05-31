@@ -13,7 +13,7 @@
 (* see EncodedMessage in types.rs *)
 type encoded_message = {
   enc_message_id : string ;
-  enc_message : string ;
+  enc_message : string ; (* message in base64 *)
   enc_expire : int64 option ;
 }
 

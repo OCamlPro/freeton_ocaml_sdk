@@ -41,7 +41,11 @@ pub const ERROR_PARSE_PUBKEY_FAILED : u16 = 26 ;
 pub const ERROR_LOAD_CONTRACT_IMAGE_FAILED : u16 = 27 ;
 pub const ERROR_UPDATE_CONTRACT_IMAGE_FAILED : u16 = 28 ;
 pub const ERROR_WRITE_TVC_FILE : u16 = 29 ;
-
+pub const ERROR_ENCODE_BODY_FAILED : u16 = 30 ;
+pub const ERROR_DECODE_BASE64_FAILED : u16 = 31 ;
+pub const ERROR_DECODE_PUBKEY_FAILED : u16 = 32 ;
+pub const ERROR_DECODE_SECRET_FAILED : u16 = 33 ;
+pub const ERROR_DECODE_HEXA_FAILED : u16 = 34 ;
 
 #[derive(ocaml::IntoValue, ocaml::FromValue)]
 pub struct Error {
