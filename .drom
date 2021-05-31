@@ -2,17 +2,17 @@
 
 # hash of toml configuration files
 # used for generation of all files
-4397188581fd42f89eb258ab78097d52:.
+2723b51909818db688cda821f15b129e:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
 # file .github/workflows/doc-deploy.yml
-cc1ea89d9a3a154aad3ccc079c925b74:.github/workflows/doc-deploy.yml
+492ab791c1f09c2302622aa02293d38e:.github/workflows/doc-deploy.yml
 # end context for .github/workflows/doc-deploy.yml
 
 # begin context for .github/workflows/workflow.yml
 # file .github/workflows/workflow.yml
-a862d56a623824cfc167987186f77ac3:.github/workflows/workflow.yml
+21ef42610de2aa8a2e39118a0de255b6:.github/workflows/workflow.yml
 # end context for .github/workflows/workflow.yml
 
 # begin context for .gitignore
@@ -27,7 +27,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for CHANGES.md
 # file CHANGES.md
-a7e22ebdd6b8c4528d0a86c1c7a701df:CHANGES.md
+4a3ee53161ca615bc25a803463a62722:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
@@ -42,7 +42,7 @@ a9dea633d334c663984be4419d9c6787:Makefile
 
 # begin context for README.md
 # file README.md
-982ceb276757cc723692aabfbe751aa6:README.md
+fef13f288aeb675e4289982e7c5175de:README.md
 # end context for README.md
 
 # begin context for docs/README.txt
@@ -77,12 +77,12 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-57a0aac80ffe1b843799d8ab734651b4:dune-project
+2f3a93279eb2606b4e1576d5b4073953:dune-project
 # end context for dune-project
 
 # begin context for freeton_ocaml_sdk.opam
 # file freeton_ocaml_sdk.opam
-a20107b5059d127777897e3013c185bc:freeton_ocaml_sdk.opam
+909ec8e7bb0b3c50c13d47746d1cba17:freeton_ocaml_sdk.opam
 # end context for freeton_ocaml_sdk.opam
 
 # begin context for scripts/after.sh

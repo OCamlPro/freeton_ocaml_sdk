@@ -51,6 +51,11 @@ type error =
   | ERROR_LOAD_CONTRACT_IMAGE_FAILED
   | ERROR_UPDATE_CONTRACT_IMAGE_FAILED
   | ERROR_WRITE_TVC_FILE
+  | ERROR_ENCODE_BODY_FAILED
+  | ERROR_DECODE_BASE64_FAILED
+  | ERROR_DECODE_PUBKEY_FAILED
+  | ERROR_DECODE_SECRET_FAILED
+  | ERROR_DECODE_HEXA_FAILED
 
 exception TonError of error * string
 
@@ -85,6 +90,11 @@ let error_of_code = function
   | 27 -> ERROR_LOAD_CONTRACT_IMAGE_FAILED
   | 28 -> ERROR_UPDATE_CONTRACT_IMAGE_FAILED
   | 29 -> ERROR_WRITE_TVC_FILE
+  | 30 -> ERROR_ENCODE_BODY_FAILED
+  | 31 -> ERROR_DECODE_BASE64_FAILED
+  | 32 -> ERROR_DECODE_PUBKEY_FAILED
+  | 33 -> ERROR_DECODE_SECRET_FAILED
+  | 34 -> ERROR_DECODE_HEXA_FAILED
   | _ -> assert false
 
 let string_of_error = function
@@ -118,6 +128,11 @@ let string_of_error = function
   | ERROR_LOAD_CONTRACT_IMAGE_FAILED -> "Load contract image failed"
   | ERROR_UPDATE_CONTRACT_IMAGE_FAILED -> "Update contract image failed"
   | ERROR_WRITE_TVC_FILE -> "Write TVC file"
+  | ERROR_ENCODE_BODY_FAILED -> "Encode body failed"
+  | ERROR_DECODE_BASE64_FAILED -> "Decode base64 string failed"
+  | ERROR_DECODE_PUBKEY_FAILED -> "Decode public key failed"
+  | ERROR_DECODE_SECRET_FAILED -> "Decode secret key failed"
+  | ERROR_DECODE_HEXA_FAILED -> "Decode hexa string failed"
 
 let () =
   Printexc.register_printer (function
