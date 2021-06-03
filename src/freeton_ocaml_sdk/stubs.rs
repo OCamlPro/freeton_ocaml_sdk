@@ -131,6 +131,58 @@ pub fn call_contract_ml(
 }
 
 #[ocaml::func]
+pub fn call_contract_local_ml(
+    ton: ocaml::Pointer<TonClientStruct>,
+    abi: String,
+    msg: String,
+    boc: String,
+) -> ocp::Reply<String> {
+    let ton = crate::types::ton_client_of_ocaml(ton);
+    ocp::reply_async(
+        crate::call::call_contract_local_rs(
+            ton,
+            abi,
+            msg,
+            boc
+            )
+    )
+}
+
+#[ocaml::func]
+pub fn send_message_ml(
+    ton: ocaml::Pointer<TonClientStruct>,
+    abi: String,
+    msg: String,
+) -> ocp::Reply<crate::call::SendMessageResult> {
+    let ton = crate::types::ton_client_of_ocaml(ton);
+    ocp::reply_async(
+        crate::call::send_message_rs(
+            ton,
+            abi,
+            msg,
+            )
+    )
+}
+
+#[ocaml::func]
+pub fn wait_for_transaction_ml(
+    ton: ocaml::Pointer<TonClientStruct>,
+    abi: String,
+    msg: String,
+    send: crate::call::SendMessageResult
+) -> ocp::Reply<String> {
+    let ton = crate::types::ton_client_of_ocaml(ton);
+    ocp::reply_async(
+        crate::call::wait_for_transaction_rs(
+            ton,
+            abi,
+            msg,
+            send
+            )
+    )
+}
+
+#[ocaml::func]
 pub fn prepare_message_ml(
     ton: ocaml::Pointer<TonClientStruct>,
     args: Vec<String>,

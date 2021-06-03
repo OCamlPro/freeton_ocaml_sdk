@@ -11,11 +11,16 @@
 (**************************************************************************)
 
 (* see EncodedMessage in types.rs *)
-type encoded_message = {
-  enc_message_id : string ;
-  enc_message : string ; (* message in base64 *)
-  enc_expire : int64 option ;
-}
+
+module EncodedMessage = struct
+
+  type t = {
+    message_id : string ;
+    message : string ;
+    expire : int64 option ;
+  }
+
+end
 
 external deploy_contract_ml :
   Ton_types.client->
@@ -37,7 +42,7 @@ external prepare_message_ml :
   Ton_types.client ->
   string array ->
   keypair : Ton_types.keypair option ->
-  encoded_message Ton_types.reply = "prepare_message_ml"
+  EncodedMessage.t Ton_types.reply = "prepare_message_ml"
 
 let prepare_message ~client ~address ~abi ~meth ~params ?keypair () =
   Ton_types.reply (
@@ -131,3 +136,43 @@ external parse_message :
   string -> string Ton_types.reply = "parse_message_ml"
 
 let parse_message s = Ton_types.reply ( parse_message s )
+
+
+
+
+external call_contract_local_ml :
+  Ton_types.client ->
+  string ->
+  string ->
+  string ->
+  string Ton_types.reply = "call_contract_local_ml"
+
+let call_contract_local ~client ~abi ~msg ~boc =
+  Ton_types.reply ( call_contract_local_ml client abi msg boc )
+
+module SendMessageResult = struct
+
+  type t = {
+    shard_block_id : string ;
+    sending_endpoints : string array ;
+  }
+end
+
+external send_message_ml :
+  Ton_types.client ->
+  string ->
+  string ->
+  SendMessageResult.t Ton_types.reply = "send_message_ml"
+
+let send_message ~client ~abi ~msg =
+  Ton_types.reply ( send_message_ml client abi msg )
+
+external wait_for_transaction_ml :
+  Ton_types.client ->
+  string ->
+  string ->
+  SendMessageResult.t ->
+  string Ton_types.reply = "wait_for_transaction_ml"
+
+let wait_for_transaction ~client ~abi ~msg send =
+  Ton_types.reply ( wait_for_transaction_ml client abi msg send )

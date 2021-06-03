@@ -209,6 +209,7 @@ type message = {
   msg_library_hash: string option ;
   (* msg_msg_type : int; [@key "msg_type"] *)
   msg_msg_type_name: string option ;
+  (* "Internal", "ExtOut" *)
   msg_proof: string option ;
   msg_split_depth: int option ;
   msg_src : string; [@dft ""]
