@@ -32,7 +32,7 @@ pub struct TonClientStruct {
 unsafe extern "C" fn client_finalizer(v: Raw) {
     let v = Value::new(v);
     let ptr = ocaml::Pointer::<TonClientStruct>::from_value(v);
-    eprintln!("drop_in_place on TonClient");
+    // eprintln!("drop_in_place on TonClient");
     ptr.drop_in_place()
 }
 
@@ -66,7 +66,7 @@ pub struct StateInitStruct {
 unsafe extern "C" fn state_init_finalizer(v: Raw) {
     let v = Value::new(v);
     let ptr = ocaml::Pointer::<StateInitStruct>::from_value(v);
-    eprintln!("drop_in_place on StateInit");
+    // eprintln!("drop_in_place on StateInit");
     ptr.drop_in_place()
 }
 

@@ -11,11 +11,16 @@
 (**************************************************************************)
 
 (* see EncodedMessage in types.rs *)
-type encoded_message = {
-  enc_message_id : string ;
-  enc_message : string ;
-  enc_expire : int64 option ;
-}
+
+module EncodedMessage : sig
+
+  type t = {
+    message_id : string ;
+    message : string ;
+    expire : int64 option ;
+  }
+
+end
 
 val deploy :
   client:Ton_types.client ->
@@ -63,7 +68,30 @@ val prepare_message :
   meth:string ->
   params:string ->
   ?keypair:Ton_types.keypair ->
-  unit -> encoded_message
+  unit -> EncodedMessage.t
 
 (* we should also lift 'send_message' and 'wait_for_transaction' to be
    able to completely debug a call *)
+
+val call_contract_local :
+  client:Ton_types.client ->
+  abi:string -> msg:string -> boc:string -> string
+
+
+module SendMessageResult : sig
+
+  type t = {
+    shard_block_id : string ;
+    sending_endpoints : string array ;
+  }
+end
+
+val send_message :
+  client:Ton_types.client ->
+  abi:string ->
+  msg:string -> (* base64 of message *)
+  SendMessageResult.t
+
+val wait_for_transaction :
+  client:Ton_types.client ->
+  abi:string -> msg:string -> SendMessageResult.t -> string

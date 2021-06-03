@@ -16,19 +16,10 @@ use crate::client::{create_client_local};
 use crate::deploy::{load_abi};
 
 use ton_client::crypto::KeyPair;
-/*
-use crate::config::Config;
-use crate::convert;
-use crate::helpers::{TonClient, now, create_client_verbose, create_client_local, query, load_ton_address, load_abi};
-use ton_abi::{Contract, ParamType};
-*/
 
 use chrono::{TimeZone,Local};
-//use hex;
 use ton_client::abi::{
     encode_message,
-//    decode_message,
-//    ParamsOfDecodeMessage,
     ParamsOfEncodeMessage,
     ParamsOfEncodeMessageBody,
     Abi,
@@ -43,7 +34,7 @@ use ton_client::processing::{
     send_message,
 };
 use ton_client::tvm::{
-    run_tvm,
+//    run_tvm,
     ParamsOfRunTvm,
 //    run_get,
     //    ParamsOfRunGet
@@ -259,6 +250,36 @@ async fn query_account_boc(ton: TonClient, addr: &str) -> Result<String, String>
  */
 
 
+pub async fn call_contract_local_rs(
+    ton: TonClient,
+    abi: String,
+    msg: String,
+    boc: String,
+) -> Result<String, ocp::Error> {
+    let abi = load_abi(&abi)?;
+    let result = ton_client::tvm::run_tvm(
+        ton,
+        ParamsOfRunTvm {
+            message: msg,
+            account: boc,
+            execution_options: None,
+            abi: Some(abi.clone()),
+            return_updated_account: Some(true),
+            boc_cache: None,
+        },
+    ).await
+        .map_err(|e|
+                 ocp::error(ocp::ERROR_RUN_TVM_FAILED,
+                            format!("{:#}", e)))?;
+    let result =
+        result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({}));
+    if !result.is_null() {
+        Ok(serde_json::to_string_pretty(&result).unwrap())
+    } else {
+        Ok("".to_string())
+    }
+}
+
 async fn send_message_and_wait(
     ton: TonClient,
     abi: Abi,
@@ -270,7 +291,7 @@ async fn send_message_and_wait(
         eprintln!("Running get-method...");
 //        let acc_boc = query_account_boc(ton.clone(), addr).await?;
 
-        let result = run_tvm(
+        let result = ton_client::tvm::run_tvm(
             ton.clone(),
             ParamsOfRunTvm {
                 message: msg,
@@ -326,6 +347,82 @@ async fn send_message_and_wait(
         //println!("done");
         Ok(result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({})))
     }
+}
+
+#[derive(ocaml::IntoValue, ocaml::FromValue)]
+pub struct SendMessageResult {
+    shard_block_id: String ,
+    sending_endpoints: Vec<String>
+        
+}
+
+pub async fn wait_for_transaction_rs(
+    ton: TonClient ,
+    abi: String ,
+    msg: String ,
+    send: SendMessageResult ,
+) -> Result<String, ocp::Error>
+{
+    let abi = load_abi(&abi)?;
+
+    let callback = |_| {
+        async move {}
+    };
+    let result = wait_for_transaction(
+        ton,
+        ParamsOfWaitForTransaction {
+            abi: Some(abi),
+            message: msg,
+            shard_block_id: send.shard_block_id,
+            send_events: true,
+            sending_endpoints: Some ( send.sending_endpoints )
+        },
+        callback.clone(),
+    ).await
+        .map_err(|e|
+                 ocp::error(
+                     ocp::ERROR_WAIT_FOR_TRANSACTION_FAILED,
+                     format!("{:#}", e)))?;
+
+    let result =
+        result.decoded.and_then(|d| d.output).unwrap_or(serde_json::json!({}));
+    if !result.is_null() {
+        Ok(serde_json::to_string_pretty(&result).unwrap())
+    } else {
+        Ok("".to_string())
+    }
+}
+
+pub async fn send_message_rs(
+    ton: TonClient ,
+    abi: String ,
+    msg: String ,
+) -> Result<SendMessageResult, ocp::Error>
+{
+    let abi = load_abi(&abi)?;
+
+    let callback = |_| {
+        async move {}
+    };
+
+    let result = send_message(
+        ton ,
+        ParamsOfSendMessage {
+            message: msg,
+            abi: Some(abi),
+            send_events: false,
+        },
+        callback,
+    ).await
+        .map_err(|e|
+                 ocp::error(ocp::ERROR_SEND_MESSAGE_FAILED,
+                            format!("{:#}", e)))?;
+    Ok(
+        SendMessageResult {
+            shard_block_id : result.shard_block_id ,
+            sending_endpoints : result.sending_endpoints
+        }
+        )
 }
 
 pub async fn prepare_message_rs(
@@ -390,7 +487,7 @@ pub async fn call_contract_rs(
     let result = call_contract_with_result(ton, addr, abi,
                                            method, params, keys,
                                            acc_boc, local).await?;
-    eprintln!("Succeeded.");
+//    eprintln!("Succeeded.");
     if !result.is_null() {
         Ok(serde_json::to_string_pretty(&result).unwrap())
     } else {
