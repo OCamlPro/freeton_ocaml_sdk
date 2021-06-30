@@ -9,3 +9,17 @@
 (*                                                                        *)
 (*                                                                        *)
 (**************************************************************************)
+
+(* open Ton_types *)
+
+(* TODO:
+
+get_api_reference – Returns Core Library API reference
+
+version – Returns Core Library version
+
+build_info – Returns detailed information about this build.
+
+resolve_app_request – Resolves application request processing result
+
+*)

@@ -10,27 +10,32 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Ton_types
+(* open Ton_types *)
 
-module EncodeMessageBody = struct
+(* TODO:
 
-  type params = {
-    abi: Abi.t ;
-    call_set: CallSet.t ;
-    is_internal: bool ;
-    signer: Signer.t ;
-    processing_try_index: int option ; [@opt None]
-  } [@@deriving json_encoding]
+parse_message – Parses message boc into a JSON
 
-  type result = {
-    body: string ;
-    data_to_sign : string option ; [@opt None]
-  } [@@deriving json_encoding]
+parse_transaction – Parses transaction boc into a JSON
 
-  let f =
-    Tc.request_sync "encode_message_body"
-      ~params_enc ~result_enc
+parse_account – Parses account boc into a JSON
 
-end
+parse_block – Parses block boc into a JSON
 
-let encode_message_body = EncodeMessageBody.f
+parse_shardstate – Parses shardstate boc into a JSON
+
+get_blockchain_config – Extract blockchain configuration from key block and also from zerostate.
+
+get_boc_hash – Calculates BOC root hash
+
+get_code_from_tvc – Extracts code from TVC contract image
+
+cache_get – Get BOC from cache
+
+cache_set – Save BOC into cache
+
+cache_unpin – Unpin BOCs with specified pin.
+
+encode_boc – Encodes BOC from builder operations.
+
+*)

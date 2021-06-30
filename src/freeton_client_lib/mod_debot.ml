@@ -10,8 +10,20 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(* open Ton_types *)
 
-(* If you delete or rename this file, you should add
-   'src/freeton_types_lib/main.ml' to the 'skip' field in "drom.toml" *)
+(* TODO:
 
-let main () = Printf.printf "Hello world!\n"
+init – UNSTABLE Creates and instance of DeBot.
+
+start – UNSTABLE Starts the DeBot.
+
+fetch – UNSTABLE Fetches DeBot metadata from blockchain.
+
+execute – UNSTABLE Executes debot action.
+
+send – UNSTABLE Sends message to Debot.
+
+remove – UNSTABLE Destroys debot handle.
+
+*)

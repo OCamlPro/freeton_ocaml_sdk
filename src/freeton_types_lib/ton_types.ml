@@ -98,14 +98,26 @@ module FunctionHeader = struct
 end
 
 module CallSet = struct
-   type t = {
-     function_name : string ;
-     header : FunctionHeader.t option ; [@opt None]
-     input : Json_repr.ezjsonm option; [@opt None]
-   }
-   [@@deriving json_encoding ]
+  type t = {
+    function_name : string ;
+    header : FunctionHeader.t option ; [@opt None]
+    input : Json_repr.ezjsonm option; [@opt None]
+  }
+  [@@deriving json_encoding ]
 
-   let t_enc = enc
+  let t_enc = enc
+end
+
+module DeploySet = struct
+  type t = {
+    tvc: string ;
+    workchain_id : int option ; [@opt None]
+    initial_data : Json_repr.ezjsonm option ; [@opt None]
+    initial_pubkey : string option ; [@opt None]
+  }
+  [@@deriving json_encoding ]
+
+  let t_enc = enc
 end
 
 module KeyPair = struct
@@ -137,4 +149,55 @@ module Signer = struct
   [@@deriving json_encoding ]
 
    let t_enc = enc
+ end
+
+module MessageBodyType = struct
+  type t = string
+  [@@deriving json_encoding ]
+
+(*
+enum MessageBodyType {
+    Input = "Input",
+    Output = "Output",
+    InternalOutput = "InternalOutput",
+    Event = "Event"
+}
+*)
+  let t_enc = enc
+end
+
+module DecodedMessageBody = struct
+  type t = {
+    body_type: MessageBodyType.t ;
+    name: string ;
+    value: Json_repr.ezjsonm option ; [@opt None]
+    header: FunctionHeader.t option ; [@opt None]
+  }
+  [@@deriving json_encoding ]
+
+  let t_enc = enc
+end
+
+module DecodedOutput = struct
+  type t = {
+    out_messages: DecodedMessageBody.t list ; (*  | null[], *)
+    output: Json_repr.ezjsonm option ; [@opt None]
+  }
+  [@@deriving json_encoding ]
+
+  let t_enc = enc
+end
+
+module TransactionFees = struct
+  type t = {
+    in_msg_fwd_fee: string ; (* bigint in fact *)
+    storage_fee: string ;
+    gas_fee: string ;
+    out_msgs_fwd_fee: string ;
+    total_account_fees: string ;
+    total_output: string ;
+  }
+  [@@deriving json_encoding ]
+
+  let t_enc = enc
 end
