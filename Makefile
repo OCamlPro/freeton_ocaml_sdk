@@ -15,7 +15,7 @@ all: build
 build:
 	./scripts/before.sh build
 	opam exec -- dune build @install
-	./scripts/copy-bin.sh freeton_ocaml_sdk
+	./scripts/copy-bin.sh freeton_ocaml_sdk freeton_client_lib freeton_types_lib
 	./scripts/after.sh build
 
 build-deps:

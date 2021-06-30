@@ -23,43 +23,43 @@ module EncodedMessage = struct
 end
 
 external deploy_contract_ml :
-  Ton_types.client->
+  Freeton_types.client->
   string array ->
-  keypair : Ton_types.keypair ->
+  keypair : Freeton_types.keypair ->
   wc : int ->
-  string Ton_types.reply (* address *) = "deploy_contract_ml"
+  string Freeton_types.reply (* address *) = "deploy_contract_ml"
 
 
 let deploy ~client ~tvc_file ~abi ~params ~keypair
     ?(initial_data="") ?(initial_pubkey="") ?(wc=0) () =
-  Ton_types.reply
+  Freeton_types.reply
     (
       deploy_contract_ml client [| tvc_file ; abi ; params ;
                 initial_data; initial_pubkey |] ~keypair ~wc
     )
 
 external prepare_message_ml :
-  Ton_types.client ->
+  Freeton_types.client ->
   string array ->
-  keypair : Ton_types.keypair option ->
-  EncodedMessage.t Ton_types.reply = "prepare_message_ml"
+  keypair : Freeton_types.keypair option ->
+  EncodedMessage.t Freeton_types.reply = "prepare_message_ml"
 
 let prepare_message ~client ~address ~abi ~meth ~params ?keypair () =
-  Ton_types.reply (
+  Freeton_types.reply (
     prepare_message_ml client [| address ; abi ; meth ; params |]
       ~keypair
   )
 
 external call_contract_ml :
-  Ton_types.client ->
+  Freeton_types.client ->
   string array ->
-  keypair : Ton_types.keypair option ->
+  keypair : Freeton_types.keypair option ->
   local : bool ->
-  string Ton_types.reply = "call_contract_ml"
+  string Freeton_types.reply = "call_contract_ml"
 
 let call_lwt ~client ~address ~abi ~meth ~params ?keypair ~boc
     ~local () =
-  Ton_types.reply_lwt (
+  Freeton_types.reply_lwt (
     call_contract_ml client [| address ; abi ; meth ; params ; boc |]
       ~keypair
       ~local
@@ -89,7 +89,7 @@ let call_lwt
               let client =
                 match client with
                 | Some client -> client
-                | None -> Ton_client.create server_url
+                | None -> Freeton_client.create server_url
               in
               call_lwt ~client ~address ~abi ~meth ~params ?keypair ~boc
                 ~local ()
@@ -97,7 +97,7 @@ let call_lwt
 
 let call ~client ~address ~abi ~meth ~params ?keypair ~boc
     ~local () =
-  Ton_types.reply (
+  Freeton_types.reply (
     call_contract_ml client [| address ; abi ; meth ; params ; boc |]
       ~keypair
       ~local
@@ -119,36 +119,36 @@ let call_run ?client ~server_url ~address ~abi ~meth ~params ?keypair ~local () 
           let client =
             match client with
             | Some client -> client
-            | None -> Ton_client.create server_url
+            | None -> Freeton_client.create server_url
           in
           call ~client ~address ~abi ~meth ~params ?keypair ~boc
             ~local ()
 
 external update_contract_state :
-  string array -> unit Ton_types.reply = "update_contract_state_ml"
+  string array -> unit Freeton_types.reply = "update_contract_state_ml"
 
 let update_contract_state ~tvc_file ~pubkey ?(data="") ~abi () =
-  Ton_types.reply (
+  Freeton_types.reply (
     update_contract_state [| tvc_file ; pubkey ; data ; abi |]
   )
 
 external parse_message :
-  string -> string Ton_types.reply = "parse_message_ml"
+  string -> string Freeton_types.reply = "parse_message_ml"
 
-let parse_message s = Ton_types.reply ( parse_message s )
+let parse_message s = Freeton_types.reply ( parse_message s )
 
 
 
 
 external call_contract_local_ml :
-  Ton_types.client ->
+  Freeton_types.client ->
   string ->
   string ->
   string ->
-  string Ton_types.reply = "call_contract_local_ml"
+  string Freeton_types.reply = "call_contract_local_ml"
 
 let call_contract_local ~client ~abi ~msg ~boc =
-  Ton_types.reply ( call_contract_local_ml client abi msg boc )
+  Freeton_types.reply ( call_contract_local_ml client abi msg boc )
 
 module SendMessageResult = struct
 
@@ -159,20 +159,20 @@ module SendMessageResult = struct
 end
 
 external send_message_ml :
-  Ton_types.client ->
+  Freeton_types.client ->
   string ->
   string ->
-  SendMessageResult.t Ton_types.reply = "send_message_ml"
+  SendMessageResult.t Freeton_types.reply = "send_message_ml"
 
 let send_message ~client ~abi ~msg =
-  Ton_types.reply ( send_message_ml client abi msg )
+  Freeton_types.reply ( send_message_ml client abi msg )
 
 external wait_for_transaction_ml :
-  Ton_types.client ->
+  Freeton_types.client ->
   string ->
   string ->
   SendMessageResult.t ->
-  string Ton_types.reply = "wait_for_transaction_ml"
+  string Freeton_types.reply = "wait_for_transaction_ml"
 
 let wait_for_transaction ~client ~abi ~msg send =
-  Ton_types.reply ( wait_for_transaction_ml client abi msg send )
+  Freeton_types.reply ( wait_for_transaction_ml client abi msg send )

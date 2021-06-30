@@ -2,17 +2,17 @@
 
 # hash of toml configuration files
 # used for generation of all files
-73aa19eb78f1bcfd10225078ca1c69c9:.
+4ccf77a0e4e4c8189f1c3420b73fab92:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
 # file .github/workflows/doc-deploy.yml
-492ab791c1f09c2302622aa02293d38e:.github/workflows/doc-deploy.yml
+df939e01836026147037c1f3bacaa24f:.github/workflows/doc-deploy.yml
 # end context for .github/workflows/doc-deploy.yml
 
 # begin context for .github/workflows/workflow.yml
 # file .github/workflows/workflow.yml
-21ef42610de2aa8a2e39118a0de255b6:.github/workflows/workflow.yml
+8eb1ad1d5cced46a9658bebc30e09818:.github/workflows/workflow.yml
 # end context for .github/workflows/workflow.yml
 
 # begin context for .gitignore
@@ -27,7 +27,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for CHANGES.md
 # file CHANGES.md
-4a3ee53161ca615bc25a803463a62722:CHANGES.md
+f0dad6632363c733c0ade2263132e1e2:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
@@ -37,7 +37,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for Makefile
 # file Makefile
-a9dea633d334c663984be4419d9c6787:Makefile
+b759cbad6ad20fc431d8b6b3b4dcf0cc:Makefile
 # end context for Makefile
 
 # begin context for README.md
@@ -67,7 +67,7 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for drom.toml
 # file drom.toml
-19f4b9de078cfecda5ee33874bab630f:drom.toml
+085dd9cd8739b31a2fcfd9e0bb4bee58:drom.toml
 # end context for drom.toml
 
 # begin context for dune
@@ -77,13 +77,23 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-66dfa9e839222dd5a27d33ed6cdf59fe:dune-project
+4c74a0cd032b56e2e991bcc3719fc455:dune-project
 # end context for dune-project
+
+# begin context for freeton_client_lib.opam
+# file freeton_client_lib.opam
+28b806289e4a7515dbcbbd8a24a9133a:freeton_client_lib.opam
+# end context for freeton_client_lib.opam
 
 # begin context for freeton_ocaml_sdk.opam
 # file freeton_ocaml_sdk.opam
-fa46da6517ef67a737dfb7edaedb015c:freeton_ocaml_sdk.opam
+15cdb4d85a8056c3d9293fedf99701e9:freeton_ocaml_sdk.opam
 # end context for freeton_ocaml_sdk.opam
+
+# begin context for freeton_types_lib.opam
+# file freeton_types_lib.opam
+95cb88a75feb4751c79046554f73812c:freeton_types_lib.opam
+# end context for freeton_types_lib.opam
 
 # begin context for scripts/after.sh
 # file scripts/after.sh
@@ -115,19 +125,64 @@ a562548bd6cc8b0a733aa335c58c5908:sphinx/conf.py
 8d984cbb854fe94fc5fa77b97b6ee046:sphinx/license.rst
 # end context for sphinx/license.rst
 
+# begin context for src/freeton_client_lib/dune
+# file src/freeton_client_lib/dune
+b447a44752d74de85d25e36eda5099bd:src/freeton_client_lib/dune
+# end context for src/freeton_client_lib/dune
+
+# begin context for src/freeton_client_lib/freeton_client_lib_stubs.c
+# file src/freeton_client_lib/freeton_client_lib_stubs.c
+e57e1bb38bb9d47311ce7f6d2bb45715:src/freeton_client_lib/freeton_client_lib_stubs.c
+# end context for src/freeton_client_lib/freeton_client_lib_stubs.c
+
+# begin context for src/freeton_client_lib/index.mld
+# file src/freeton_client_lib/index.mld
+e5e327474d77ac197193161785d1bafe:src/freeton_client_lib/index.mld
+# end context for src/freeton_client_lib/index.mld
+
+# begin context for src/freeton_client_lib/main.ml
+# file src/freeton_client_lib/main.ml
+9642ab9d0c52b8aeae6eca7c480bc049:src/freeton_client_lib/main.ml
+# end context for src/freeton_client_lib/main.ml
+
+# begin context for src/freeton_client_lib/version.mlt
+# file src/freeton_client_lib/version.mlt
+6a3411944251a158f283de8696b8c968:src/freeton_client_lib/version.mlt
+# end context for src/freeton_client_lib/version.mlt
+
 # begin context for src/freeton_ocaml_sdk/dune
 # file src/freeton_ocaml_sdk/dune
-dfc8483152295295023a75cbaac5b1b9:src/freeton_ocaml_sdk/dune
+492406224a9b342016b71fb8018b99ee:src/freeton_ocaml_sdk/dune
 # end context for src/freeton_ocaml_sdk/dune
 
 # begin context for src/freeton_ocaml_sdk/package.toml
 # file src/freeton_ocaml_sdk/package.toml
-0f07b2f84ef72e8c35405e41b728533f:src/freeton_ocaml_sdk/package.toml
+b23a328739f01b1a752d34a90006386e:src/freeton_ocaml_sdk/package.toml
 # end context for src/freeton_ocaml_sdk/package.toml
+
+# begin context for src/freeton_types_lib/dune
+# file src/freeton_types_lib/dune
+bf2f3bc69f00f0591d641a59b9e65b53:src/freeton_types_lib/dune
+# end context for src/freeton_types_lib/dune
+
+# begin context for src/freeton_types_lib/index.mld
+# file src/freeton_types_lib/index.mld
+6ab67501c08e4fb25c6b11b1e7aed279:src/freeton_types_lib/index.mld
+# end context for src/freeton_types_lib/index.mld
+
+# begin context for src/freeton_types_lib/main.ml
+# file src/freeton_types_lib/main.ml
+b53d84b042dd89b2583062268ef3ac73:src/freeton_types_lib/main.ml
+# end context for src/freeton_types_lib/main.ml
+
+# begin context for src/freeton_types_lib/version.mlt
+# file src/freeton_types_lib/version.mlt
+6a3411944251a158f283de8696b8c968:src/freeton_types_lib/version.mlt
+# end context for src/freeton_types_lib/version.mlt
 
 # begin context for test/expect-tests/dune
 # file test/expect-tests/dune
-cb6cebbf6a537b2cf81e0166c86df5e4:test/expect-tests/dune
+2cabc8be00ab0c1eac7f70cae3f1ddcb:test/expect-tests/dune
 # end context for test/expect-tests/dune
 
 # begin context for test/expect-tests/test.ml
@@ -137,7 +192,7 @@ cb6cebbf6a537b2cf81e0166c86df5e4:test/expect-tests/dune
 
 # begin context for test/inline-tests/dune
 # file test/inline-tests/dune
-94bb4d21e56fc8e0ebc5fe6018fc7c18:test/inline-tests/dune
+c45164fa8b39f35a1d2fb7d25f4d2a27:test/inline-tests/dune
 # end context for test/inline-tests/dune
 
 # begin context for test/inline-tests/test.ml
@@ -147,7 +202,7 @@ cb6cebbf6a537b2cf81e0166c86df5e4:test/expect-tests/dune
 
 # begin context for test/output-tests/dune
 # file test/output-tests/dune
-bebd0dc4bba27f9b8b54d6c39d37dd7d:test/output-tests/dune
+04931ae70a7fc3836554bcdd287a6bc5:test/output-tests/dune
 # end context for test/output-tests/dune
 
 # begin context for test/output-tests/test1.expected

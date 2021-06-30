@@ -11,31 +11,31 @@
 (**************************************************************************)
 
 
-external generate_mnemonic_ml: unit -> string Ton_types.reply =
+external generate_mnemonic_ml: unit -> string Freeton_types.reply =
   "generate_mnemonic_ml"
-let generate_mnemonic () = Ton_types.reply (generate_mnemonic_ml ())
+let generate_mnemonic () = Freeton_types.reply (generate_mnemonic_ml ())
 
 external generate_keypair_from_mnemonic :
-  string -> string option -> Ton_types.keypair Ton_types.reply =
+  string -> string option -> Freeton_types.keypair Freeton_types.reply =
   "generate_keypair_from_mnemonic_ml"
 
 let generate_keypair_from_mnemonic ?path m =
-  Ton_types.reply ( generate_keypair_from_mnemonic m path )
+  Freeton_types.reply ( generate_keypair_from_mnemonic m path )
 
 external generate_address :
   string array ->
   int ->
-  string Ton_types.reply =
+  string Freeton_types.reply =
   "generate_address_ml"
 
 let generate_address ~tvc_file ~abi
     ?keypair
     ?(pubkey = match keypair with
       | None -> assert false
-      | Some keypair -> keypair.Ton_types.public)
+      | Some keypair -> keypair.Freeton_types.public)
     ?(wc = 0)
     ?(initial_data = "") () =
-  Ton_types.reply ( generate_address
+  Freeton_types.reply ( generate_address
                       [| tvc_file ; abi ; initial_data ; pubkey |]
                       wc )
 

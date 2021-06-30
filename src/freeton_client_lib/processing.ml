@@ -9,10 +9,3 @@
 (*                                                                        *)
 (*                                                                        *)
 (**************************************************************************)
-
-val read : string -> Ton_types.AbiContract.t
-val write : string -> Ton_types.AbiContract.t -> unit
-
-(* not yet ready: *)
-val encode_body :
-  abi:string -> meth:string -> params:string -> string

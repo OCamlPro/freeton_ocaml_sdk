@@ -10,9 +10,11 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val read : string -> Ton_types.AbiContract.t
-val write : string -> Ton_types.AbiContract.t -> unit
+external create_client_ml :
+  string -> Freeton_types.client Freeton_types.reply = "create_client_ml"
 
-(* not yet ready: *)
-val encode_body :
-  abi:string -> meth:string -> params:string -> string
+let create server_url =
+  Freeton_types.reply
+    (
+      create_client_ml server_url
+    )

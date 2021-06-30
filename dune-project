@@ -3,7 +3,7 @@
 (name freeton_ocaml_sdk)
 (allow_approximate_merlin)
 (generate_opam_files false)
-(version 0.3.3)
+(version 0.4.0)
 (formatting (enabled_for ocaml reason))
 
 (package
@@ -13,14 +13,45 @@
  (depends
    (ocaml (>= 4.08.0))
    (zarith ( > 1 ))
+   (freeton_types_lib (= version))
    ezjsonm
    (ez_file ( >= 0.2 ))
    ez_api
    cohttp-lwt-unix
+   (ssl (and (>= 0.5.9) (< 1.0.0)))
    ppx_deriving_encoding
    (lwt_ssl ( >= 1.1 ))
    conf-rust-2018
    conf-libssl
+   ppx_inline_test
+   ppx_expect
+   odoc
+   ocamlformat
+  )
+ )
+
+(package
+ (name freeton_client_lib)
+ (synopsis "The freeton_ocaml_sdk library is a binding over TON-SDK for Free TON")
+ (description "This project implements an OCaml-Rust binding to the TON-SDK, and a\nGraphql client to interact with the node.\n")
+ (depends
+   (ocaml (>= 4.08.0))
+   (freeton_types_lib (= version))
+   (freeton_ocaml_sdk (= version))
+   ppx_inline_test
+   ppx_expect
+   odoc
+   ocamlformat
+  )
+ )
+
+(package
+ (name freeton_types_lib)
+ (synopsis "The freeton_ocaml_sdk library is a binding over TON-SDK for Free TON")
+ (description "This project implements an OCaml-Rust binding to the TON-SDK, and a\nGraphql client to interact with the node.\n")
+ (depends
+   (ocaml (>= 4.08.0))
+   ppx_deriving_encoding
    ppx_inline_test
    ppx_expect
    odoc

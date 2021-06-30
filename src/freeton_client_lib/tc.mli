@@ -10,9 +10,32 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val read : string -> Ton_types.AbiContract.t
-val write : string -> Ton_types.AbiContract.t -> unit
+type context
 
-(* not yet ready: *)
-val encode_body :
-  abi:string -> meth:string -> params:string -> string
+val create_context : string -> context
+val destroy_context : context -> unit
+
+val init : unit -> unit
+
+type response_kind =
+  | SUCCESS
+  | ERROR
+  | NOP
+  | APP_REQUEST
+  | APP_NOTIFY
+  | CUSTOM
+
+type response = {
+  id : int ;
+  params : string ;
+  kind : response_kind ;
+  finished : bool ;
+}
+
+val request : context -> name:string -> params:string -> response list Lwt.t
+
+val request_sync :
+  string ->
+  params_enc: 'a Json_encoding.encoding ->
+  result_enc: 'b Json_encoding.encoding ->
+  context -> 'a -> 'b

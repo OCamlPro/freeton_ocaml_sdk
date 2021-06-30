@@ -55,7 +55,7 @@ jobs:
 
       - run: opam pin add . -y --no-action
 
-      - run: opam depext -y freeton_ocaml_sdk
+      - run: opam depext -y freeton_ocaml_sdk freeton_client_lib freeton_types_lib
 #        if: steps.cache-opam.outputs.cache-hit != 'true'
 
       - run: opam install -y ./*.opam --deps-only --with-test
