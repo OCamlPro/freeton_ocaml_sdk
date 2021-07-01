@@ -13,7 +13,7 @@
  (depends
    (ocaml (>= 4.08.0))
    (zarith ( > 1 ))
-   (freeton_types_lib (= version))
+   (freeton_client_lib (= version))
    ezjsonm
    (ez_file ( >= 0.2 ))
    ez_api
@@ -36,22 +36,8 @@
  (description "This project implements an OCaml-Rust binding to the TON-SDK, and a\nGraphql client to interact with the node.\n")
  (depends
    (ocaml (>= 4.08.0))
-   (freeton_types_lib (= version))
-   (freeton_ocaml_sdk (= version))
-   ppx_inline_test
-   ppx_expect
-   odoc
-   ocamlformat
-  )
- )
-
-(package
- (name freeton_types_lib)
- (synopsis "The freeton_ocaml_sdk library is a binding over TON-SDK for Free TON")
- (description "This project implements an OCaml-Rust binding to the TON-SDK, and a\nGraphql client to interact with the node.\n")
- (depends
-   (ocaml (>= 4.08.0))
-   ppx_deriving_encoding
+   ez_api
+   base-threads
    ppx_inline_test
    ppx_expect
    odoc

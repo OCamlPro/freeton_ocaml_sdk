@@ -120,3 +120,6 @@ end = struct
         }
 
 end
+
+module TC = Ton_client.TC
+module TC_lwt = Ton_client_lwt

@@ -10,7 +10,27 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Ton_types
+open Mod_boc
+open Mod_abi
+open Mod_tvm
+
+(**************************************************************************)
+(*                                                                        *)
+(*                                                                        *)
+(*                               TYPES                                    *)
+(*                                                                        *)
+(*                                                                        *)
+(**************************************************************************)
+
+
+
+(**************************************************************************)
+(*                                                                        *)
+(*                                                                        *)
+(*                               FUNCTIONS                                *)
+(*                                                                        *)
+(*                                                                        *)
+(**************************************************************************)
 
 module SendMessage = struct
 
@@ -27,7 +47,8 @@ module SendMessage = struct
   }
   [@@deriving json_encoding]
 
-  let f = Tc.request_sync "send_message" ~params_enc ~result_enc
+
+  let f = Tc.f "send_message" ~params_enc ~result_enc
 
 end
 
@@ -42,14 +63,14 @@ module WaitForTransaction = struct
   [@@deriving json_encoding]
 
   type result = {
-    transaction: Json_repr.ezjsonm ;
+    transaction: any ;
     out_messages: string list ;
     decoded: DecodedOutput.t option ; [@opt None]
     fees: TransactionFees.t ;
   }
   [@@deriving json_encoding]
 
-  let f = Tc.request_sync "wait_for_transaction" ~params_enc ~result_enc
+  let f = Tc.f "wait_for_transaction" ~params_enc ~result_enc
 end
 
 module ProcessMessage = struct
@@ -60,16 +81,16 @@ module ProcessMessage = struct
   [@@deriving json_encoding]
 
   type result = {
-    transaction: Json_repr.ezjsonm ;
+    transaction: any ;
     out_messages: string list ;
     decoded: DecodedOutput.t option ; [@opt None]
     fees: TransactionFees.t ;
   }
   [@@deriving json_encoding]
 
-  let f = Tc.request_sync "process_message" ~params_enc ~result_enc
+  let f = Tc.f "process_message" ~params_enc ~result_enc
 end
 
-let send_message = SendMessage.f
-let wait_for_transaction = WaitForTransaction.f
-let process_message = ProcessMessage.f
+let send_message = Tc.request_sync SendMessage.f
+let wait_for_transaction = Tc.request_sync WaitForTransaction.f
+let process_message = Tc.request_sync ProcessMessage.f

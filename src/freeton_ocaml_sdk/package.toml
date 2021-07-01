@@ -62,7 +62,7 @@ cohttp-lwt-unix = ""
 ez_file = ">=0.2"
 ezjsonm = ""
 zarith = ">1"
-freeton_types_lib = "version"
+freeton_client_lib = "version"
 [dependencies.ez_api]
 libname = "ez_api.encoding ez_api.cohttp_lwt"
 

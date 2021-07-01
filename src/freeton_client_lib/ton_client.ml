@@ -8,3 +8,5 @@ module NET = Mod_net
 module PROCESSING = Mod_processing
 module TVM = Mod_tvm
 module UTILS = Mod_utils
+
+module TC = Tc

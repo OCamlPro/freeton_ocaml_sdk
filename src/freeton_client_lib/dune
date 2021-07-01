@@ -4,12 +4,12 @@
   (name ton_client)
   (public_name freeton_client_lib)
   (wrapped true)
-  (libraries freeton_types_lib freeton_ocaml_sdk )
+  (libraries ez_api.encoding threads )
   (foreign_stubs
     (language c)
     (names ton_client_ocaml_stubs)
     )
-  (c_library_flags -lgsl)
+  (c_library_flags )
   (preprocess (pps ppx_deriving_encoding))
   
   )

@@ -76,7 +76,3 @@ dir = "src/freeton_ocaml_sdk"
 dir = "src/freeton_client_lib"
 # edit 'src/ton_client_ocaml/package.toml' for package-specific options
 
-[[package]]
-dir = "src/freeton_types_lib"
-# edit 'src/ton_client_ocaml/package.toml' for package-specific options
-

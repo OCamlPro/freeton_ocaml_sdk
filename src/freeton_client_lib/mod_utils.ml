@@ -10,14 +10,105 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* open Ton_types *)
+(**************************************************************************)
+(*                                                                        *)
+(*                                                                        *)
+(*                               TYPES                                    *)
+(*                                                                        *)
+(*                                                                        *)
+(**************************************************************************)
 
-(* TODO:
-convert_address – Converts address from any TON format to any TON format
+module AddressStringFormat = struct
 
-calc_storage_fee – Calculates storage fee for an account over a specified time period
+  type t =
+    | AccountId  [@kind "AccountId"] [@kind_label "type"]
+    | Hex   [@kind "Hex"] [@kind_label "type"]
+    | Base64 of {
+        url: bool ;
+        test: bool ;
+        bounce: bool ;
+      }
+      [@kind "Base64"] [@kind_label "type"]
+  [@@deriving json_encoding ]
 
-compress_zstd – Compresses data using Zstandard algorithm
+  let t_enc = enc
+end
 
-decompress_zstd – Decompresses data using Zstandard algorithm
-*)
+(**************************************************************************)
+(*                                                                        *)
+(*                                                                        *)
+(*                               FUNCTIONS                                *)
+(*                                                                        *)
+(*                                                                        *)
+(**************************************************************************)
+
+module ConvertAddress = struct
+
+  type params = {
+    address: string ;
+    output_format: AddressStringFormat.t ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    address: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "convert_address" ~params_enc ~result_enc
+
+end
+
+module CalcStorageFee = struct
+
+  type params = {
+    account: string ;
+    period: int ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    fee: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "calc_storage_fee" ~params_enc ~result_enc
+
+end
+
+module CompressZstd = struct
+  type params = {
+    uncompressed: string ;
+    level: int option ; [@opt None ]
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    compressed: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "compress_zstd" ~params_enc ~result_enc
+
+end
+
+module DecompressZstd = struct
+
+  type params = {
+    compressed: string
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    decompressed: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "decompress_zstd" ~params_enc ~result_enc
+
+end
+
+let convert_address = Tc.request_sync ConvertAddress.f
+let calc_storage_fee = Tc.request_sync CalcStorageFee.f
+let compress_zstd = Tc.request_sync CompressZstd.f
+let decompress_zstd = Tc.request_sync DecompressZstd.f

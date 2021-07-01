@@ -41,56 +41,17 @@ type response = {
   finished : bool ;
 }
 
-external has_tc_response : unit -> bool = "has_tc_response_ml" [@@noalloc]
-external get_tc_response : unit -> response = "get_tc_response_ml"
+external has_response : unit -> bool = "has_tc_response_ml" [@@noalloc]
+external get_response : unit -> response = "get_tc_response_ml"
 
-type request = {
-  mutable responses : response list ;
-  trigger : response list Lwt.u ;
-}
-
-let request_counter = ref 0
-let waiting_requests = Hashtbl.create 13
-
-external request_c :
+external request  :
   int -> string -> string -> int -> unit = "tc_request_ml"
-
-let request context ~name ~params =
-  let id = !request_counter in
-  request_counter := ( !request_counter + 1 ) land 0xffffffff;
-  let (thread, trigger) = Lwt.wait () in
-  let request = {
-    responses = [] ;
-    trigger ;
-  } in
-  Hashtbl.add waiting_requests id request ;
-  request_c context name params id;
-  thread
-
-open Lwt.Infix
-let rec waiting_thread () =
-  Lwt_unix.sleep 0.1 >>=
-  let rec iter () =
-    if has_tc_response () then
-      let r = get_tc_response () in
-      let request = Hashtbl.find waiting_requests r.id in
-      request.responses <- r :: request.responses ;
-      if r.finished then begin
-        Hashtbl.remove waiting_requests r.id ;
-        Lwt.wakeup request.trigger (List.rev request.responses)
-      end ;
-      iter ()
-    else
-      waiting_thread
-  in
-  iter ()
 
 let init_done = ref false
 let init () =
   if not !init_done then begin
     init_done := true ;
     let _t = Thread.self () in
-    Lwt.async waiting_thread ;
     init ()
   end
 
@@ -99,9 +60,20 @@ let () = init ()
 
 external request_sync_c :
   int -> string -> string -> string = "tc_request_sync_ml"
-let request_sync name ~params_enc ~result_enc context params =
+
+
+type ('params, 'result) f = {
+  call_name : string ;
+  call_params : 'params Json_encoding.encoding ;
+  call_result : 'result Json_encoding.encoding ;
+}
+
+let f call_name ~params_enc ~result_enc =
+  { call_name ; call_params = params_enc ; call_result = result_enc }
+
+let request_sync f context params =
   let r =
-    request_sync_c context name
-      ( EzEncoding.construct ~compact:true params_enc params )
+    request_sync_c context f.call_name
+      ( EzEncoding.construct ~compact:true f.call_params params )
   in
-  EzEncoding.destruct result_enc r
+  EzEncoding.destruct f.call_result r

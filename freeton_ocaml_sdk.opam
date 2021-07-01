@@ -40,7 +40,7 @@ depends: [
   "ocaml" {>= "4.08.0"}
   "dune" {>= "2.6.0"}
   "zarith" {> "1"}
-  "freeton_types_lib" {= version}
+  "freeton_client_lib" {= version}
   "ezjsonm" {}
   "ez_file" {>= "0.2"}
   "ez_api" {}

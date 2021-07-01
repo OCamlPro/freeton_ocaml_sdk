@@ -23,10 +23,10 @@ let encode_body ~abi ~meth ~params =
 
 let read filename =
   let json = EzFile.read_file filename in
-  EzEncoding.destruct  Ton_types.AbiContract.t_enc json
+  EzEncoding.destruct  Ton_client.ABI.AbiContract.t_enc json
 
 let write file abi =
   let json = EzEncoding.construct
-      ~compact:false Ton_types.AbiContract.t_enc  abi in
+      ~compact:false Ton_client.ABI.AbiContract.t_enc  abi in
   EzFile.make_dir ~p:true (Filename.dirname file);
   EzFile.write_file file json

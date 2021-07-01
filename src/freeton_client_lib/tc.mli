@@ -32,10 +32,21 @@ type response = {
   finished : bool ;
 }
 
-val request : context -> name:string -> params:string -> response list Lwt.t
+val has_response : unit -> bool
+val get_response : unit -> response
+val request : context -> string -> string -> int -> unit
 
-val request_sync :
-  string ->
-  params_enc: 'a Json_encoding.encoding ->
-  result_enc: 'b Json_encoding.encoding ->
-  context -> 'a -> 'b
+
+type ('params, 'result) f = {
+  call_name : string ;
+  call_params : 'params Json_encoding.encoding ;
+  call_result : 'result Json_encoding.encoding ;
+}
+
+val f :
+           string ->
+           params_enc:'a Json_encoding.encoding ->
+           result_enc:'b Json_encoding.encoding -> ('a, 'b) f
+
+
+val request_sync : ('a, 'b) f -> context -> 'a -> 'b

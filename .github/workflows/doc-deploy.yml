@@ -31,7 +31,7 @@ jobs:
       # define opam-repo = "git+https://" to add an extra opam repo
 
       - run: opam pin add . -y --no-action
-      - run: opam depext -y freeton_ocaml_sdk freeton_client_lib freeton_types_lib
+      - run: opam depext -y freeton_ocaml_sdk freeton_client_lib
         if: steps.cache-opam.outputs.cache-hit != 'true'
       - run: opam install -y ./*.opam --deps-only --with-test
         if: steps.cache-opam.outputs.cache-hit != 'true'

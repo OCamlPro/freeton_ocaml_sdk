@@ -10,63 +10,457 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* open Ton_types *)
+open Mod_boc
+
+(**************************************************************************)
+(*                                                                        *)
+(*                                                                        *)
+(*                               TYPES                                    *)
+(*                                                                        *)
+(*                                                                        *)
+(**************************************************************************)
+
+module KeyPair = struct
+  type t = {
+    public: string ;
+    secret: string ;
+  }
+  [@@deriving json_encoding ]
+
+   let t_enc = enc
+end
+
+module SigningBoxHandle = struct
+  type t = int
+  [@@deriving json_encoding ]
+
+  let t_enc = enc
+end
+
+(**************************************************************************)
+(*                                                                        *)
+(*                                                                        *)
+(*                               FUNCTIONS                                *)
+(*                                                                        *)
+(*                                                                        *)
+(**************************************************************************)
+
+module Factorize = struct
+  type params = {
+    composite: string
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    factors: string list ;
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "factorize" ~params_enc ~result_enc
+end
+
+module ModularPower = struct
+
+  type params = {
+    base: string ;
+    exponent: string ;
+    modulus: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    modular_power: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "modular_power" ~params_enc ~result_enc
+end
+
+
+module TonCrc16 = struct
+
+  type params = {
+    data: string
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    crc: number
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "ton_crc16" ~params_enc ~result_enc
+end
+
+module GenerateRandomBytes = struct
+
+  type params = {
+    length: number
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    bytes: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "generate_random_bytes" ~params_enc ~result_enc
+end
+
+module ConvertPublicKeyToTonSafeFormat = struct
+
+  type params = {
+    public_key: string
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    ton_public_key: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "convert_public_key_to_ton_safe_format" ~params_enc ~result_enc
+end
+
+module GenerateRandomSignKeys = struct
+
+  type params = unit
+  [@@deriving json_encoding]
+
+  type result = KeyPair.t
+  [@@deriving json_encoding]
+
+  let f = Tc.f "generate_random_sign_keys" ~params_enc ~result_enc
+
+end
+
+module Sign = struct
+
+  type params = {
+    unsigned: string ;
+    keys: KeyPair.t ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    signed: string ;
+    signature: string ;
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "sign" ~params_enc ~result_enc
+
+end
+
+module VerifySignature = struct
+
+  type params = {
+    signed: string ;
+    public: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    unsigned: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "verify_signature" ~params_enc ~result_enc
+
+end
+
+module TypesOfHash = struct
+  type params = {
+    data: string
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    hash: string
+  }
+  [@@deriving json_encoding]
+end
+
+module Sha256 = struct
+  include TypesOfHash
+  let f = Tc.f "sha256" ~params_enc ~result_enc
+end
+
+module Sha512 = struct
+  include TypesOfHash
+  let f = Tc.f "sha512" ~params_enc ~result_enc
+end
+
+module Scrypt = struct
+
+  type params = {
+    password: string ;
+    salt: string ;
+    log_n: number ;
+    r: number ;
+    p: number ;
+    dk_len: number ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    key: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "scrypt" ~params_enc ~result_enc
+end
+
+module NaclSignKeyPairFromSecret = struct
+  type params = {
+    secret: string
+  }
+  [@@deriving json_encoding]
+
+  type result = KeyPair.t
+  [@@deriving json_encoding]
+
+
+  let f = Tc.f "nacl_sign_keypair_from_secret_key" ~params_enc ~result_enc
+end
+
+module NaclSign = struct
+
+  type params = {
+    unsigned: string ;
+    secret: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    signed: string
+  }
+  [@@deriving json_encoding]
+
+
+  let f = Tc.f "nacl_sign" ~params_enc ~result_enc
+end
+
+module NaclSignOpen = struct
+
+  type params = {
+    signed: string ;
+    public: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    unsigned: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "nacl_sign_open" ~params_enc ~result_enc
+end
+
+module NaclSignDetached = struct
+  type params = {
+    unsigned: string ;
+    secret: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    signature: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "nacl_sign_detached" ~params_enc ~result_enc
+end
+
+module NaclSignDetachedVerify = struct
+
+  type params = {
+    unsigned: string ;
+    signature: string ;
+    public: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    succeeded: bool
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "nacl_sign_detached_verify" ~params_enc ~result_enc
+end
+
+module NaclBoxKeyPair = struct
+
+  type params = unit
+  [@@deriving json_encoding]
+
+  type result = KeyPair.t
+  [@@deriving json_encoding]
+
+  let f = Tc.f "nacl_box_keypair" ~params_enc ~result_enc
+end
+
+module NaclBoxKeyPairFromSecret = struct
+  type params = {
+    secret: string
+  }
+  [@@deriving json_encoding]
+
+  type result = KeyPair.t
+  [@@deriving json_encoding]
+
+  let f = Tc.f "nacl_box_keypair_from_secret_key" ~params_enc ~result_enc
+end
+
+module NaclBox = struct
+  type params = {
+    decrypted: string ;
+    nonce: string ;
+    their_public: string ;
+    secret: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    encrypted: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "nacl_box" ~params_enc ~result_enc
+end
+
+module NaclBoxOpen = struct
+
+  type params = {
+    encrypted: string ;
+    nonce: string ;
+    their_public: string ;
+    secret: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    decrypted: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "nacl_box_open" ~params_enc ~result_enc
+end
+
+module NaclSecretBox = struct
+  type params = {
+    decrypted: string ;
+    nonce: string ;
+    key: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    encrypted: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "nacl_box_open" ~params_enc ~result_enc
+end
+
+module NaclSecretBoxOpen = struct
+
+  type params = {
+    encrypted: string ;
+    nonce: string ;
+    key: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    decrypted: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "nacl_secret_box_open" ~params_enc ~result_enc
+end
+
+module MnemonicWords = struct
+  type params = {
+    dictionary: number option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    words: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "mnemonic_words" ~params_enc ~result_enc
+end
+
+module MnemonicFromRandom = struct
+
+  type params = {
+    dictionary: number option ; [@opt None]
+    word_count: number option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    phrase: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "mnemonic_from_random" ~params_enc ~result_enc
+end
+
+module MnemonicFromEntropy = struct
+
+  type params = {
+    entropy: string ;
+    dictionary: number option ; [@opt None]
+    word_count: number option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    phrase: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "mnemonic_from_entropy" ~params_enc ~result_enc
+end
+
+module MnemonicVerify = struct
+
+  type params = {
+    phrase: string ;
+    dictionary: number option ; [@opt None]
+    word_count: number option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    valid: bool
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "mnemonic_verify" ~params_enc ~result_enc
+end
+
+module MnemonicDeriveSignKeys = struct
+
+  type params = {
+    phrase: string ;
+    path: string option ; [@opt None]
+    dictionary: number option ; [@opt None]
+    word_count: number option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  type result = KeyPair.t
+  [@@deriving json_encoding]
+
+  let f = Tc.f "mnemonic_derive_sign_keys" ~params_enc ~result_enc
+end
 
 (* TODO:
-
-factorize – Integer factorization
-
-modular_power – Modular exponentiation
-
-ton_crc16 – Calculates CRC16 using TON algorithm.
-
-generate_random_bytes – Generates random byte array of the specified length and returns it in base64 format
-
-convert_public_key_to_ton_safe_format – Converts public key to ton safe_format
-
-generate_random_sign_keys – Generates random ed25519 key pair.
-
-sign – Signs a data using the provided keys.
-
-verify_signature – Verifies signed data using the provided public key. Raises error if verification is failed.
-
-sha256 – Calculates SHA256 hash of the specified data.
-
-sha512 – Calculates SHA512 hash of the specified data.
-
-scrypt – Perform scrypt encryption
-
-nacl_sign_keypair_from_secret_key – Generates a key pair for signing from the secret key
-
-nacl_sign – Signs data using the signer's secret key.
-
-nacl_sign_open – Verifies the signature and returns the unsigned message
-
-nacl_sign_detached – Signs the message using the secret key and returns a signature.
-
-nacl_sign_detached_verify – Verifies the signature with public key and unsigned data.
-
-nacl_box_keypair – Generates a random NaCl key pair
-
-nacl_box_keypair_from_secret_key – Generates key pair from a secret key
-
-nacl_box – Public key authenticated encryption
-
-nacl_box_open – Decrypt and verify the cipher text using the receivers secret key, the senders public key, and the nonce.
-
-nacl_secret_box – Encrypt and authenticate message using nonce and secret key.
-
-nacl_secret_box_open – Decrypts and verifies cipher text using nonce and secret key.
-
-mnemonic_words – Prints the list of words from the specified dictionary
-
-mnemonic_from_random – Generates a random mnemonic
-
-mnemonic_from_entropy – Generates mnemonic from pre-generated entropy
-
-mnemonic_verify – Validates a mnemonic phrase
-
-mnemonic_derive_sign_keys – Derives a key pair for signing from the seed phrase
 
 hdkey_xprv_from_mnemonic – Generates an extended master private key that will be the root for all the derived keys
 
@@ -99,6 +493,36 @@ encryption_box_get_info – Queries info from the given encryption box
 encryption_box_encrypt – Encrypts data using given encryption box
 
 encryption_box_decrypt – Decrypts data using given encryption box
-
-
 *)
+
+let factorize = Tc.request_sync Factorize.f
+let modular_power = Tc.request_sync ModularPower.f
+let ton_crc16 = Tc.request_sync TonCrc16.f
+let generate_random_bytes = Tc.request_sync GenerateRandomBytes.f
+let convert_public_key_to_ton_safe_format =
+  Tc.request_sync ConvertPublicKeyToTonSafeFormat.f
+let generate_random_sign_keys =
+  Tc.request_sync GenerateRandomSignKeys.f
+let sign = Tc.request_sync Sign.f
+let verify_signature = Tc.request_sync VerifySignature.f
+let sha256 = Tc.request_sync Sha256.f
+let sha512 = Tc.request_sync Sha512.f
+let scrypt = Tc.request_sync Scrypt.f
+let nacl_sign_keypair_from_secret_key =
+  Tc.request_sync NaclSignKeyPairFromSecret.f
+let nacl_sign = Tc.request_sync NaclSign.f
+let nacl_sign_open = Tc.request_sync NaclSignOpen.f
+let nacl_sign_detached = Tc.request_sync NaclSignDetached.f
+let nacl_sign_detached_verify = Tc.request_sync NaclSignDetachedVerify.f
+let nacl_box_keypair = Tc.request_sync NaclBoxKeyPair.f
+let nacl_box_keypair_from_secret_key =
+  Tc.request_sync NaclBoxKeyPairFromSecret.f
+let nacl_box =  Tc.request_sync NaclBox.f
+let nacl_box_open =  Tc.request_sync NaclBoxOpen.f
+let nacl_secret_box =  Tc.request_sync NaclSecretBox.f
+let nacl_secret_box_open =  Tc.request_sync NaclSecretBoxOpen.f
+let mnemonic_words =  Tc.request_sync MnemonicWords.f
+let mnemonic_from_random =  Tc.request_sync MnemonicFromRandom.f
+let mnemonic_from_entropy =  Tc.request_sync MnemonicFromEntropy.f
+let mnemonic_verify =  Tc.request_sync MnemonicVerify.f
+let mnemonic_derive_sign_keys =  Tc.request_sync MnemonicDeriveSignKeys.f
