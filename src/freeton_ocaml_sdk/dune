@@ -15,7 +15,7 @@
  (name freeton_ocaml_sdk)
  (public_name freeton_ocaml_sdk)
  (wrapped false)
- (libraries zarith ezjsonm ez_file ez_api.encoding ez_api.cohttp_lwt cohttp-lwt-unix )
+ (libraries zarith freeton_client_lib ezjsonm ez_file ez_api.encoding ez_api.cohttp_lwt cohttp-lwt-unix )
  (foreign_archives freeton_ocaml_sdk)
  (c_library_flags
   (-lpthread -lc -lm -lssl -lcrypto))

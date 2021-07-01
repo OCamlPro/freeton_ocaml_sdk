@@ -12,11 +12,12 @@
 
 val generate_mnemonic : unit -> string
 
-val generate_keypair_from_mnemonic : ?path:string -> string -> Ton_types.keypair
+val generate_keypair_from_mnemonic : ?path:string -> string ->
+  Freeton_types.keypair
 
 val generate_address :
   tvc_file:string -> abi:string ->
-  ?keypair:Ton_types.keypair ->
+  ?keypair:Freeton_types.keypair ->
   ?pubkey:string ->
   ?wc:int -> ?initial_data:string -> unit -> string
 

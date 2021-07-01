@@ -10,9 +10,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module TYPES = Ton_types
+module TYPES = Freeton_types
 
-module CLIENT = Ton_client
+module CLIENT = Freeton_client
 
 module CRYPTO = Ton_crypto
 module RPC = Ton_rpc
@@ -100,7 +100,7 @@ end = struct
       payload : string option ;
     }
 
-    external rs : t -> Message.t Ton_types.reply = "encode_internal_message_ml"
+    external rs : t -> Message.t Freeton_types.reply = "encode_internal_message_ml"
 
   end
 
@@ -113,10 +113,13 @@ end = struct
         ?payload
         ?call
         () =
-      Ton_types.reply @@
+      Freeton_types.reply @@
       EncodeInternalMessage.rs
         EncodeInternalMessage.{ address ; src_address ; ihr_disabled ;
           bounce ; value ; payload ; call
         }
 
 end
+
+module TC = Ton_client.TC
+module TC_lwt = Ton_client_lwt

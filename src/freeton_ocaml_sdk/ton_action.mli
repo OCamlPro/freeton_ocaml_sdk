@@ -23,32 +23,32 @@ module EncodedMessage : sig
 end
 
 val deploy :
-  client:Ton_types.client ->
+  client:Freeton_types.client ->
   tvc_file:string ->
   abi:string ->
   params:string ->
-  keypair:Ton_types.keypair ->
+  keypair:Freeton_types.keypair ->
   ?initial_data:string ->
   ?initial_pubkey:string -> ?wc:int -> unit -> string
 
 val call_lwt :
-  ?client:Ton_types.client ->
+  ?client:Freeton_types.client ->
   server_url:string ->
   address:string ->
   abi:string ->
   meth:string ->
   params:string ->
-  ?keypair:Ton_types.keypair -> local:bool -> unit ->
+  ?keypair:Freeton_types.keypair -> local:bool -> unit ->
   ( string, exn ) result Lwt.t
 
 val call_run :
-  ?client:Ton_types.client ->
+  ?client:Freeton_types.client ->
   server_url:string ->
   address:string ->
   abi:string ->
   meth:string ->
   params:string ->
-  ?keypair:Ton_types.keypair -> local:bool -> unit -> string
+  ?keypair:Freeton_types.keypair -> local:bool -> unit -> string
 
 (* Modify a TVC file *)
 val update_contract_state :
@@ -62,19 +62,19 @@ val update_contract_state :
 val parse_message : string -> string
 
 val prepare_message :
-  client:Ton_types.client ->
+  client:Freeton_types.client ->
   address:string ->
   abi:string ->
   meth:string ->
   params:string ->
-  ?keypair:Ton_types.keypair ->
+  ?keypair:Freeton_types.keypair ->
   unit -> EncodedMessage.t
 
 (* we should also lift 'send_message' and 'wait_for_transaction' to be
    able to completely debug a call *)
 
 val call_contract_local :
-  client:Ton_types.client ->
+  client:Freeton_types.client ->
   abi:string -> msg:string -> boc:string -> string
 
 
@@ -87,11 +87,11 @@ module SendMessageResult : sig
 end
 
 val send_message :
-  client:Ton_types.client ->
+  client:Freeton_types.client ->
   abi:string ->
   msg:string -> (* base64 of message *)
   SendMessageResult.t
 
 val wait_for_transaction :
-  client:Ton_types.client ->
+  client:Freeton_types.client ->
   abi:string -> msg:string -> SendMessageResult.t -> string

@@ -2,17 +2,17 @@
 
 # hash of toml configuration files
 # used for generation of all files
-73aa19eb78f1bcfd10225078ca1c69c9:.
+0e3c396b28daae0760ed22432b4c584f:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
 # file .github/workflows/doc-deploy.yml
-492ab791c1f09c2302622aa02293d38e:.github/workflows/doc-deploy.yml
+33186708df8a5c24f60b17a65af3798e:.github/workflows/doc-deploy.yml
 # end context for .github/workflows/doc-deploy.yml
 
 # begin context for .github/workflows/workflow.yml
 # file .github/workflows/workflow.yml
-21ef42610de2aa8a2e39118a0de255b6:.github/workflows/workflow.yml
+690bd9b871347ccc4179cafece985c1e:.github/workflows/workflow.yml
 # end context for .github/workflows/workflow.yml
 
 # begin context for .gitignore
@@ -27,7 +27,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for CHANGES.md
 # file CHANGES.md
-4a3ee53161ca615bc25a803463a62722:CHANGES.md
+f0dad6632363c733c0ade2263132e1e2:CHANGES.md
 # end context for CHANGES.md
 
 # begin context for LICENSE.md
@@ -37,7 +37,7 @@ a8d1bcd6f62c6b813b77d3ff8959d8d2:.ocamlformat-ignore
 
 # begin context for Makefile
 # file Makefile
-a9dea633d334c663984be4419d9c6787:Makefile
+2ce805d0c9ecd85b94dc9e6b3237a0d6:Makefile
 # end context for Makefile
 
 # begin context for README.md
@@ -67,7 +67,7 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for drom.toml
 # file drom.toml
-19f4b9de078cfecda5ee33874bab630f:drom.toml
+085dd9cd8739b31a2fcfd9e0bb4bee58:drom.toml
 # end context for drom.toml
 
 # begin context for dune
@@ -77,13 +77,23 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-66dfa9e839222dd5a27d33ed6cdf59fe:dune-project
+108d27754e5c550a768408d737656c4f:dune-project
 # end context for dune-project
+
+# begin context for freeton_client_lib.opam
+# file freeton_client_lib.opam
+d3c78a9582ec057afa6ad0acad2aa031:freeton_client_lib.opam
+# end context for freeton_client_lib.opam
 
 # begin context for freeton_ocaml_sdk.opam
 # file freeton_ocaml_sdk.opam
-fa46da6517ef67a737dfb7edaedb015c:freeton_ocaml_sdk.opam
+0b47d466fe20473eaea9ec69d7838457:freeton_ocaml_sdk.opam
 # end context for freeton_ocaml_sdk.opam
+
+# begin context for freeton_types_lib.opam
+# file freeton_types_lib.opam
+95cb88a75feb4751c79046554f73812c:freeton_types_lib.opam
+# end context for freeton_types_lib.opam
 
 # begin context for scripts/after.sh
 # file scripts/after.sh
@@ -115,19 +125,54 @@ a562548bd6cc8b0a733aa335c58c5908:sphinx/conf.py
 8d984cbb854fe94fc5fa77b97b6ee046:sphinx/license.rst
 # end context for sphinx/license.rst
 
+# begin context for src/freeton_client_lib/dune
+# file src/freeton_client_lib/dune
+86eb23c1161fd0cedd4141ab8201d01a:src/freeton_client_lib/dune
+# end context for src/freeton_client_lib/dune
+
+# begin context for src/freeton_client_lib/freeton_client_lib_stubs.c
+# file src/freeton_client_lib/freeton_client_lib_stubs.c
+e57e1bb38bb9d47311ce7f6d2bb45715:src/freeton_client_lib/freeton_client_lib_stubs.c
+# end context for src/freeton_client_lib/freeton_client_lib_stubs.c
+
+# begin context for src/freeton_client_lib/index.mld
+# file src/freeton_client_lib/index.mld
+e5e327474d77ac197193161785d1bafe:src/freeton_client_lib/index.mld
+# end context for src/freeton_client_lib/index.mld
+
+# begin context for src/freeton_client_lib/version.mlt
+# file src/freeton_client_lib/version.mlt
+6a3411944251a158f283de8696b8c968:src/freeton_client_lib/version.mlt
+# end context for src/freeton_client_lib/version.mlt
+
 # begin context for src/freeton_ocaml_sdk/dune
 # file src/freeton_ocaml_sdk/dune
-dfc8483152295295023a75cbaac5b1b9:src/freeton_ocaml_sdk/dune
+da30d8cb05ec8b0b35dfe04784d3b8b2:src/freeton_ocaml_sdk/dune
 # end context for src/freeton_ocaml_sdk/dune
 
 # begin context for src/freeton_ocaml_sdk/package.toml
 # file src/freeton_ocaml_sdk/package.toml
-0f07b2f84ef72e8c35405e41b728533f:src/freeton_ocaml_sdk/package.toml
+b23a328739f01b1a752d34a90006386e:src/freeton_ocaml_sdk/package.toml
 # end context for src/freeton_ocaml_sdk/package.toml
+
+# begin context for src/freeton_types_lib/dune
+# file src/freeton_types_lib/dune
+bf2f3bc69f00f0591d641a59b9e65b53:src/freeton_types_lib/dune
+# end context for src/freeton_types_lib/dune
+
+# begin context for src/freeton_types_lib/index.mld
+# file src/freeton_types_lib/index.mld
+6ab67501c08e4fb25c6b11b1e7aed279:src/freeton_types_lib/index.mld
+# end context for src/freeton_types_lib/index.mld
+
+# begin context for src/freeton_types_lib/version.mlt
+# file src/freeton_types_lib/version.mlt
+6a3411944251a158f283de8696b8c968:src/freeton_types_lib/version.mlt
+# end context for src/freeton_types_lib/version.mlt
 
 # begin context for test/expect-tests/dune
 # file test/expect-tests/dune
-cb6cebbf6a537b2cf81e0166c86df5e4:test/expect-tests/dune
+8a2d01a721f81b4133146cd089137326:test/expect-tests/dune
 # end context for test/expect-tests/dune
 
 # begin context for test/expect-tests/test.ml
@@ -137,7 +182,7 @@ cb6cebbf6a537b2cf81e0166c86df5e4:test/expect-tests/dune
 
 # begin context for test/inline-tests/dune
 # file test/inline-tests/dune
-94bb4d21e56fc8e0ebc5fe6018fc7c18:test/inline-tests/dune
+544dd067571db6bac7203b68cb647b37:test/inline-tests/dune
 # end context for test/inline-tests/dune
 
 # begin context for test/inline-tests/test.ml
@@ -147,7 +192,7 @@ cb6cebbf6a537b2cf81e0166c86df5e4:test/expect-tests/dune
 
 # begin context for test/output-tests/dune
 # file test/output-tests/dune
-bebd0dc4bba27f9b8b54d6c39d37dd7d:test/output-tests/dune
+6838f3765d63916b5479e92c3ca5b4a9:test/output-tests/dune
 # end context for test/output-tests/dune
 
 # begin context for test/output-tests/test1.expected

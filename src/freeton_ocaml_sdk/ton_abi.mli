@@ -10,8 +10,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val read : string -> Ton_types.ABI.contract
-val write : string -> Ton_types.ABI.contract -> unit
+val read : string -> Ton_client.ABI.AbiContract.t
+val write : string -> Ton_client.ABI.AbiContract.t -> unit
 
 (* not yet ready: *)
 val encode_body :

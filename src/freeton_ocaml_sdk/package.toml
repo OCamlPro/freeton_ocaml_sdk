@@ -10,8 +10,7 @@ skeleton = "rust_binding_lib"
 synopsis = "OCaml binding to the TON-SDK and the Graphql API for Free TON blockchain"
 
 # description if different from project description
-description = """
-The freeton_ocaml_sdk library is a binding to the TON-SDK Rust library
+description = """The freeton_ocaml_sdk library is a binding to the TON-SDK Rust library
 and the GraphQL API of the FreeTON blockchain. It can be used to build
 application to query the account states, transactions and other blockchain
 data. to deploy and call smart contracts.
@@ -63,8 +62,10 @@ cohttp-lwt-unix = ""
 ez_file = ">=0.2"
 ezjsonm = ""
 zarith = ">1"
+freeton_client_lib = "version"
 [dependencies.ez_api]
 libname = "ez_api.encoding ez_api.cohttp_lwt"
+
 
 # package tools dependencies
 [tools]
@@ -72,6 +73,7 @@ conf-libssl = ""
 conf-rust-2018 = ""
 lwt_ssl = ">=1.1"
 ppx_deriving_encoding = ""
+ssl = "0.5.9"
 
 # package fields (depends on package skeleton)
 #Examples:

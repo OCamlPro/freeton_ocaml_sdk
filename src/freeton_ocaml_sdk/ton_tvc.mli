@@ -10,13 +10,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val read : string -> Ton_types.state_init
+val read : string -> Freeton_types.state_init
 
 (* returns "None" or base64 encoding of data *)
-val data : Ton_types.state_init -> string
+val data : Freeton_types.state_init -> string
 
 (* returns "None" or base64 encoding of code *)
-val code : Ton_types.state_init -> string
+val code : Freeton_types.state_init -> string
 
 (* returns hex encoding of code hash *)
-val code_hash : Ton_types.state_init -> string
+val code_hash : Freeton_types.state_init -> string
