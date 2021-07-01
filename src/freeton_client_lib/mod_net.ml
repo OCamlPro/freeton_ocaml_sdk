@@ -11,6 +11,7 @@
 (**************************************************************************)
 
 open Mod_boc
+open Mod_abi
 
 (*
 enum NetErrorCode {
@@ -95,6 +96,56 @@ module FieldAggregation = struct
 
   let t_enc = enc
 
+end
+
+module EndpointsSet = struct
+  type t = {
+    endpoints: string list
+  }
+  [@@deriving json_encoding]
+
+  let t_enc = enc
+end
+
+module MessageNode = struct
+
+  type t = {
+    id: string ;
+    src_transaction_id: string option ; [@opt None]
+    dst_transaction_id: string option ; [@opt None]
+    src: string option ; [@opt None]
+    dst: string option ; [@opt None]
+    value: string option ; [@opt None]
+    bounce: bool ;
+    decoded_body: DecodedMessageBody.t option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+  let t_enc = enc
+
+end
+
+module TransactionNode = struct
+
+  type t = {
+    id: string ;
+    in_msg: string ;
+    out_msgs: string list ;
+    account_addr: string ;
+    total_fees: string ;
+    aborted: bool ;
+    exit_code: number option ;
+  }
+  [@@deriving json_encoding]
+  let t_enc = enc
+
+end
+
+module RegisteredIterator = struct
+  type t = {
+    handle: number
+  }
+  [@@deriving json_encoding]
+  let t_enc = enc
 end
 
 (**************************************************************************)
@@ -230,36 +281,231 @@ module BatchQuery = struct
 
 end
 
+module SubscribeCollection = struct
+
+  type params = {
+    collection: string ;
+    filter: any option ; [@opt None]
+    result: string
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    handle: number
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "subscribe_collection" ~params_enc ~result_enc
+
+end
+
+module Unsubscribe = struct
+
+  type params = SubscribeCollection.result
+  [@@deriving json_encoding]
+
+  type result = unit
+  [@@deriving json_encoding]
+
+  let f = Tc.f "unsubscribe" ~params_enc ~result_enc
+
+end
+
+module Suspend = struct
+
+  type params = unit
+  [@@deriving json_encoding]
+
+  type result = unit
+  [@@deriving json_encoding]
+
+  let f = Tc.f "suspend" ~params_enc ~result_enc
+
+end
+
+module Resume = struct
+
+  type params = unit
+  [@@deriving json_encoding]
+
+  type result = unit
+  [@@deriving json_encoding]
+
+  let f = Tc.f "resume" ~params_enc ~result_enc
+
+end
+
+module FindLastShardBlock = struct
+
+  type params = {
+    address: string
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    block_id: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "find_last_shard_block" ~params_enc ~result_enc
+
+end
+
+module FetchEndpoints = struct
+
+  type params = unit
+  [@@deriving json_encoding]
+
+  type result = EndpointsSet.t
+  [@@deriving json_encoding]
+
+  let f = Tc.f "fetch_endpoints" ~params_enc ~result_enc
+
+end
+
+module SetEndpoints = struct
+
+  type params = EndpointsSet.t
+  [@@deriving json_encoding]
+
+  type result = unit
+  [@@deriving json_encoding]
+
+  let f = Tc.f "set_endpoints" ~params_enc ~result_enc
+
+end
+
+module GetEndpoints = struct
+
+  type params = unit
+  [@@deriving json_encoding]
+
+  type result = {
+    query: string ;
+    endpoints: string list ;
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "get_endpoints" ~params_enc ~result_enc
+
+end
+
+module QueryTransactionTree = struct
+
+  type params = {
+    in_msg: string ;
+    abi_registry: Abi.t list option ; [@opt None]
+    timeout : number ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    messages: MessageNode.t list ;
+    transactions: TransactionNode.t list ;
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "query_transaction_tree" ~params_enc ~result_enc
+
+end
+
+module CreateBlockIterator = struct
+  type params = {
+    start_time: number option ; [@opt None]
+    end_time: number option ; [@opt None]
+    shard_filter: string list option ; [@opt None]
+    result: string option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  type result = RegisteredIterator.t
+  [@@deriving json_encoding]
+
+  let f = Tc.f "create_block_iterator" ~params_enc ~result_enc
+
+
+end
+
+module ResumeBlockIterator = struct
+
+  type params = {
+    resume_state: any
+  }
+  [@@deriving json_encoding]
+
+  type result = RegisteredIterator.t
+  [@@deriving json_encoding]
+
+  let f = Tc.f "resume_block_iterator" ~params_enc ~result_enc
+
+end
+
+module CreateTransactionIterator = struct
+  type params = {
+    start_time: number option ; [@opt None]
+    end_time: number option ; [@opt None]
+    shard_filter: string list option ; [@opt None]
+    accounts_filter: string list option ; [@opt None]
+    result: string option ; [@opt None]
+    include_transfers: bool option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  type result = RegisteredIterator.t
+  [@@deriving json_encoding]
+
+  let f = Tc.f "create_transaction_iterator" ~params_enc ~result_enc
+
+end
+
+module ResumeTransactionIterator = struct
+
+  type params = {
+    resume_state: any ;
+    accounts_filter: string list option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  type result = RegisteredIterator.t
+  [@@deriving json_encoding]
+
+  let f = Tc.f "resume_transaction_iterator" ~params_enc ~result_enc
+
+end
+
+module IteratorNext = struct
+
+  type params = {
+    iterator: number ;
+    limit: number option ; [@opt None]
+    return_resume_state: bool option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    items: any list ;
+    has_more: bool ;
+    resume_state: any option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "iterator_next" ~params_enc ~result_enc
+
+end
+
+module RemoveIterator = struct
+
+  type params = RegisteredIterator.t
+  [@@deriving json_encoding]
+
+  type result = unit
+  [@@deriving json_encoding]
+
+  let f = Tc.f "remove_iterator" ~params_enc ~result_enc
+
+end
 
 (* TODO:
-
-unsubscribe – Cancels a subscription
-
-subscribe_collection – Creates a subscription
-
-suspend – Suspends network module to stop any network activity
-
-resume – Resumes network module to enable network activity
-
-find_last_shard_block – Returns ID of the last block in a specified account shard
-
-fetch_endpoints – Requests the list of alternative endpoints from server
-
-set_endpoints – Sets the list of endpoints to use on reinit
-
-get_endpoints – Requests the list of alternative endpoints from server
-
-query_transaction_tree – Returns transactions tree for specific message.
-
-create_block_iterator – Creates block iterator.
-
-resume_block_iterator – Resumes block iterator.
-
-create_transaction_iterator – Creates transaction iterator.
-
-resume_transaction_iterator – Resumes transaction iterator.
-
-iterator_next – Returns next available items.
 
 remove_iterator – Removes an iterator
 *)
@@ -270,3 +516,18 @@ let query_collection = Tc.request_sync QueryCollection.f
 let aggregate_collection = Tc.request_sync AggregateCollection.f
 let wait_for_collection = Tc.request_sync WaitForCollection.f
 let query_counterparties = Tc.request_sync QueryCounterparties.f
+let unsubscribe = Tc.request_sync Unsubscribe.f
+let subscribe_collection = Tc.request_sync SubscribeCollection.f
+let suspend = Tc.request_sync Suspend.f
+let resume = Tc.request_sync Resume.f
+let find_last_shard_block = Tc.request_sync FindLastShardBlock.f
+let fetch_endpoints = Tc.request_sync FetchEndpoints.f
+let set_endpoints = Tc.request_sync SetEndpoints.f
+let get_endpoints = Tc.request_sync GetEndpoints.f
+let query_transaction_tree = Tc.request_sync QueryTransactionTree.f
+let create_block_iterator = Tc.request_sync CreateBlockIterator.f
+let resume_block_iterator = Tc.request_sync ResumeBlockIterator.f
+let create_transaction_iterator = Tc.request_sync CreateTransactionIterator.f
+let resume_transaction_iterator = Tc.request_sync ResumeTransactionIterator.f
+let iterator_next = Tc.request_sync IteratorNext.f
+let remove_iterator = Tc.request_sync RemoveIterator.f

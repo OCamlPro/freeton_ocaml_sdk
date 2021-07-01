@@ -460,17 +460,103 @@ module MnemonicDeriveSignKeys = struct
   let f = Tc.f "mnemonic_derive_sign_keys" ~params_enc ~result_enc
 end
 
+module HDKeyXPrvFromMnemonic = struct
+
+  type params = {
+    phrase: string ;
+    dictionary: number option ; [@opt None]
+    word_count: number option ; [@opt None]
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    xprv: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "hdkey_xprv_from_mnemonic" ~params_enc ~result_enc
+end
+
+module HDKeyDeriveFromXPrv = struct
+
+  type params = {
+    xprv: string ;
+    child_index: number ;
+    hardened: bool ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    xprv: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "hdkey_derive_from_xprv" ~params_enc ~result_enc
+end
+
+module HDKeyDeriveFromXPrvPath = struct
+
+  type params = {
+    xprv: string ;
+    path: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    xprv: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "hdkey_derive_from_xprv_path" ~params_enc ~result_enc
+end
+
+module HDKeySecretFromXPrv = struct
+
+  type params = {
+    xprv: string
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    secret: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "hdkey_secret_from_xprv" ~params_enc ~result_enc
+end
+
+module HDKeyPublicFromXPrv = struct
+
+  type params = {
+    xprv: string
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    public: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "hdkey_public_from_xprv" ~params_enc ~result_enc
+end
+
+module Chacha20 = struct
+  type params = {
+    data: string ;
+    key: string ;
+    nonce: string ;
+  }
+  [@@deriving json_encoding]
+
+  type result = {
+    data: string
+  }
+  [@@deriving json_encoding]
+
+  let f = Tc.f "chacha20" ~params_enc ~result_enc
+end
+
 (* TODO:
-
-hdkey_xprv_from_mnemonic – Generates an extended master private key that will be the root for all the derived keys
-
-hdkey_derive_from_xprv – Returns extended private key derived from the specified extended private key and child index
-
-hdkey_derive_from_xprv_path – Derives the extended private key from the specified key and path
-
-hdkey_secret_from_xprv – Extracts the private key from the serialized extended private key
-
-hdkey_public_from_xprv – Extracts the public key from the serialized extended private key
 
 chacha20 – Performs symmetric chacha20 encryption.
 
@@ -526,3 +612,9 @@ let mnemonic_from_random =  Tc.request_sync MnemonicFromRandom.f
 let mnemonic_from_entropy =  Tc.request_sync MnemonicFromEntropy.f
 let mnemonic_verify =  Tc.request_sync MnemonicVerify.f
 let mnemonic_derive_sign_keys =  Tc.request_sync MnemonicDeriveSignKeys.f
+let hdkey_xprv_from_mnemonic = Tc.request_sync HDKeyXPrvFromMnemonic.f
+let hdkey_derive_from_xprv = Tc.request_sync HDKeyDeriveFromXPrv.f
+let hdkey_derive_from_xprv_path = Tc.request_sync HDKeyDeriveFromXPrvPath.f
+let hdkey_secret_from_xprv = Tc.request_sync HDKeySecretFromXPrv.f
+let hdkey_public_from_xprv = Tc.request_sync HDKeyPublicFromXPrv.f
+let chacha20 = Tc.request_sync Chacha20.f
