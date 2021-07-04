@@ -44,7 +44,7 @@ type response = {
 external has_response : unit -> bool = "has_tc_response_ml" [@@noalloc]
 external get_response : unit -> response = "get_tc_response_ml"
 
-external request  :
+external request_c  :
   int -> string -> string -> int -> unit = "tc_request_ml"
 
 let init_done = ref false
@@ -71,7 +71,7 @@ type ('params, 'result) f = {
 let f call_name ~params_enc ~result_enc =
   { call_name ; call_params = params_enc ; call_result = result_enc }
 
-let request_sync f context params =
+let request f context params =
   let r =
     request_sync_c context f.call_name
       ( EzEncoding.construct ~compact:true f.call_params params )

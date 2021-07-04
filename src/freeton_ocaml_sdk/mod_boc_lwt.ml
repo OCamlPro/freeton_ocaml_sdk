@@ -10,42 +10,18 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type context
+open Ton_client_lwt
+include Ton_client.BOC
 
-val create_context : string -> context
-val destroy_context : context -> unit
-
-val init : unit -> unit
-
-type response_kind =
-  | SUCCESS
-  | ERROR
-  | NOP
-  | APP_REQUEST
-  | APP_NOTIFY
-  | CUSTOM
-
-type response = {
-  id : int ;
-  params : string ;
-  kind : response_kind ;
-  finished : bool ;
-}
-
-val has_response : unit -> bool
-val get_response : unit -> response
-val request_c : context -> string -> string -> int -> unit
-
-
-type ('params, 'result) f = {
-  call_name : string ;
-  call_params : 'params Json_encoding.encoding ;
-  call_result : 'result Json_encoding.encoding ;
-}
-
-val f :
-  string ->
-  params_enc:'a Json_encoding.encoding ->
-  result_enc:'b Json_encoding.encoding -> ('a, 'b) f
-
-val request : ('a, 'b) f -> context -> 'a -> 'b
+let parse_message = Tc.request ParseMessage.f
+let parse_transaction = Tc.request ParseTransaction.f
+let parse_account = Tc.request ParseAccount.f
+let parse_block = Tc.request ParseBlock.f
+let parse_shardstate = Tc.request ParseShardstate.f
+let get_blockchain_config = Tc.request GetBlockchainConfig.f
+let get_boc_hash = Tc.request GetBocHash.f
+let get_code_from_tvc = Tc.request GetCodeFromTvc.f
+let cache_get = Tc.request BocCacheGet.f
+let cache_set = Tc.request BocCacheSet.f
+let cache_unpin = Tc.request BocCacheUnpin.f
+let encode_boc = Tc.request EncodeBoc.f

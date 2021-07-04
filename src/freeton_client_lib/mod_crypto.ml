@@ -558,8 +558,6 @@ end
 
 (* TODO:
 
-chacha20 – Performs symmetric chacha20 encryption.
-
 register_signing_box – Register an application implemented signing box.
 
 get_signing_box – Creates a default signing box implementation.
@@ -581,40 +579,40 @@ encryption_box_encrypt – Encrypts data using given encryption box
 encryption_box_decrypt – Decrypts data using given encryption box
 *)
 
-let factorize = Tc.request_sync Factorize.f
-let modular_power = Tc.request_sync ModularPower.f
-let ton_crc16 = Tc.request_sync TonCrc16.f
-let generate_random_bytes = Tc.request_sync GenerateRandomBytes.f
+let factorize = Tc.request Factorize.f
+let modular_power = Tc.request ModularPower.f
+let ton_crc16 = Tc.request TonCrc16.f
+let generate_random_bytes = Tc.request GenerateRandomBytes.f
 let convert_public_key_to_ton_safe_format =
-  Tc.request_sync ConvertPublicKeyToTonSafeFormat.f
+  Tc.request ConvertPublicKeyToTonSafeFormat.f
 let generate_random_sign_keys =
-  Tc.request_sync GenerateRandomSignKeys.f
-let sign = Tc.request_sync Sign.f
-let verify_signature = Tc.request_sync VerifySignature.f
-let sha256 = Tc.request_sync Sha256.f
-let sha512 = Tc.request_sync Sha512.f
-let scrypt = Tc.request_sync Scrypt.f
+  Tc.request GenerateRandomSignKeys.f
+let sign = Tc.request Sign.f
+let verify_signature = Tc.request VerifySignature.f
+let sha256 = Tc.request Sha256.f
+let sha512 = Tc.request Sha512.f
+let scrypt = Tc.request Scrypt.f
 let nacl_sign_keypair_from_secret_key =
-  Tc.request_sync NaclSignKeyPairFromSecret.f
-let nacl_sign = Tc.request_sync NaclSign.f
-let nacl_sign_open = Tc.request_sync NaclSignOpen.f
-let nacl_sign_detached = Tc.request_sync NaclSignDetached.f
-let nacl_sign_detached_verify = Tc.request_sync NaclSignDetachedVerify.f
-let nacl_box_keypair = Tc.request_sync NaclBoxKeyPair.f
+  Tc.request NaclSignKeyPairFromSecret.f
+let nacl_sign = Tc.request NaclSign.f
+let nacl_sign_open = Tc.request NaclSignOpen.f
+let nacl_sign_detached = Tc.request NaclSignDetached.f
+let nacl_sign_detached_verify = Tc.request NaclSignDetachedVerify.f
+let nacl_box_keypair = Tc.request NaclBoxKeyPair.f
 let nacl_box_keypair_from_secret_key =
-  Tc.request_sync NaclBoxKeyPairFromSecret.f
-let nacl_box =  Tc.request_sync NaclBox.f
-let nacl_box_open =  Tc.request_sync NaclBoxOpen.f
-let nacl_secret_box =  Tc.request_sync NaclSecretBox.f
-let nacl_secret_box_open =  Tc.request_sync NaclSecretBoxOpen.f
-let mnemonic_words =  Tc.request_sync MnemonicWords.f
-let mnemonic_from_random =  Tc.request_sync MnemonicFromRandom.f
-let mnemonic_from_entropy =  Tc.request_sync MnemonicFromEntropy.f
-let mnemonic_verify =  Tc.request_sync MnemonicVerify.f
-let mnemonic_derive_sign_keys =  Tc.request_sync MnemonicDeriveSignKeys.f
-let hdkey_xprv_from_mnemonic = Tc.request_sync HDKeyXPrvFromMnemonic.f
-let hdkey_derive_from_xprv = Tc.request_sync HDKeyDeriveFromXPrv.f
-let hdkey_derive_from_xprv_path = Tc.request_sync HDKeyDeriveFromXPrvPath.f
-let hdkey_secret_from_xprv = Tc.request_sync HDKeySecretFromXPrv.f
-let hdkey_public_from_xprv = Tc.request_sync HDKeyPublicFromXPrv.f
-let chacha20 = Tc.request_sync Chacha20.f
+  Tc.request NaclBoxKeyPairFromSecret.f
+let nacl_box =  Tc.request NaclBox.f
+let nacl_box_open =  Tc.request NaclBoxOpen.f
+let nacl_secret_box =  Tc.request NaclSecretBox.f
+let nacl_secret_box_open =  Tc.request NaclSecretBoxOpen.f
+let mnemonic_words =  Tc.request MnemonicWords.f
+let mnemonic_from_random =  Tc.request MnemonicFromRandom.f
+let mnemonic_from_entropy =  Tc.request MnemonicFromEntropy.f
+let mnemonic_verify =  Tc.request MnemonicVerify.f
+let mnemonic_derive_sign_keys =  Tc.request MnemonicDeriveSignKeys.f
+let hdkey_xprv_from_mnemonic = Tc.request HDKeyXPrvFromMnemonic.f
+let hdkey_derive_from_xprv = Tc.request HDKeyDeriveFromXPrv.f
+let hdkey_derive_from_xprv_path = Tc.request HDKeyDeriveFromXPrvPath.f
+let hdkey_secret_from_xprv = Tc.request HDKeySecretFromXPrv.f
+let hdkey_public_from_xprv = Tc.request HDKeyPublicFromXPrv.f
+let chacha20 = Tc.request Chacha20.f

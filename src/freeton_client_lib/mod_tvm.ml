@@ -159,6 +159,6 @@ module RunGet = struct
 
 end
 
-let run_executor = Tc.request_sync RunExecutor.f
-let run_tvm = Tc.request_sync RunTvm.f
-let run_get = Tc.request_sync RunGet.f
+let run_executor = Tc.request RunExecutor.f
+let run_tvm = Tc.request RunTvm.f
+let run_get = Tc.request RunGet.f

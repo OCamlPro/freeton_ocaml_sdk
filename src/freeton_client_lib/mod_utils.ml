@@ -108,7 +108,7 @@ module DecompressZstd = struct
 
 end
 
-let convert_address = Tc.request_sync ConvertAddress.f
-let calc_storage_fee = Tc.request_sync CalcStorageFee.f
-let compress_zstd = Tc.request_sync CompressZstd.f
-let decompress_zstd = Tc.request_sync DecompressZstd.f
+let convert_address = Tc.request ConvertAddress.f
+let calc_storage_fee = Tc.request CalcStorageFee.f
+let compress_zstd = Tc.request CompressZstd.f
+let decompress_zstd = Tc.request DecompressZstd.f
