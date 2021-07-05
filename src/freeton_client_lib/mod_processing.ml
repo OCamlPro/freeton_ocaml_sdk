@@ -91,6 +91,6 @@ module ProcessMessage = struct
   let f = Tc.f "process_message" ~params_enc ~result_enc
 end
 
-let send_message = Tc.request_sync SendMessage.f
-let wait_for_transaction = Tc.request_sync WaitForTransaction.f
-let process_message = Tc.request_sync ProcessMessage.f
+let send_message = Tc.request SendMessage.f
+let wait_for_transaction = Tc.request WaitForTransaction.f
+let process_message = Tc.request ProcessMessage.f

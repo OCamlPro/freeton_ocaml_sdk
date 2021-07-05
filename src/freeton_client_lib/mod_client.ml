@@ -233,8 +233,10 @@ module ResolveAppRequest = struct
 end
 
 
+let create = Client.create
+let destroy = Client.destroy
 
-let get_api_reference = Tc.request_sync GetApiReference.f
-let version = Tc.request_sync Version.f
-let build_info = Tc.request_sync BuildInfo.f
-let resolve_app_request = Tc.request_sync ResolveAppRequest.f
+let get_api_reference = Tc.request GetApiReference.f
+let version = Tc.request Version.f
+let build_info = Tc.request BuildInfo.f
+let resolve_app_request = Tc.request ResolveAppRequest.f

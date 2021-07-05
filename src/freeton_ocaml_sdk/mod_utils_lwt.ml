@@ -10,42 +10,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type context
+open Ton_client_lwt
+include Ton_client.UTILS
 
-val create_context : string -> context
-val destroy_context : context -> unit
-
-val init : unit -> unit
-
-type response_kind =
-  | SUCCESS
-  | ERROR
-  | NOP
-  | APP_REQUEST
-  | APP_NOTIFY
-  | CUSTOM
-
-type response = {
-  id : int ;
-  params : string ;
-  kind : response_kind ;
-  finished : bool ;
-}
-
-val has_response : unit -> bool
-val get_response : unit -> response
-val request_c : context -> string -> string -> int -> unit
-
-
-type ('params, 'result) f = {
-  call_name : string ;
-  call_params : 'params Json_encoding.encoding ;
-  call_result : 'result Json_encoding.encoding ;
-}
-
-val f :
-  string ->
-  params_enc:'a Json_encoding.encoding ->
-  result_enc:'b Json_encoding.encoding -> ('a, 'b) f
-
-val request : ('a, 'b) f -> context -> 'a -> 'b
+let convert_address = Tc.request ConvertAddress.f
+let calc_storage_fee = Tc.request CalcStorageFee.f
+let compress_zstd = Tc.request CompressZstd.f
+let decompress_zstd = Tc.request DecompressZstd.f

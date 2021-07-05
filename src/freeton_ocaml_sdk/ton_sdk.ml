@@ -121,5 +121,16 @@ end = struct
 
 end
 
-module TC = Ton_client.TC
-module TC_lwt = Ton_client_lwt
+module Ton_client = Ton_client
+module Ton_client_lwt = struct
+
+  module ABI = Mod_abi_lwt
+  module BOC = Mod_boc_lwt
+  module CLIENT = Mod_client_lwt
+  module CRYPTO = Mod_crypto_lwt
+  module DEBOT = Mod_debot_lwt
+  module NET = Mod_net_lwt
+  module PROCESSING = Mod_processing_lwt
+  module TVM = Mod_tvm_lwt
+  module UTILS = Mod_utils_lwt
+end

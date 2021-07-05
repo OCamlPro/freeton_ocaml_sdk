@@ -505,29 +505,24 @@ module RemoveIterator = struct
 
 end
 
-(* TODO:
-
-remove_iterator – Removes an iterator
-*)
-
-let query = Tc.request_sync Query.f
-let batch_query = Tc.request_sync BatchQuery.f
-let query_collection = Tc.request_sync QueryCollection.f
-let aggregate_collection = Tc.request_sync AggregateCollection.f
-let wait_for_collection = Tc.request_sync WaitForCollection.f
-let query_counterparties = Tc.request_sync QueryCounterparties.f
-let unsubscribe = Tc.request_sync Unsubscribe.f
-let subscribe_collection = Tc.request_sync SubscribeCollection.f
-let suspend = Tc.request_sync Suspend.f
-let resume = Tc.request_sync Resume.f
-let find_last_shard_block = Tc.request_sync FindLastShardBlock.f
-let fetch_endpoints = Tc.request_sync FetchEndpoints.f
-let set_endpoints = Tc.request_sync SetEndpoints.f
-let get_endpoints = Tc.request_sync GetEndpoints.f
-let query_transaction_tree = Tc.request_sync QueryTransactionTree.f
-let create_block_iterator = Tc.request_sync CreateBlockIterator.f
-let resume_block_iterator = Tc.request_sync ResumeBlockIterator.f
-let create_transaction_iterator = Tc.request_sync CreateTransactionIterator.f
-let resume_transaction_iterator = Tc.request_sync ResumeTransactionIterator.f
-let iterator_next = Tc.request_sync IteratorNext.f
-let remove_iterator = Tc.request_sync RemoveIterator.f
+let query = Tc.request Query.f
+let batch_query = Tc.request BatchQuery.f
+let query_collection = Tc.request QueryCollection.f
+let aggregate_collection = Tc.request AggregateCollection.f
+let wait_for_collection = Tc.request WaitForCollection.f
+let query_counterparties = Tc.request QueryCounterparties.f
+let unsubscribe = Tc.request Unsubscribe.f
+let subscribe_collection = Tc.request SubscribeCollection.f
+let suspend = Tc.request Suspend.f
+let resume = Tc.request Resume.f
+let find_last_shard_block = Tc.request FindLastShardBlock.f
+let fetch_endpoints = Tc.request FetchEndpoints.f
+let set_endpoints = Tc.request SetEndpoints.f
+let get_endpoints = Tc.request GetEndpoints.f
+let query_transaction_tree = Tc.request QueryTransactionTree.f
+let create_block_iterator = Tc.request CreateBlockIterator.f
+let resume_block_iterator = Tc.request ResumeBlockIterator.f
+let create_transaction_iterator = Tc.request CreateTransactionIterator.f
+let resume_transaction_iterator = Tc.request ResumeTransactionIterator.f
+let iterator_next = Tc.request IteratorNext.f
+let remove_iterator = Tc.request RemoveIterator.f

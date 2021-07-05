@@ -234,15 +234,15 @@ module EncodeBoc = struct
 end
 
 
-let parse_message = Tc.request_sync ParseMessage.f
-let parse_transaction = Tc.request_sync ParseTransaction.f
-let parse_account = Tc.request_sync ParseAccount.f
-let parse_block = Tc.request_sync ParseBlock.f
-let parse_shardstate = Tc.request_sync ParseShardstate.f
-let get_blockchain_config = Tc.request_sync GetBlockchainConfig.f
-let get_boc_hash = Tc.request_sync GetBocHash.f
-let get_code_from_tvc = Tc.request_sync GetCodeFromTvc.f
-let cache_get = Tc.request_sync BocCacheGet.f
-let cache_set = Tc.request_sync BocCacheSet.f
-let cache_unpin = Tc.request_sync BocCacheUnpin.f
-let encode_boc = Tc.request_sync EncodeBoc.f
+let parse_message = Tc.request ParseMessage.f
+let parse_transaction = Tc.request ParseTransaction.f
+let parse_account = Tc.request ParseAccount.f
+let parse_block = Tc.request ParseBlock.f
+let parse_shardstate = Tc.request ParseShardstate.f
+let get_blockchain_config = Tc.request GetBlockchainConfig.f
+let get_boc_hash = Tc.request GetBocHash.f
+let get_code_from_tvc = Tc.request GetCodeFromTvc.f
+let cache_get = Tc.request BocCacheGet.f
+let cache_set = Tc.request BocCacheSet.f
+let cache_unpin = Tc.request BocCacheUnpin.f
+let encode_boc = Tc.request EncodeBoc.f

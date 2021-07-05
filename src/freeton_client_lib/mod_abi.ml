@@ -418,13 +418,13 @@ module EncodeAccount = struct
 
 end
 
-let encode_message_body = Tc.request_sync EncodeMessageBody.f
+let encode_message_body = Tc.request EncodeMessageBody.f
 let attach_signature_to_message_body =
-  Tc.request_sync AttachSignatureToMessageBody.f
-let encode_message = Tc.request_sync EncodeMessage.f
-let encode_internal_message = Tc.request_sync EncodeInternalMessage.f
+  Tc.request AttachSignatureToMessageBody.f
+let encode_message = Tc.request EncodeMessage.f
+let encode_internal_message = Tc.request EncodeInternalMessage.f
 let attach_signature =
-  Tc.request_sync AttachSignature.f
-let decode_message = Tc.request_sync DecodeMessage.f
-let decode_message_body = Tc.request_sync DecodeMessageBody.f
-let encode_account = Tc.request_sync EncodeAccount.f
+  Tc.request AttachSignature.f
+let decode_message = Tc.request DecodeMessage.f
+let decode_message_body = Tc.request DecodeMessageBody.f
+let encode_account = Tc.request EncodeAccount.f
