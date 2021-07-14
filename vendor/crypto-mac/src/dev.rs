@@ -1,31 +1,34 @@
+//! Development-related functionality
 
+pub use blobby;
+
+/// Define test
 #[macro_export]
+#[cfg_attr(docsrs, doc(cfg(feature = "dev")))]
 macro_rules! new_test {
     ($name:ident, $test_name:expr, $mac:ty) => {
         #[test]
         fn $name() {
-            use crypto_mac::Mac;
-            use crypto_mac::blobby::Blob3Iterator;
+            use crypto_mac::dev::blobby::Blob3Iterator;
+            use crypto_mac::{Mac, NewMac};
 
-            fn run_test(key: &[u8], input: &[u8], tag: &[u8])
-                -> Option<&'static str>
-            {
-                let mut mac = <$mac as Mac>::new_varkey(key).unwrap();
-                mac.input(input);
-                let result = mac.result_reset();
-                if &result.code()[..] != tag {
+            fn run_test(key: &[u8], input: &[u8], tag: &[u8]) -> Option<&'static str> {
+                let mut mac = <$mac as NewMac>::new_varkey(key).unwrap();
+                mac.update(input);
+                let result = mac.finalize_reset();
+                if &result.into_bytes()[..] != tag {
                     return Some("whole message");
                 }
                 // test if reset worked correctly
-                mac.input(input);
+                mac.update(input);
                 if mac.verify(&tag).is_err() {
                     return Some("after reset");
                 }
 
-                let mut mac = <$mac as Mac>::new_varkey(key).unwrap();
+                let mut mac = <$mac as NewMac>::new_varkey(key).unwrap();
                 // test reading byte by byte
                 for i in 0..input.len() {
-                    mac.input(&input[i..i + 1]);
+                    mac.update(&input[i..i + 1]);
                 }
                 if let Err(_) = mac.verify(tag) {
                     return Some("message byte-by-byte");
@@ -36,34 +39,35 @@ macro_rules! new_test {
             let data = include_bytes!(concat!("data/", $test_name, ".blb"));
 
             for (i, row) in Blob3Iterator::new(data).unwrap().enumerate() {
-                let key = row[0];
-                let input = row[1];
-                let tag = row[2];
+                let [key, input, tag] = row.unwrap();
                 if let Some(desc) = run_test(key, input, tag) {
-                    panic!("\n\
-                        Failed test №{}: {}\n\
-                        key:\t{:?}\n\
-                        input:\t{:?}\n\
-                        tag:\t{:?}\n",
+                    panic!(
+                        "\n\
+                         Failed test №{}: {}\n\
+                         key:\t{:?}\n\
+                         input:\t{:?}\n\
+                         tag:\t{:?}\n",
                         i, desc, key, input, tag,
                     );
                 }
             }
         }
-    }
+    };
 }
 
+/// Define benchmark
 #[macro_export]
+#[cfg_attr(docsrs, doc(cfg(feature = "dev")))]
 macro_rules! bench {
     ($name:ident, $engine:path, $bs:expr) => {
         #[bench]
         fn $name(b: &mut Bencher) {
             let key = Default::default();
-            let mut m = <$engine>::new(&key);
+            let mut mac = <$engine>::new(&key);
             let data = [0; $bs];
 
             b.iter(|| {
-                m.input(&data);
+                mac.update(&data);
             });
 
             b.bytes = $bs;
@@ -73,12 +77,12 @@ macro_rules! bench {
     ($engine:path) => {
         extern crate test;
 
+        use crypto_mac::{Mac, NewMac};
         use test::Bencher;
-        use crypto_mac::Mac;
 
-        bench!(bench1_10,    $engine, 10);
-        bench!(bench2_100,   $engine, 100);
-        bench!(bench3_1000,  $engine, 1000);
-        bench!(bench3_10000, $engine, 10000);
-    }
+        $crate::bench!(bench1_10, $engine, 10);
+        $crate::bench!(bench2_100, $engine, 100);
+        $crate::bench!(bench3_1000, $engine, 1000);
+        $crate::bench!(bench3_10000, $engine, 10000);
+    };
 }

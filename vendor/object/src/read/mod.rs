@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use core::{fmt, result};
 
 use crate::common::*;
-use crate::{ByteString, Endianness};
+use crate::ByteString;
 
 mod read_ref;
 pub use read_ref::*;
@@ -18,7 +18,21 @@ pub use read_cache::*;
 mod util;
 pub use util::StringTable;
 
+#[cfg(any(
+    feature = "coff",
+    feature = "elf",
+    feature = "macho",
+    feature = "pe",
+    feature = "wasm"
+))]
 mod any;
+#[cfg(any(
+    feature = "coff",
+    feature = "elf",
+    feature = "macho",
+    feature = "pe",
+    feature = "wasm"
+))]
 pub use any::*;
 
 #[cfg(feature = "archive")]
@@ -86,7 +100,7 @@ impl<T> ReadError<T> for Option<T> {
     target_pointer_width = "32",
     feature = "elf"
 ))]
-pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile32<'data, Endianness, R>;
+pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile32<'data, crate::Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(
@@ -95,15 +109,15 @@ pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile32<'data, Endianness, 
     target_pointer_width = "64",
     feature = "elf"
 ))]
-pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile64<'data, Endianness, R>;
+pub type NativeFile<'data, R = &'data [u8]> = elf::ElfFile64<'data, crate::Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "macos", target_pointer_width = "32", feature = "macho"))]
-pub type NativeFile<'data, R = &'data [u8]> = macho::MachOFile32<'data, Endianness, R>;
+pub type NativeFile<'data, R = &'data [u8]> = macho::MachOFile32<'data, crate::Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "macos", target_pointer_width = "64", feature = "macho"))]
-pub type NativeFile<'data, R = &'data [u8]> = macho::MachOFile64<'data, Endianness, R>;
+pub type NativeFile<'data, R = &'data [u8]> = macho::MachOFile64<'data, crate::Endianness, R>;
 
 /// The native executable file for the target platform.
 #[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "pe"))]
@@ -118,7 +132,7 @@ pub type NativeFile<'data, R = &'data [u8]> = pe::PeFile64<'data, R>;
 pub type NativeFile<'data, R = &'data [u8]> = wasm::WasmFile<'data, R>;
 
 /// An object file kind.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum FileKind {
     /// A Unix archive.
@@ -127,6 +141,9 @@ pub enum FileKind {
     /// A COFF object file.
     #[cfg(feature = "coff")]
     Coff,
+    /// A dyld cache file containing Mach-O images.
+    #[cfg(feature = "macho")]
+    DyldCache,
     /// A 32-bit ELF file.
     #[cfg(feature = "elf")]
     Elf32,
@@ -159,8 +176,13 @@ pub enum FileKind {
 impl FileKind {
     /// Determine a file kind by parsing the start of the file.
     pub fn parse<'data, R: ReadRef<'data>>(data: R) -> Result<FileKind> {
+        Self::parse_at(data, 0)
+    }
+
+    /// Determine a file kind by parsing at the given offset.
+    pub fn parse_at<'data, R: ReadRef<'data>>(data: R, offset: u64) -> Result<FileKind> {
         let magic = data
-            .read_bytes_at(0, 16)
+            .read_bytes_at(offset, 16)
             .read_error("Could not read file magic")?;
         if magic.len() < 16 {
             return Err(Error("File too short"));
@@ -169,6 +191,8 @@ impl FileKind {
         let kind = match [magic[0], magic[1], magic[2], magic[3], magic[4], magic[5], magic[6], magic[7]] {
             #[cfg(feature = "archive")]
             [b'!', b'<', b'a', b'r', b'c', b'h', b'>', b'\n'] => FileKind::Archive,
+            #[cfg(feature = "macho")]
+            [b'd', b'y', b'l', b'd', b'_', b'v', b'1', b' '] => FileKind::DyldCache,
             #[cfg(feature = "elf")]
             [0x7f, b'E', b'L', b'F', 1, ..] => FileKind::Elf32,
             #[cfg(feature = "elf")]
@@ -223,6 +247,7 @@ pub struct SymbolIndex(pub usize);
 
 /// The section where a symbol is defined.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum SymbolSection {
     /// The section is unknown.
     Unknown,
@@ -442,15 +467,44 @@ impl<'data> Export<'data> {
         self.name.0
     }
 
-    /// The symbol address.
+    /// The virtual address of the symbol.
     #[inline]
     pub fn address(&self) -> u64 {
         self.address
     }
 }
 
+/// PDB Information
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CodeView<'data> {
+    guid: [u8; 16],
+    path: ByteString<'data>,
+    age: u32,
+}
+
+impl<'data> CodeView<'data> {
+    /// The path to the PDB as stored in CodeView
+    #[inline]
+    pub fn path(&self) -> &'data [u8] {
+        self.path.0
+    }
+
+    /// The age of the PDB
+    #[inline]
+    pub fn age(&self) -> u32 {
+        self.age
+    }
+
+    /// The GUID of the PDB.
+    #[inline]
+    pub fn guid(&self) -> [u8; 16] {
+        self.guid
+    }
+}
+
 /// The target referenced by a relocation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum RelocationTarget {
     /// The target is a symbol.
     Symbol(SymbolIndex),
@@ -520,6 +574,7 @@ impl Relocation {
 
 /// A data compression format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum CompressionFormat {
     /// The data is uncompressed.
     None,

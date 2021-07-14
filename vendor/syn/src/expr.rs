@@ -851,6 +851,24 @@ ast_enum! {
     }
 }
 
+impl From<Ident> for Member {
+    fn from(ident: Ident) -> Member {
+        Member::Named(ident)
+    }
+}
+
+impl From<Index> for Member {
+    fn from(index: Index) -> Member {
+        Member::Unnamed(index)
+    }
+}
+
+impl From<usize> for Member {
+    fn from(index: usize) -> Member {
+        Member::Unnamed(Index::from(index))
+    }
+}
+
 impl Eq for Member {}
 
 impl PartialEq for Member {
@@ -2926,7 +2944,7 @@ pub(crate) mod printing {
             self.bracket_token.surround(tokens, |tokens| {
                 inner_attrs_to_tokens(&self.attrs, tokens);
                 self.elems.to_tokens(tokens);
-            })
+            });
         }
     }
 
@@ -2937,7 +2955,7 @@ pub(crate) mod printing {
             self.func.to_tokens(tokens);
             self.paren_token.surround(tokens, |tokens| {
                 self.args.to_tokens(tokens);
-            })
+            });
         }
     }
 
@@ -2991,7 +3009,7 @@ pub(crate) mod printing {
                 if self.elems.len() == 1 && !self.elems.trailing_punct() {
                     <Token![,]>::default().to_tokens(tokens);
                 }
-            })
+            });
         }
     }
 
@@ -3389,7 +3407,7 @@ pub(crate) mod printing {
                     Token![..](Span::call_site()).to_tokens(tokens);
                 }
                 self.rest.to_tokens(tokens);
-            })
+            });
         }
     }
 
@@ -3403,7 +3421,7 @@ pub(crate) mod printing {
                 self.expr.to_tokens(tokens);
                 self.semi_token.to_tokens(tokens);
                 self.len.to_tokens(tokens);
-            })
+            });
         }
     }
 

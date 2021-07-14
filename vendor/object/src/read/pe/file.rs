@@ -2,12 +2,16 @@ use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::{mem, str};
 
+use core::convert::TryInto;
+
 use crate::read::coff::{CoffCommon, CoffSymbol, CoffSymbolIterator, CoffSymbolTable, SymbolTable};
 use crate::read::{
     self, Architecture, ComdatKind, Error, Export, FileFlags, Import, NoDynamicRelocationIterator,
     Object, ObjectComdat, ReadError, ReadRef, Result, SectionIndex, SymbolIndex,
 };
-use crate::{pe, ByteString, Bytes, LittleEndian as LE, Pod, U16Bytes, U32Bytes, U32, U64};
+use crate::{
+    pe, ByteString, Bytes, CodeView, LittleEndian as LE, Pod, U16Bytes, U32Bytes, U32, U64,
+};
 
 use super::{PeSection, PeSectionIterator, PeSegment, PeSegmentIterator, SectionTable};
 
@@ -42,7 +46,7 @@ where
         let (nt_headers, data_directories) = Pe::parse(data, &mut offset)?;
         let sections = nt_headers.sections(data, offset)?;
         let symbols = nt_headers.symbols(data)?;
-        let image_base = u64::from(nt_headers.optional_header().image_base());
+        let image_base = nt_headers.optional_header().image_base();
 
         Ok(PeFile {
             dos_header,
@@ -108,7 +112,8 @@ where
 
     fn architecture(&self) -> Architecture {
         match self.nt_headers.file_header().machine.get(LE) {
-            // TODO: Arm/Arm64
+            pe::IMAGE_FILE_MACHINE_ARMNT => Architecture::Arm,
+            pe::IMAGE_FILE_MACHINE_ARM64 => Architecture::Aarch64,
             pe::IMAGE_FILE_MACHINE_I386 => Architecture::I386,
             pe::IMAGE_FILE_MACHINE_AMD64 => Architecture::X86_64,
             _ => Architecture::Unknown,
@@ -328,12 +333,68 @@ where
         Ok(exports)
     }
 
+    fn pdb_info(&self) -> Result<Option<CodeView>> {
+        let data_dir = match self.data_directory(pe::IMAGE_DIRECTORY_ENTRY_DEBUG) {
+            Some(data_dir) => data_dir,
+            None => return Ok(None),
+        };
+        let debug_data = data_dir.data(self.data, &self.common.sections).map(Bytes)?;
+        let debug_dir = debug_data
+            .read_at::<pe::ImageDebugDirectory>(0)
+            .read_error("Invalid PE debug dir size")?;
+
+        if debug_dir.typ.get(LE) != pe::IMAGE_DEBUG_TYPE_CODEVIEW {
+            return Ok(None);
+        }
+
+        let info = self
+            .data
+            .read_slice_at::<u8>(
+                debug_dir.pointer_to_raw_data.get(LE) as u64,
+                debug_dir.size_of_data.get(LE) as usize,
+            )
+            .read_error("Invalid CodeView Info address")?;
+
+        let mut info = Bytes(info);
+
+        let sig = info
+            .read_bytes(4)
+            .read_error("Invalid CodeView signature")?;
+        if sig.0 != b"RSDS" {
+            return Ok(None);
+        }
+
+        let guid: [u8; 16] = info
+            .read_bytes(16)
+            .read_error("Invalid CodeView GUID")?
+            .0
+            .try_into()
+            .unwrap();
+
+        let age = info.read::<U32<LE>>().read_error("Invalid CodeView Age")?;
+
+        let path = info
+            .read_string()
+            .read_error("Invalid CodeView file path")?;
+
+        Ok(Some(CodeView {
+            path: ByteString(path),
+            guid,
+            age: age.get(LE),
+        }))
+    }
+
     fn has_debug_symbols(&self) -> bool {
         self.section_by_name(".debug_info").is_some()
     }
 
+    fn relative_address_base(&self) -> u64 {
+        self.common.image_base
+    }
+
     fn entry(&self) -> u64 {
         u64::from(self.nt_headers.optional_header().address_of_entry_point())
+            .wrapping_add(self.common.image_base)
     }
 
     fn flags(&self) -> FileFlags {

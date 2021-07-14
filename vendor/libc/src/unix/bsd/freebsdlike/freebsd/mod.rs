@@ -14,9 +14,16 @@ pub type key_t = ::c_long;
 pub type msglen_t = ::c_ulong;
 pub type msgqnum_t = ::c_ulong;
 
+pub type cpulevel_t = ::c_int;
+pub type cpuwhich_t = ::c_int;
+
 pub type mqd_t = *mut ::c_void;
 pub type posix_spawnattr_t = *mut ::c_void;
 pub type posix_spawn_file_actions_t = *mut ::c_void;
+
+pub type pthread_spinlock_t = *mut __c_anonymous_pthread_spinlock;
+pub type pthread_barrierattr_t = *mut __c_anonymous_pthread_barrierattr;
+pub type pthread_barrier_t = *mut __c_anonymous_pthread_barrier;
 
 s! {
     pub struct aiocb {
@@ -109,6 +116,11 @@ s! {
         pub sc_groups: [::gid_t; 1],
     }
 
+    pub struct accept_filter_arg {
+        pub af_name: [::c_char; 16],
+        af_arg: [[::c_char; 10]; 24],
+    }
+
     pub struct ptrace_vm_entry {
         pub pve_entry: ::c_int,
         pub pve_timestamp: ::c_int,
@@ -120,6 +132,53 @@ s! {
         pub pve_fileid: ::c_long,
         pub pve_fsid: u32,
         pub pve_path: *mut ::c_char,
+    }
+
+    pub struct cpuset_t {
+        #[cfg(target_pointer_width = "64")]
+        __bits: [::c_long; 4],
+        #[cfg(target_pointer_width = "32")]
+        __bits: [::c_long; 8],
+    }
+
+    pub struct cap_rights_t {
+        cr_rights: [u64; 2],
+    }
+
+    pub struct umutex {
+        m_owner: ::lwpid_t,
+        m_flags: u32,
+        m_ceilings: [u32; 2],
+        m_rb_link: ::uintptr_t,
+        #[cfg(target_pointer_width = "32")]
+        m_pad: u32,
+        m_spare: [u32; 2],
+
+    }
+
+    pub struct ucond {
+        c_has_waiters: u32,
+        c_flags: u32,
+        c_clockid: u32,
+        c_spare: [u32; 1],
+    }
+
+    pub struct __c_anonymous_pthread_spinlock {
+        s_clock: umutex,
+    }
+
+    pub struct __c_anonymous_pthread_barrierattr {
+        pshared: ::c_int,
+    }
+
+    pub struct __c_anonymous_pthread_barrier {
+        b_lock: umutex,
+        b_cv: ucond,
+        b_cycle: i64,
+        b_count: ::c_int,
+        b_waiters: ::c_int,
+        b_refcount: ::c_int,
+        b_destroying: ::c_int,
     }
 }
 
@@ -448,6 +507,7 @@ pub const Q_GETQUOTA: ::c_int = 0x700;
 pub const Q_SETQUOTA: ::c_int = 0x800;
 
 pub const MAP_GUARD: ::c_int = 0x00002000;
+pub const MAP_ALIGNED_SUPER: ::c_int = 1 << 24;
 
 pub const POSIX_FADV_NORMAL: ::c_int = 0;
 pub const POSIX_FADV_RANDOM: ::c_int = 1;
@@ -691,6 +751,16 @@ pub const JAIL_GET_MASK: ::c_int = 0x08;
 pub const JAIL_SYS_DISABLE: ::c_int = 0;
 pub const JAIL_SYS_NEW: ::c_int = 1;
 pub const JAIL_SYS_INHERIT: ::c_int = 2;
+
+pub const MNT_ACLS: ::c_int = 0x08000000;
+pub const MNT_BYFSID: ::c_int = 0x08000000;
+pub const MNT_GJOURNAL: ::c_int = 0x02000000;
+pub const MNT_MULTILABEL: ::c_int = 0x04000000;
+pub const MNT_NFS4ACLS: ::c_int = 0x00000010;
+pub const MNT_SNAPSHOT: ::c_int = 0x01000000;
+pub const MNT_UNION: ::c_int = 0x00000020;
+pub const MNT_EXPUBLIC: ::c_int = 0x20000000;
+pub const MNT_NONBUSY: ::c_int = 0x04000000;
 
 pub const SO_BINTIME: ::c_int = 0x2000;
 pub const SO_NO_OFFLOAD: ::c_int = 0x4000;
@@ -1213,6 +1283,23 @@ pub const F_READAHEAD: ::c_int = 15;
 pub const F_RDAHEAD: ::c_int = 16;
 pub const F_DUP2FD_CLOEXEC: ::c_int = 18;
 
+// For realhostname* api
+pub const HOSTNAME_FOUND: ::c_int = 0;
+pub const HOSTNAME_INCORRECTNAME: ::c_int = 1;
+pub const HOSTNAME_INVALIDADDR: ::c_int = 2;
+pub const HOSTNAME_INVALIDNAME: ::c_int = 3;
+
+// For rfork
+pub const RFFDG: ::c_int = 4;
+pub const RFPROC: ::c_int = 16;
+pub const RFMEM: ::c_int = 32;
+pub const RFNOWAIT: ::c_int = 64;
+pub const RFCFDG: ::c_int = 4096;
+pub const RFTHREAD: ::c_int = 8192;
+pub const RFLINUXTHPN: ::c_int = 65536;
+pub const RFTSIGZMB: ::c_int = 524288;
+pub const RFSPAWN: ::c_int = 2147483648;
+
 const_fn! {
     {const} fn _ALIGN(p: usize) -> usize {
         (p + _ALIGNBYTES) & !_ALIGNBYTES
@@ -1263,6 +1350,38 @@ f! {
 
     pub fn uname(buf: *mut ::utsname) -> ::c_int {
         __xuname(256, buf as *mut ::c_void)
+    }
+
+    pub fn CPU_ZERO(cpuset: &mut cpuset_t) -> () {
+        for slot in cpuset.__bits.iter_mut() {
+            *slot = 0;
+        }
+    }
+
+    pub fn CPU_FILL(cpuset: &mut cpuset_t) -> () {
+        for slot in cpuset.__bits.iter_mut() {
+            *slot = !0;
+        }
+    }
+
+    pub fn CPU_SET(cpu: usize, cpuset: &mut cpuset_t) -> () {
+        let bitset_bits = ::mem::size_of::<::c_long>();
+        let (idx, offset) = (cpu / bitset_bits, cpu % bitset_bits);
+        cpuset.__bits[idx] |= 1 << offset;
+        ()
+    }
+
+    pub fn CPU_CLR(cpu: usize, cpuset: &mut cpuset_t) -> () {
+        let bitset_bits = ::mem::size_of::<::c_long>();
+        let (idx, offset) = (cpu / bitset_bits, cpu % bitset_bits);
+        cpuset.__bits[idx] &= !(1 << offset);
+        ()
+    }
+
+    pub fn CPU_ISSET(cpu: usize, cpuset: &mut cpuset_t) -> bool {
+        let bitset_bits = ::mem::size_of::<::c_long>();
+        let (idx, offset) = (cpu / bitset_bits, cpu % bitset_bits);
+        0 != cpuset.__bits[idx] & (1 << offset)
     }
 }
 
@@ -1497,6 +1616,24 @@ extern "C" {
         newfd: ::c_int,
     ) -> ::c_int;
 
+    pub fn pthread_getthreadid_np() -> ::c_int;
+    pub fn pthread_getaffinity_np(
+        td: ::pthread_t,
+        cpusetsize: ::size_t,
+        cpusetp: *mut cpuset_t,
+    ) -> ::c_int;
+    pub fn pthread_setaffinity_np(
+        td: ::pthread_t,
+        cpusetsize: ::size_t,
+        cpusetp: *const cpuset_t,
+    ) -> ::c_int;
+
+    pub fn pthread_spin_init(lock: *mut pthread_spinlock_t, pshared: ::c_int) -> ::c_int;
+    pub fn pthread_spin_destroy(lock: *mut pthread_spinlock_t) -> ::c_int;
+    pub fn pthread_spin_lock(lock: *mut pthread_spinlock_t) -> ::c_int;
+    pub fn pthread_spin_trylock(lock: *mut pthread_spinlock_t) -> ::c_int;
+    pub fn pthread_spin_unlock(lock: *mut pthread_spinlock_t) -> ::c_int;
+
     #[cfg_attr(all(target_os = "freebsd", freebsd11), link_name = "statfs@FBSD_1.0")]
     pub fn statfs(path: *const ::c_char, buf: *mut statfs) -> ::c_int;
     #[cfg_attr(all(target_os = "freebsd", freebsd11), link_name = "fstatfs@FBSD_1.0")]
@@ -1526,6 +1663,37 @@ extern "C" {
     ) -> *mut ::c_void;
 
     pub fn nmount(iov: *mut ::iovec, niov: ::c_uint, flags: ::c_int) -> ::c_int;
+    pub fn setproctitle(fmt: *const ::c_char, ...);
+    pub fn rfork(flags: ::c_int) -> ::c_int;
+    pub fn cpuset_getaffinity(
+        level: cpulevel_t,
+        which: cpuwhich_t,
+        id: ::id_t,
+        setsize: ::size_t,
+        mask: *mut cpuset_t,
+    ) -> ::c_int;
+    pub fn cpuset_setaffinity(
+        level: cpulevel_t,
+        which: cpuwhich_t,
+        id: ::id_t,
+        setsize: ::size_t,
+        mask: *const cpuset_t,
+    ) -> ::c_int;
+    pub fn cap_enter() -> ::c_int;
+    pub fn cap_getmode(modep: *mut ::c_uint) -> ::c_int;
+    pub fn __cap_rights_init(version: ::c_int, rights: *mut cap_rights_t, ...)
+        -> *mut cap_rights_t;
+    pub fn __cap_rights_set(rights: *mut cap_rights_t, ...) -> *mut cap_rights_t;
+    pub fn __cap_rights_clear(rights: *mut cap_rights_t, ...) -> *mut cap_rights_t;
+    pub fn __cap_rights_is_set(rights: *const cap_rights_t, ...) -> bool;
+    pub fn cap_rights_is_valid(rights: *const cap_rights_t) -> bool;
+    pub fn cap_rights_limit(fd: ::c_int, rights: *const cap_rights_t) -> ::c_int;
+    pub fn cap_rights_merge(dst: *mut cap_rights_t, src: *const cap_rights_t) -> *mut cap_rights_t;
+    pub fn cap_rights_remove(dst: *mut cap_rights_t, src: *const cap_rights_t)
+        -> *mut cap_rights_t;
+    pub fn cap_rights_contains(big: *const cap_rights_t, little: *const cap_rights_t) -> bool;
+
+    pub fn reallocarray(ptr: *mut ::c_void, nmemb: ::size_t, size: ::size_t) -> *mut ::c_void;
 }
 
 #[link(name = "util")]
@@ -1537,6 +1705,13 @@ extern "C" {
     pub fn extattr_string_to_namespace(
         string: *const ::c_char,
         attrnamespace: *mut ::c_int,
+    ) -> ::c_int;
+    pub fn realhostname(host: *mut ::c_char, hsize: ::size_t, ip: *const ::in_addr) -> ::c_int;
+    pub fn realhostname_sa(
+        host: *mut ::c_char,
+        hsize: ::size_t,
+        addr: *mut ::sockaddr,
+        addrlen: ::c_int,
     ) -> ::c_int;
 }
 
@@ -1571,6 +1746,9 @@ cfg_if! {
     } else if #[cfg(target_arch = "powerpc64")] {
         mod powerpc64;
         pub use self::powerpc64::*;
+    } else if #[cfg(target_arch = "powerpc")] {
+        mod powerpc;
+        pub use self::powerpc::*;
     } else {
         // Unknown target_arch
     }

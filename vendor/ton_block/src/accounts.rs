@@ -559,14 +559,19 @@ impl AccountStuff {
         self.storage_stat.used = StorageUsed::calculate_for_struct(&self.storage)?;
         Ok(())
     }
+    fn update_storage_stat_fast(&mut self) -> Result<()> {
+        let cell = self.storage.serialize()?;
+        self.storage_stat.used.bits.0 = cell.tree_bits_count();
+        self.storage_stat.used.cells.0 = cell.tree_cell_count();
+        self.storage_stat.used.public_cells.0 = 0;
+        Ok(())
+    }
 }
 
 impl Serializable for AccountStuff {
     fn write_to(&self, builder: &mut BuilderData) -> Result<()> {
         self.addr.write_to(builder)?;
-        let mut storage_stat = self.storage_stat.clone();
-        storage_stat.used = StorageUsed::calculate_for_struct(&self.storage)?;
-        storage_stat.write_to(builder)?;
+        self.storage_stat.write_to(builder)?;
         self.storage.write_to(builder)?;
         Ok(())
     }
@@ -664,7 +669,7 @@ impl Account {
         None
     }
 
-    // freeze account from active
+    // freeze active account
     pub fn try_freeze(&mut self) -> Result<()> {
         if let Some(stuff) = self.stuff_mut() {
             if let AccountState::AccountActive(ref state_init) = stuff.storage.state {
@@ -673,6 +678,16 @@ impl Account {
         }
         Ok(())
     }
+
+    // uninit active account
+    pub fn uninit_account(&mut self) {
+        if let Some(stuff) = self.stuff_mut() {
+            if let AccountState::AccountActive(_) = stuff.storage.state {
+                stuff.storage.state = AccountState::AccountUninit
+            }
+        }
+    }
+
     /// obsolete - use try_freeze
     pub fn freeze_account(&mut self) { self.try_freeze().unwrap() }
     /// create frozen account - for test purposes
@@ -765,6 +780,13 @@ impl Account {
         }
     }
 
+    pub fn update_storage_stat_fast(&mut self) -> Result<()> {
+        match self.stuff_mut() {
+            Some(stuff) => stuff.update_storage_stat_fast(),
+            None => Ok(())
+        }
+    }
+
     /// getting statistic using storage for calculate storage/transfer fee
 
     /// Getting account ID
@@ -812,10 +834,8 @@ impl Account {
     pub fn set_data(&mut self, new_data: Cell) -> bool {
         if let Some(stuff) = self.stuff_mut() {
             if let AccountState::AccountActive(ref mut state_init) = stuff.storage.state {
-                if let Some(ref mut data) = (*state_init).data {
-                    *data = new_data;
-                    return true;
-                }
+                state_init.data = Some(new_data);
+                return true
             }
         }
         false
@@ -825,10 +845,8 @@ impl Account {
     pub fn set_code(&mut self, new_code: Cell) -> bool {
         if let Some(stuff) = self.stuff_mut() {
             if let AccountState::AccountActive(ref mut state_init) = stuff.storage.state {
-                if let Some(ref mut code) = state_init.code {
-                    *code = new_code;
-                    return true;
-                }
+                state_init.code = Some(new_code);
+                return true
             }
         }
         false
@@ -1069,6 +1087,13 @@ pub struct ShardAccount {
 }
 
 impl ShardAccount {
+    pub fn with_account_root(account_root: Cell, last_trans_hash: UInt256, last_trans_lt: u64) -> Self {
+        ShardAccount {
+            account: ChildCell::with_cell(account_root),
+            last_trans_hash,
+            last_trans_lt,
+        }
+    }
     pub fn with_params(account: &Account, last_trans_hash: UInt256, last_trans_lt: u64) -> Result<Self> {
         Ok(ShardAccount {
             account: ChildCell::with_struct(account)?,

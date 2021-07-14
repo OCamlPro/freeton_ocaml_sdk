@@ -11,30 +11,33 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "hmac"
-version = "0.7.1"
+version = "0.10.1"
 authors = ["RustCrypto Developers"]
 description = "Generic implementation of Hash-based Message Authentication Code (HMAC)"
 documentation = "https://docs.rs/hmac"
+readme = "README.md"
 keywords = ["crypto", "mac", "hmac", "digest"]
 categories = ["cryptography", "no-std"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/RustCrypto/MACs"
 [dependencies.crypto-mac]
-version = "0.7"
+version = "0.10"
 
 [dependencies.digest]
-version = "0.8"
+version = "0.9"
 [dev-dependencies.crypto-mac]
-version = "0.7"
+version = "0.10"
 features = ["dev"]
 
 [dev-dependencies.md-5]
-version = "0.8"
+version = "0.9"
 default-features = false
 
 [dev-dependencies.sha2]
-version = "0.8"
+version = "0.9"
 default-features = false
-[badges.travis-ci]
-repository = "RustCrypto/hashes"
+
+[features]
+std = ["crypto-mac/std"]

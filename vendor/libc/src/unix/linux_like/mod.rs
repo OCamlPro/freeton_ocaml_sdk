@@ -2,6 +2,7 @@ pub type sa_family_t = u16;
 pub type speed_t = ::c_uint;
 pub type tcflag_t = ::c_uint;
 pub type clockid_t = ::c_int;
+pub type timer_t = *mut ::c_void;
 pub type key_t = ::c_int;
 pub type id_t = ::c_uint;
 
@@ -546,6 +547,9 @@ pub const PROT_READ: ::c_int = 1;
 pub const PROT_WRITE: ::c_int = 2;
 pub const PROT_EXEC: ::c_int = 4;
 
+pub const XATTR_CREATE: ::c_int = 0x1;
+pub const XATTR_REPLACE: ::c_int = 0x2;
+
 cfg_if! {
     if #[cfg(not(target_env = "uclibc"))] {
         pub const LC_CTYPE: ::c_int = 0;
@@ -602,6 +606,7 @@ pub const MS_RELATIME: ::c_ulong = 0x200000;
 pub const MS_KERNMOUNT: ::c_ulong = 0x400000;
 pub const MS_I_VERSION: ::c_ulong = 0x800000;
 pub const MS_STRICTATIME: ::c_ulong = 0x1000000;
+pub const MS_LAZYTIME: ::c_ulong = 0x2000000;
 pub const MS_ACTIVE: ::c_ulong = 0x40000000;
 pub const MS_MGC_VAL: ::c_ulong = 0xc0ed0000;
 pub const MS_MGC_MSK: ::c_ulong = 0xffff0000;
@@ -1302,6 +1307,7 @@ pub const ARPHRD_ADAPT: u16 = 264;
 pub const ARPHRD_ROSE: u16 = 270;
 pub const ARPHRD_X25: u16 = 271;
 pub const ARPHRD_HWX25: u16 = 272;
+pub const ARPHRD_CAN: u16 = 280;
 pub const ARPHRD_PPP: u16 = 512;
 pub const ARPHRD_CISCO: u16 = 513;
 pub const ARPHRD_HDLC: u16 = ARPHRD_CISCO;

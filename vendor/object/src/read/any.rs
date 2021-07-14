@@ -13,12 +13,13 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    self, Architecture, BinaryFormat, ComdatKind, CompressedData, CompressedFileRange, Error,
-    Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectMap, ObjectSection,
+    self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData, CompressedFileRange,
+    Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectMap, ObjectSection,
     ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result, SectionFlags,
     SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
     SymbolScope, SymbolSection,
 };
+#[allow(unused_imports)]
 use crate::Endianness;
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -173,7 +174,6 @@ pub struct File<'data, R: ReadRef<'data> = &'data [u8]> {
     inner: FileInternal<'data, R>,
 }
 
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum FileInternal<'data, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
@@ -218,6 +218,25 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             _ => return Err(Error("Unsupported file format")),
         };
         Ok(File { inner })
+    }
+
+    /// Parse the raw file data at an arbitrary offset inside the input data.
+    ///
+    /// Currently, this is only supported for Mach-O images.
+    /// This can be used for parsing Mach-O images inside the dyld shared cache,
+    /// where multiple images, located at different offsets, share the same address
+    /// space.
+    pub fn parse_at(data: R, offset: u64) -> Result<Self> {
+        let _inner = match FileKind::parse_at(data, offset)? {
+            #[cfg(feature = "macho")]
+            FileKind::MachO32 => FileInternal::MachO32(macho::MachOFile32::parse_at(data, offset)?),
+            #[cfg(feature = "macho")]
+            FileKind::MachO64 => FileInternal::MachO64(macho::MachOFile64::parse_at(data, offset)?),
+            #[allow(unreachable_patterns)]
+            _ => return Err(Error("Unsupported file format")),
+        };
+        #[allow(unreachable_code)]
+        Ok(File { inner: _inner })
     }
 
     /// Return the file format.
@@ -397,6 +416,15 @@ where
     #[inline]
     fn gnu_debugaltlink(&self) -> Result<Option<(&'data [u8], &'data [u8])>> {
         with_inner!(self.inner, FileInternal, |x| x.gnu_debugaltlink())
+    }
+
+    #[inline]
+    fn pdb_info(&self) -> Result<Option<CodeView>> {
+        with_inner!(self.inner, FileInternal, |x| x.pdb_info())
+    }
+
+    fn relative_address_base(&self) -> u64 {
+        with_inner!(self.inner, FileInternal, |x| x.relative_address_base())
     }
 
     fn entry(&self) -> u64 {

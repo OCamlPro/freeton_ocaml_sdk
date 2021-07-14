@@ -1,5 +1,4 @@
 use std::mem;
-use std::vec::Vec;
 
 use crate::endian::*;
 use crate::macho;
@@ -7,6 +6,7 @@ use crate::pod::{bytes_of, WritableBuffer};
 use crate::write::string::*;
 use crate::write::util::*;
 use crate::write::*;
+use crate::AddressSize;
 
 #[derive(Default, Clone, Copy)]
 struct SectionOffsets {
@@ -191,7 +191,7 @@ impl Object {
         let macho32 = MachO32 { endian };
         let macho64 = MachO64 { endian };
         let macho: &dyn MachO = match address_size {
-            AddressSize::U32 => &macho32,
+            AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => &macho32,
             AddressSize::U64 => &macho64,
         };
         let pointer_align = address_size.bytes() as usize;
@@ -300,9 +300,8 @@ impl Object {
 
         // Calculate size of strtab.
         let strtab_offset = offset;
-        let mut strtab_data = Vec::new();
-        // Null name.
-        strtab_data.push(0);
+        // Start with null name.
+        let mut strtab_data = vec![0];
         strtab.write(1, &mut strtab_data);
         offset += strtab_data.len();
 

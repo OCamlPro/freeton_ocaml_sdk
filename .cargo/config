@@ -6,13 +6,28 @@ target-dir = "_build/target"
 # Required in OSX so that the compiler allows undefined symbols when linking dynamic libraries
 rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
 
-
 [source.crates-io]
+replace-with = "vendored-sources"
+
+[source."https://github.com/NilFoundation/rust-tvm.git"]
+git = "https://github.com/NilFoundation/rust-tvm.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/NilFoundation/ton-executor.git"]
+git = "https://github.com/NilFoundation/ton-executor.git"
 replace-with = "vendored-sources"
 
 [source."https://github.com/lefessan/TON-SDK.git"]
 git = "https://github.com/lefessan/TON-SDK.git"
-branch = "z-2021-05-25-pub"
+branch = "z-2021-07-09-pub-nil"
+replace-with = "vendored-sources"
+
+[source."https://github.com/nilfoundation/crusty3-zk.git"]
+git = "https://github.com/nilfoundation/crusty3-zk.git"
+replace-with = "vendored-sources"
+
+[source."https://github.com/nilfoundation/tvm-asm.git"]
+git = "https://github.com/nilfoundation/tvm-asm.git"
 replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/bip39-rs.git"]
@@ -31,10 +46,6 @@ replace-with = "vendored-sources"
 git = "https://github.com/tonlabs/ton-labs-abi.git"
 replace-with = "vendored-sources"
 
-[source."https://github.com/tonlabs/ton-labs-assembler.git"]
-git = "https://github.com/tonlabs/ton-labs-assembler.git"
-replace-with = "vendored-sources"
-
 [source."https://github.com/tonlabs/ton-labs-block-json.git"]
 git = "https://github.com/tonlabs/ton-labs-block-json.git"
 replace-with = "vendored-sources"
@@ -43,16 +54,8 @@ replace-with = "vendored-sources"
 git = "https://github.com/tonlabs/ton-labs-block.git"
 replace-with = "vendored-sources"
 
-[source."https://github.com/tonlabs/ton-labs-executor.git"]
-git = "https://github.com/tonlabs/ton-labs-executor.git"
-replace-with = "vendored-sources"
-
 [source."https://github.com/tonlabs/ton-labs-types.git"]
 git = "https://github.com/tonlabs/ton-labs-types.git"
-replace-with = "vendored-sources"
-
-[source."https://github.com/tonlabs/ton-labs-vm.git"]
-git = "https://github.com/tonlabs/ton-labs-vm.git"
 replace-with = "vendored-sources"
 
 [source.vendored-sources]

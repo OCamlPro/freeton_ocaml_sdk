@@ -1,12 +1,13 @@
 pub type c_char = u8;
 pub type wchar_t = u32;
+pub type __u64 = ::c_ulonglong;
 
 s! {
     pub struct stat {
         pub st_dev: ::dev_t,
         pub st_ino: ::ino_t,
         pub st_mode: ::c_uint,
-        pub st_nlink: ::c_uint,
+        pub st_nlink: ::nlink_t,
         pub st_uid: ::uid_t,
         pub st_gid: ::gid_t,
         pub st_rdev: ::dev_t,
@@ -29,7 +30,7 @@ s! {
         pub st_dev: ::dev_t,
         pub st_ino: ::ino_t,
         pub st_mode: ::c_uint,
-        pub st_nlink: ::c_uint,
+        pub st_nlink: ::nlink_t,
         pub st_uid: ::uid_t,
         pub st_gid: ::gid_t,
         pub st_rdev: ::dev_t,

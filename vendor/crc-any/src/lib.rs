@@ -63,6 +63,7 @@ To simplify the usage, there are several common versions of CRC whose computing 
  * crc16
  * crc16ccitt_false
  * crc16aug_ccitt
+ * crc16buypass
  * crc16cdma2000
  * crc16dds_110
  * crc16dect_r
@@ -542,7 +543,7 @@ impl CRC {
 
     /// |Check|Poly|Init|Ref|XorOut|
     /// |---|---|---|---|---|
-    /// |0x06|0x03 (0x30)|0x00|true|0x00|
+    /// |0x06|0x03 (rev: 0x30)|0x00|true|0x00|
     ///
     /// ```
     /// # extern crate crc_any;

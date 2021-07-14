@@ -2,9 +2,9 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 
 use crate::read::{
-    self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Export, FileFlags, Import,
-    ObjectMap, Relocation, Result, SectionFlags, SectionIndex, SectionKind, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
+    FileFlags, Import, ObjectMap, Relocation, Result, SectionFlags, SectionIndex, SectionKind,
+    SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
 };
 use crate::Endianness;
 
@@ -68,9 +68,6 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
 
     /// Get an iterator over the segments in the file.
     fn segments(&'file self) -> Self::SegmentIterator;
-
-    /// Get the entry point address of the binary
-    fn entry(&'file self) -> u64;
 
     /// Get the section named `section_name`, if such a section exists.
     ///
@@ -198,6 +195,20 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     fn gnu_debugaltlink(&self) -> Result<Option<(&'data [u8], &'data [u8])>> {
         Ok(None)
     }
+
+    /// The filename and GUID from the PE CodeView section
+    #[inline]
+    fn pdb_info(&self) -> Result<Option<CodeView>> {
+        Ok(None)
+    }
+
+    /// Get the base address used for relative virtual addresses.
+    ///
+    /// Currently this is only non-zero for PE.
+    fn relative_address_base(&'file self) -> u64;
+
+    /// Get the virtual address of the entry point of the binary
+    fn entry(&'file self) -> u64;
 
     /// File flags that are specific to each file format.
     fn flags(&self) -> FileFlags;

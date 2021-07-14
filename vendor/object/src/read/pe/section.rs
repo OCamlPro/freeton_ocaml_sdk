@@ -87,7 +87,7 @@ where
 {
     #[inline]
     fn address(&self) -> u64 {
-        u64::from(self.section.virtual_address.get(LE))
+        u64::from(self.section.virtual_address.get(LE)).wrapping_add(self.file.common.image_base)
     }
 
     #[inline]
@@ -107,7 +107,7 @@ where
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?)
+        self.bytes()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
@@ -218,7 +218,7 @@ where
 
     #[inline]
     fn address(&self) -> u64 {
-        u64::from(self.section.virtual_address.get(LE))
+        u64::from(self.section.virtual_address.get(LE)).wrapping_add(self.file.common.image_base)
     }
 
     #[inline]
@@ -242,7 +242,7 @@ where
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?)
+        self.bytes()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {

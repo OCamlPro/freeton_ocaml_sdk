@@ -17,14 +17,10 @@
 
 #![no_std]
 
-extern crate rand_core;
-
-#[cfg(feature="serde1")] extern crate serde;
-#[cfg(feature="serde1")] #[macro_use] extern crate serde_derive;
-
 use core::num::Wrapping as w;
 use core::{fmt, slice};
 use rand_core::{RngCore, SeedableRng, Error, impls, le};
+#[cfg(feature="serde1")] use serde::{Serialize, Deserialize};
 
 /// An Xorshift random number generator.
 ///
@@ -109,6 +105,10 @@ impl SeedableRng for XorShiftRng {
 
                 let slice = slice::from_raw_parts_mut(ptr, 4 * 4);
                 rng.try_fill_bytes(slice)?;
+            }
+            for v in seed_u32.iter_mut() {
+                // enforce LE for consistency across platforms
+                *v = v.to_le();
             }
             if !seed_u32.iter().all(|&x| x == 0) { break; }
         }

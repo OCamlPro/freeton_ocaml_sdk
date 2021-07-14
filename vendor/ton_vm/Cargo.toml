@@ -34,8 +34,9 @@ num-traits = "^0.2.8"
 rand = "0.7.2"
 sha2 = "^0.8"
 
+crusty3_zk = { git = "https://github.com/nilfoundation/crusty3-zk.git"}
 
-ton_labs_assembler = { git = "https://github.com/tonlabs/ton-labs-assembler.git" }
+ton_labs_assembler = { git = "https://github.com/nilfoundation/tvm-asm.git" }
 
 [features]
 ci_run = []

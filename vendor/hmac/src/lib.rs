@@ -10,49 +10,40 @@
 //! To get the authentication code:
 //!
 //! ```rust
-//! extern crate hmac;
-//! extern crate sha2;
-//!
 //! use sha2::Sha256;
-//! use hmac::{Hmac, Mac};
+//! use hmac::{Hmac, Mac, NewMac};
 //!
 //! // Create alias for HMAC-SHA256
 //! type HmacSha256 = Hmac<Sha256>;
 //!
-//! # fn main() {
 //! // Create HMAC-SHA256 instance which implements `Mac` trait
 //! let mut mac = HmacSha256::new_varkey(b"my secret and secure key")
 //!     .expect("HMAC can take key of any size");
-//! mac.input(b"input message");
+//! mac.update(b"input message");
 //!
-//! // `result` has type `MacResult` which is a thin wrapper around array of
+//! // `result` has type `Output` which is a thin wrapper around array of
 //! // bytes for providing constant time equality check
-//! let result = mac.result();
-//! // To get underlying array use `code` method, but be carefull, since
+//! let result = mac.finalize();
+//! // To get underlying array use `into_bytes` method, but be careful, since
 //! // incorrect use of the code value may permit timing attacks which defeat
-//! // the security provided by the `MacResult`
-//! let code_bytes = result.code();
-//! # }
+//! // the security provided by the `Output`
+//! let code_bytes = result.into_bytes();
 //! ```
 //!
 //! To verify the message:
 //!
 //! ```rust
-//! # extern crate hmac;
-//! # extern crate sha2;
 //! # use sha2::Sha256;
-//! # use hmac::{Hmac, Mac};
-//! # fn main() {
+//! # use hmac::{Hmac, Mac, NewMac};
 //! # type HmacSha256 = Hmac<Sha256>;
 //! let mut mac = HmacSha256::new_varkey(b"my secret and secure key")
 //!     .expect("HMAC can take key of any size");
 //!
-//! mac.input(b"input message");
+//! mac.update(b"input message");
 //!
-//! # let code_bytes = mac.clone().result().code();
+//! # let code_bytes = mac.clone().finalize().into_bytes();
 //! // `verify` will return `Ok(())` if code is correct, `Err(MacError)` otherwise
 //! mac.verify(&code_bytes).unwrap();
-//! # }
 //! ```
 //!
 //! # Block and input sizes
@@ -60,27 +51,36 @@
 //! generic nature of the implementation this edge case must be handled as well
 //! to remove potential panic scenario. This is done by truncating hash output
 //! to the hash block size if needed.
-#![no_std]
-#![doc(html_logo_url =
-    "https://raw.githubusercontent.com/RustCrypto/meta/master/logo_small.png")]
-pub extern crate digest;
-pub extern crate crypto_mac;
 
-pub use crypto_mac::Mac;
-use crypto_mac::{InvalidKeyLength, MacResult};
-use digest::{Input, BlockInput, FixedOutput, Reset};
-use digest::generic_array::{ArrayLength, GenericArray};
-use digest::generic_array::sequence::GenericSequence;
-use core::cmp::min;
-use core::fmt;
+#![no_std]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/RustCrypto/meta/master/logo.svg",
+    html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/meta/master/logo.svg"
+)]
+#![forbid(unsafe_code)]
+#![warn(missing_docs, rust_2018_idioms)]
+
+#[cfg(feature = "std")]
+extern crate std;
+
+pub use crypto_mac::{self, Mac, NewMac};
+pub use digest;
+
+use core::{cmp::min, fmt};
+use crypto_mac::{
+    generic_array::{sequence::GenericSequence, ArrayLength, GenericArray},
+    InvalidKeyLength, Output,
+};
+use digest::{BlockInput, FixedOutput, Reset, Update};
 
 const IPAD: u8 = 0x36;
 const OPAD: u8 = 0x5C;
 
 /// The `Hmac` struct represents an HMAC using a given hash function `D`.
 pub struct Hmac<D>
-    where D: Input + BlockInput + FixedOutput + Reset + Default + Clone,
-          D::BlockSize: ArrayLength<u8>
+where
+    D: Update + BlockInput + FixedOutput + Reset + Default + Clone,
+    D::BlockSize: ArrayLength<u8>,
 {
     digest: D,
     i_key_pad: GenericArray<u8, D::BlockSize>,
@@ -88,8 +88,9 @@ pub struct Hmac<D>
 }
 
 impl<D> Clone for Hmac<D>
-    where D: Input + BlockInput + FixedOutput + Reset + Default + Clone,
-          D::BlockSize: ArrayLength<u8>
+where
+    D: Update + BlockInput + FixedOutput + Reset + Default + Clone,
+    D::BlockSize: ArrayLength<u8>,
 {
     fn clone(&self) -> Hmac<D> {
         Hmac {
@@ -101,24 +102,25 @@ impl<D> Clone for Hmac<D>
 }
 
 impl<D> fmt::Debug for Hmac<D>
-    where D: Input + BlockInput + FixedOutput + Reset + Default + Clone + fmt::Debug,
-          D::BlockSize: ArrayLength<u8>
+where
+    D: Update + BlockInput + FixedOutput + Reset + Default + Clone + fmt::Debug,
+    D::BlockSize: ArrayLength<u8>,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Hmac")
-         .field("digest", &self.digest)
-         .field("i_key_pad", &self.i_key_pad)
-         .field("opad_digest", &self.opad_digest)
-         .finish()
+            .field("digest", &self.digest)
+            .field("i_key_pad", &self.i_key_pad)
+            .field("opad_digest", &self.opad_digest)
+            .finish()
     }
 }
 
-impl <D> Mac for Hmac<D>
-    where D: Input + BlockInput + FixedOutput + Reset + Default + Clone,
-          D::BlockSize: ArrayLength<u8>,
-          D::OutputSize: ArrayLength<u8>
+impl<D> NewMac for Hmac<D>
+where
+    D: Update + BlockInput + FixedOutput + Reset + Default + Clone,
+    D::BlockSize: ArrayLength<u8>,
+    D::OutputSize: ArrayLength<u8>,
 {
-    type OutputSize = D::OutputSize;
     type KeySize = D::BlockSize;
 
     fn new(key: &GenericArray<u8, Self::KeySize>) -> Self {
@@ -147,8 +149,8 @@ impl <D> Mac for Hmac<D>
             }
         } else {
             let mut digest = D::default();
-            digest.input(key);
-            let output = digest.fixed_result();
+            digest.update(key);
+            let output = digest.finalize_fixed();
             // `n` is calculated at compile time and will equal
             // D::OutputSize. This is used to ensure panic-free code
             let n = min(output.len(), hmac.i_key_pad.len());
@@ -158,28 +160,54 @@ impl <D> Mac for Hmac<D>
             }
         }
 
-        hmac.digest.input(&hmac.i_key_pad);
-        hmac.opad_digest.input(&opad);
+        hmac.digest.update(&hmac.i_key_pad);
+        hmac.opad_digest.update(&opad);
 
         Ok(hmac)
     }
+}
+
+impl<D> Mac for Hmac<D>
+where
+    D: Update + BlockInput + FixedOutput + Reset + Default + Clone,
+    D::BlockSize: ArrayLength<u8>,
+    D::OutputSize: ArrayLength<u8>,
+{
+    type OutputSize = D::OutputSize;
 
     #[inline]
-    fn input(&mut self, data: &[u8]) {
-        self.digest.input(data);
+    fn update(&mut self, data: &[u8]) {
+        self.digest.update(data);
     }
 
     #[inline]
-    fn result(self) -> MacResult<D::OutputSize> {
+    fn finalize(self) -> Output<Self> {
         let mut opad_digest = self.opad_digest.clone();
-        let hash = self.digest.fixed_result();
-        opad_digest.input(&hash);
-        MacResult::new(opad_digest.fixed_result())
+        let hash = self.digest.finalize_fixed();
+        opad_digest.update(&hash);
+        Output::new(opad_digest.finalize_fixed())
     }
 
     #[inline]
     fn reset(&mut self) {
         self.digest.reset();
-        self.digest.input(&self.i_key_pad);
+        self.digest.update(&self.i_key_pad);
+    }
+}
+
+#[cfg(feature = "std")]
+impl<D> std::io::Write for Hmac<D>
+where
+    D: Update + BlockInput + FixedOutput + Reset + Default + Clone,
+    D::BlockSize: ArrayLength<u8>,
+    D::OutputSize: ArrayLength<u8>,
+{
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        Mac::update(self, buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
     }
 }

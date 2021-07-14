@@ -758,6 +758,7 @@ impl<T: Writer> Engine<T> {
         TUPLE s = parse_const_u4             => 0x6F, s
         TUPLEVAR                             => 0x6F, 0x80
         TWO                                  => 0x72
+        VERGRTH16                            => 0xF9, 0x12
         UBITSIZE                             => 0xB6, 0x03
         UFITS z = parse_const_u8_plus_one    => 0xB5, z
         UFITSX                               => 0xB6, 0x01

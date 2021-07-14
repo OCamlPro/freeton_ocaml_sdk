@@ -8,6 +8,7 @@ use crate::read::{self, Error, ReadError, ReadRef};
 /// The kind of archive format.
 // TODO: Gnu64 and Darwin64 (and Darwin for writing)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum ArchiveKind {
     /// There are no special files that indicate the archive format.
     Unknown,
@@ -26,7 +27,7 @@ pub struct ArchiveFile<'data, R: ReadRef<'data> = &'data [u8]> {
     len: u64,
     offset: u64,
     kind: ArchiveKind,
-    symbols: &'data [u8],
+    symbols: (u64, u64),
     names: &'data [u8],
 }
 
@@ -47,7 +48,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             offset: tail,
             len,
             kind: ArchiveKind::Unknown,
-            symbols: &[],
+            symbols: (0, 0),
             names: &[],
         };
 
@@ -66,7 +67,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             if member.name == b"/" {
                 // GNU symbol table (unless we later determine this is COFF).
                 file.kind = ArchiveKind::Gnu;
-                file.symbols = member.data(data)?;
+                file.symbols = member.file_range();
                 file.offset = tail;
 
                 if tail < len {
@@ -74,7 +75,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
                     if member.name == b"/" {
                         // COFF linker member.
                         file.kind = ArchiveKind::Coff;
-                        file.symbols = member.data(data)?;
+                        file.symbols = member.file_range();
                         file.offset = tail;
 
                         if tail < len {
@@ -99,7 +100,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
             } else if member.name == b"__.SYMDEF" || member.name == b"__.SYMDEF SORTED" {
                 // BSD symbol table.
                 file.kind = ArchiveKind::Bsd;
-                file.symbols = member.data(data)?;
+                file.symbols = member.file_range();
                 file.offset = tail;
             } else {
                 // TODO: This could still be a BSD file. We leave this as unknown for now.
@@ -130,7 +131,7 @@ impl<'data, R: ReadRef<'data>> ArchiveFile<'data, R> {
 
 /// An iterator over the members of an archive.
 #[derive(Debug)]
-pub struct ArchiveMemberIterator<'data, R: ReadRef<'data>> {
+pub struct ArchiveMemberIterator<'data, R: ReadRef<'data> = &'data [u8]> {
     data: R,
     offset: u64,
     len: u64,
@@ -197,13 +198,12 @@ impl<'data> ArchiveMember<'data> {
             parse_bsd_extended_name(&header.name[3..], data, &mut file_offset, &mut file_size)
                 .read_error("Invalid archive extended name length")?
         } else if header.name[0] == b'/' {
-            let name_len =
-                (header.name.iter().position(|&x| x == b' ')).unwrap_or_else(|| header.name.len());
+            let name_len = memchr::memchr(b' ', &header.name).unwrap_or(header.name.len());
             &header.name[..name_len]
         } else {
-            let name_len = (header.name.iter().position(|&x| x == b'/'))
-                .or_else(|| header.name.iter().position(|&x| x == b' '))
-                .unwrap_or_else(|| header.name.len());
+            let name_len = memchr::memchr(b'/', &header.name)
+                .or_else(|| memchr::memchr(b' ', &header.name))
+                .unwrap_or(header.name.len());
             &header.name[..name_len]
         };
 
@@ -268,20 +268,19 @@ impl<'data> ArchiveMember<'data> {
 
 // Ignores bytes starting from the first space.
 fn parse_u64_digits(digits: &[u8], radix: u32) -> Option<u64> {
-    let len = digits
-        .iter()
-        .position(|&x| x == b' ')
-        .unwrap_or_else(|| digits.len());
-    let digits = &digits[..len];
-    if digits.is_empty() {
+    if let [b' ', ..] = digits {
         return None;
     }
     let mut result: u64 = 0;
     for &c in digits {
-        let x = (c as char).to_digit(radix)?;
-        result = result
-            .checked_mul(u64::from(radix))?
-            .checked_add(u64::from(x))?;
+        if c == b' ' {
+            return Some(result);
+        } else {
+            let x = (c as char).to_digit(radix)?;
+            result = result
+                .checked_mul(u64::from(radix))?
+                .checked_add(u64::from(x))?;
+        }
     }
     Some(result)
 }
@@ -290,7 +289,7 @@ fn parse_sysv_extended_name<'data>(digits: &[u8], names: &'data [u8]) -> Result<
     let offset = parse_u64_digits(digits, 10).ok_or(())?;
     let offset = offset.try_into().map_err(|_| ())?;
     let name_data = names.get(offset..).ok_or(())?;
-    let name = match name_data.iter().position(|&x| x == b'/' || x == 0) {
+    let name = match memchr::memchr2(b'/', b'\0', name_data) {
         Some(len) => &name_data[..len],
         None => name_data,
     };
@@ -307,7 +306,7 @@ fn parse_bsd_extended_name<'data, R: ReadRef<'data>>(
     let len = parse_u64_digits(digits, 10).ok_or(())?;
     *size = size.checked_sub(len).ok_or(())?;
     let name_data = data.read_bytes(offset, len)?;
-    let name = match name_data.iter().position(|&x| x == 0) {
+    let name = match memchr::memchr(b'\0', name_data) {
         Some(len) => &name_data[..len],
         None => name_data,
     };
@@ -386,6 +385,8 @@ mod tests {
             !<arch>\n\
             //                                              18        `\n\
             0123456789abcdef/\n\
+            s p a c e/      0           0     0     644     4         `\n\
+            0000\
             0123456789abcde/0           0     0     644     3         `\n\
             odd\n\
             /0              0           0     0     644     4         `\n\
@@ -394,6 +395,10 @@ mod tests {
         let archive = ArchiveFile::parse(data).unwrap();
         assert_eq!(archive.kind(), ArchiveKind::Gnu);
         let mut members = archive.members();
+
+        let member = members.next().unwrap().unwrap();
+        assert_eq!(member.name(), b"s p a c e");
+        assert_eq!(member.data(data).unwrap(), &b"0000"[..]);
 
         let member = members.next().unwrap().unwrap();
         assert_eq!(member.name(), b"0123456789abcde");

@@ -18,7 +18,7 @@
 edition = "2018"
 build = "build.rs"
 name = "ton_executor"
-version = "1.2.1"
+version = "1.3.14"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 clear_on_drop = { version = "0.2", features = ["no_cc"] }
@@ -26,7 +26,7 @@ clear_on_drop = { version = "0.2", features = ["no_cc"] }
 [dependencies]
 ton_block = { git = "https://github.com/tonlabs/ton-labs-block.git" }
 ton_types = { git = "https://github.com/tonlabs/ton-labs-types.git" }
-ton_vm = { git = "https://github.com/tonlabs/ton-labs-vm.git" }
+ton_vm = { git = "https://github.com/nilfoundation/rust-tvm.git", default-features = false }
 
 # External
 failure = "0.1.6"
@@ -37,5 +37,5 @@ log = "0.4.8"
 
 
 base64 = "0.10.0"
-ton_labs_assembler = { git = "https://github.com/tonlabs/ton-labs-assembler.git" }
+ton_labs_assembler = { git = "https://github.com/nilfoundation/tvm-asm.git"}
 

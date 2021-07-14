@@ -1044,7 +1044,7 @@ impl Engine {
                 let mut code = self.cmd_code.clone();
                 code.shrink_data(offset..);
                 // TODO: need to check this failure case
-                let slice = code.get_dictionary_opt().unwrap_or_else(|| SliceData::default());
+                let slice = code.get_dictionary().unwrap_or_else(|_| SliceData::default());
                 self.cmd.ictx.params.push(InstructionParameter::Slice(slice));
                 let length = code.get_next_int(bits)? as usize;
                 *self.cc.code_mut() = code;

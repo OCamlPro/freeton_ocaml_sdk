@@ -29,7 +29,12 @@ use crate::{
 use sha2::Digest;
 use ed25519::signature::{Signature, Verifier};
 use std::sync::Arc;
-use ton_types::{BuilderData, error, GasConsumer, types::ExceptionCode};
+use ton_types::{BuilderData, Cell, error, GasConsumer, types::ExceptionCode};
+
+use crusty3_zk::{groth16::{verify_proof, prepare_verifying_key, Parameters, verify_groth16_proof_from_byteblob},
+                 bls::{Bls12, Fr}
+                };
+
 
 const PUBLIC_KEY_BITS:  usize = PUBLIC_KEY_BYTES * 8;
 const SIGNATURE_BITS:   usize = SIGNATURE_BYTES * 8;
@@ -81,6 +86,47 @@ pub(super) fn execute_sha256u(engine: &mut Engine) -> Failure {
                 ctx.engine.cc.stack.push(StackItem::Integer(hash_int));
                 Ok(ctx)
             }else {
+                err!(ExceptionCode::CellUnderflow)
+            }
+        })
+        .err()
+}
+
+pub fn obtain_cells_data(cl: Cell) -> Result<Vec<u8>, Failure> {
+	let mut byte_blob = Vec::new();
+    let mut queue = vec!(cl.clone());
+    while let Some(cell) = queue.pop() {
+        let this_reference_data = cell.data();
+        
+        byte_blob.extend(this_reference_data[0..this_reference_data.len()-1].iter().copied());
+
+        let count = cell.references_count();
+        for i in 0..count {
+            queue.push(cell.reference(i)?);
+        }
+    }
+
+    Ok(byte_blob)
+}
+
+pub(super) fn execute_vergrth16(engine: &mut Engine) -> Failure {
+    engine.load_instruction(Instruction::new("VERGRTH16"))
+        .and_then(|ctx| fetch_stack(ctx, 1))
+        .and_then(|ctx| {
+            let builder = BuilderData::from(ctx.engine.cmd.var(0).as_cell()?);
+            let cell_proof_data_length = builder.length_in_bits();
+	    
+            let cell_proof = ctx.engine.finalize_cell(builder)?;
+            
+            let mut cell_proof_data = obtain_cells_data(cell_proof).unwrap();
+	    
+            if cell_proof_data_length % 8 == 0 {
+		
+                let result = verify_groth16_proof_from_byteblob::<Bls12>(&cell_proof_data[..]).unwrap();
+
+                ctx.engine.cc.stack.push(boolean!(result));
+                Ok(ctx)
+            } else {
                 err!(ExceptionCode::CellUnderflow)
             }
         })

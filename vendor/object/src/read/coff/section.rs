@@ -137,7 +137,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for CoffSegment<'data
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?)
+        self.bytes()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
@@ -228,7 +228,7 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for CoffSection<'data
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?)
+        self.bytes()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
@@ -347,7 +347,7 @@ impl pe::ImageSectionHeader {
     /// Return the raw section name.
     pub fn raw_name(&self) -> &[u8] {
         let bytes = &self.name;
-        match bytes.iter().position(|&x| x == 0) {
+        match memchr::memchr(b'\0', bytes) {
             Some(end) => &bytes[..end],
             None => &bytes[..],
         }
