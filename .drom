@@ -2,7 +2,7 @@
 
 # hash of toml configuration files
 # used for generation of all files
-0e3c396b28daae0760ed22432b4c584f:.
+fc6a0384cf175bb78fe0c5521b11c9c4:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -77,23 +77,18 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-108d27754e5c550a768408d737656c4f:dune-project
+53ab5f3a59d376e11742917df8f7cb89:dune-project
 # end context for dune-project
 
 # begin context for freeton_client_lib.opam
 # file freeton_client_lib.opam
-d3c78a9582ec057afa6ad0acad2aa031:freeton_client_lib.opam
+41cac0cc5121c02b6ed39b276760c503:freeton_client_lib.opam
 # end context for freeton_client_lib.opam
 
 # begin context for freeton_ocaml_sdk.opam
 # file freeton_ocaml_sdk.opam
-0b47d466fe20473eaea9ec69d7838457:freeton_ocaml_sdk.opam
+904e0d199059a4f4424a99692185a188:freeton_ocaml_sdk.opam
 # end context for freeton_ocaml_sdk.opam
-
-# begin context for freeton_types_lib.opam
-# file freeton_types_lib.opam
-95cb88a75feb4751c79046554f73812c:freeton_types_lib.opam
-# end context for freeton_types_lib.opam
 
 # begin context for scripts/after.sh
 # file scripts/after.sh
@@ -142,7 +137,7 @@ e5e327474d77ac197193161785d1bafe:src/freeton_client_lib/index.mld
 
 # begin context for src/freeton_client_lib/version.mlt
 # file src/freeton_client_lib/version.mlt
-6a3411944251a158f283de8696b8c968:src/freeton_client_lib/version.mlt
+3181b32d9f1619fbf8917bec97cb41fd:src/freeton_client_lib/version.mlt
 # end context for src/freeton_client_lib/version.mlt
 
 # begin context for src/freeton_ocaml_sdk/dune
@@ -154,21 +149,6 @@ da30d8cb05ec8b0b35dfe04784d3b8b2:src/freeton_ocaml_sdk/dune
 # file src/freeton_ocaml_sdk/package.toml
 b23a328739f01b1a752d34a90006386e:src/freeton_ocaml_sdk/package.toml
 # end context for src/freeton_ocaml_sdk/package.toml
-
-# begin context for src/freeton_types_lib/dune
-# file src/freeton_types_lib/dune
-bf2f3bc69f00f0591d641a59b9e65b53:src/freeton_types_lib/dune
-# end context for src/freeton_types_lib/dune
-
-# begin context for src/freeton_types_lib/index.mld
-# file src/freeton_types_lib/index.mld
-6ab67501c08e4fb25c6b11b1e7aed279:src/freeton_types_lib/index.mld
-# end context for src/freeton_types_lib/index.mld
-
-# begin context for src/freeton_types_lib/version.mlt
-# file src/freeton_types_lib/version.mlt
-6a3411944251a158f283de8696b8c968:src/freeton_types_lib/version.mlt
-# end context for src/freeton_types_lib/version.mlt
 
 # begin context for test/expect-tests/dune
 # file test/expect-tests/dune
