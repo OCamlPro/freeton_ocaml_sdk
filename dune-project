@@ -3,7 +3,7 @@
 (name freeton_ocaml_sdk)
 (allow_approximate_merlin)
 (generate_opam_files false)
-(version 0.4.0)
+(version 0.4.1)
 (formatting (enabled_for ocaml reason))
 
 (package
