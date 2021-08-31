@@ -31,6 +31,7 @@ pub async fn generate_address_rs(
     wc: i32,
     pubkey: String,
     initial_data: String,
+    initial_pubkey: String,
 ) -> Result<String, ocp::Error> {
 
     let contract = std::fs::read(tvc)
@@ -50,11 +51,16 @@ pub async fn generate_address_rs(
                  ocp::error(
                      ocp::ERROR_INVALID_JSON_INITIAL_DATA,
                      format!("{:#}", e)))?;
+
+    let initial_pubkey =
+        if initial_pubkey == "" { None } else { Some (initial_pubkey) };
+    
     let result = calc_acc_address(
         &contract,
         wc,
         pubkey,
         initial_data_json.clone(),
+        initial_pubkey.clone(),
         abi.clone()
     ).await?;
 

@@ -34,9 +34,12 @@ let generate_address ~tvc_file ~abi
       | None -> assert false
       | Some keypair -> keypair.Freeton_types.public)
     ?(wc = 0)
-    ?(initial_data = "") () =
+    ?(initial_data = "")
+    ?(initial_pubkey = "")
+    () =
   Freeton_types.reply ( generate_address
-                      [| tvc_file ; abi ; initial_data ; pubkey |]
+                          [| tvc_file ; abi ; initial_data ;
+                             pubkey ; initial_pubkey |]
                       wc )
 
 let std_path list =

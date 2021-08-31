@@ -73,6 +73,7 @@ pub fn generate_address_ml(
             wc as i32,
             args[3].clone(), // pubkey
             args[2].clone(), //   initial_data 
+            args[4].clone(), //   initial_pubkey
             ))
 }
 
