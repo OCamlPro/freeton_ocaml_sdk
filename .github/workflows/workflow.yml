@@ -41,6 +41,8 @@ jobs:
 #          restore-keys: |
 #            v2-${{ runner.os }}-opam-${{ matrix.ocaml-compiler }}-
 
+      - run: sudo apt-get update
+      
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: avsm/setup-ocaml@v2
         with:
@@ -54,8 +56,6 @@ jobs:
       # define opam-repo = "git+https://" to add an extra opam repo
 
       - run: opam pin add . -y --no-action
-
-      - run: sudo apt-get update
 
       - run: opam depext -y freeton_ocaml_sdk freeton_client_lib
 #        if: steps.cache-opam.outputs.cache-hit != 'true'
