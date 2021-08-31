@@ -47,6 +47,7 @@ pub async fn calc_acc_address(
     wc: i32,
     pubkey: String,
     init_data_json: Option<serde_json::Value>,
+    initial_pubkey: Option<String>,
     abi: Abi,
 ) -> Result<String, ocp::Error> {
     let ton = create_client_local()?;
@@ -55,6 +56,7 @@ pub async fn calc_acc_address(
         tvc: base64::encode(tvc),
         workchain_id: Some(wc),
         initial_data: init_data_json,
+        initial_pubkey: initial_pubkey,
         ..Default::default()
     };
     let result = ton_client::abi::encode_message(
@@ -121,6 +123,7 @@ pub async fn deploy_contract_rs(
         wc,
         keys.public.clone(),
         initial_data_json.clone(),
+        initial_pubkey.clone(),
         abi.clone()
     ).await?;
 

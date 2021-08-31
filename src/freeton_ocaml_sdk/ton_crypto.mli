@@ -19,6 +19,9 @@ val generate_address :
   tvc_file:string -> abi:string ->
   ?keypair:Freeton_types.keypair ->
   ?pubkey:string ->
-  ?wc:int -> ?initial_data:string -> unit -> string
+  ?wc:int ->
+  ?initial_data:string ->
+  ?initial_pubkey:string ->
+  unit -> string
 
 val std_path : int list -> string
