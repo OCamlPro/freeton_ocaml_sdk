@@ -479,6 +479,18 @@ EXAMPLE:
 
 let (let>) p f = Lwt.bind p f
 
+let head_time ~url =
+  let> head = post_lwt url (head ~level:1 ()) in
+  match head with
+  | Ok [] -> Lwt.return "0" (* No head *)
+  | Ok [{bl_start_lt = None; _}] -> assert false (* Head with no time *)
+  | Ok [{bl_start_lt = Some time; _}] -> Lwt.return time
+  | Ok _ -> assert false (* Multiple heads *)
+  | Error exn ->
+      Printf.eprintf "Failed to load head: %s\n%!"
+        (Printexc.to_string exn);
+      exit 2
+
 let iter_past_transactions ~address ~url
     ?known_transactions ?last_trans_lt ?(level=1) ?(limit=max_int) f =
 
@@ -495,14 +507,17 @@ let iter_past_transactions ~address ~url
         match result with
         | Ok [ { acc_last_trans_lt = Some last_trans_lt ;  _} ] ->
             Lwt.return last_trans_lt
+        | Ok [ { acc_last_trans_lt = None ;  _} ] ->
+            (* No last transaction, checking from the head *)
+            head_time ~url
         | Ok [] ->
             Printf.eprintf "No contract event_address\n%!";
             exit 2
+        | Ok _ -> assert false (* Multiple 'last transaction' *)
         | Error exn ->
             Printf.eprintf "Failed to load event_address last_trans_lt: %s\n%!"
               (Printexc.to_string exn);
             exit 2
-        | Ok _ -> assert false
   in
 
   let rec iter_new_transactions trs =
