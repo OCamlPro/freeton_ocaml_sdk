@@ -2,7 +2,7 @@
 
 # hash of toml configuration files
 # used for generation of all files
-f61fdb722d9f8cb76e412d1f93309377:.
+843dfd31e4c357dc6cbe8af1bc056656:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -42,7 +42,7 @@ f0dad6632363c733c0ade2263132e1e2:CHANGES.md
 
 # begin context for README.md
 # file README.md
-fef13f288aeb675e4289982e7c5175de:README.md
+982ceb276757cc723692aabfbe751aa6:README.md
 # end context for README.md
 
 # begin context for docs/README.txt
@@ -77,17 +77,17 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-80b65e043cc18ac92842dd5ed5c1ee6f:dune-project
+e734512f6b0663894cd8f187cc578d1a:dune-project
 # end context for dune-project
 
 # begin context for freeton_client_lib.opam
 # file freeton_client_lib.opam
-70dae28b92a296bbb28f56f005c8136e:freeton_client_lib.opam
+876d42eaff774d26acb09fd12d3bc727:freeton_client_lib.opam
 # end context for freeton_client_lib.opam
 
 # begin context for freeton_ocaml_sdk.opam
 # file freeton_ocaml_sdk.opam
-d2e4da57fc9a09c09d4e9035eebc1c54:freeton_ocaml_sdk.opam
+53498991684b4083c9ee5e2120784dc8:freeton_ocaml_sdk.opam
 # end context for freeton_ocaml_sdk.opam
 
 # begin context for scripts/after.sh
@@ -137,7 +137,7 @@ e5e327474d77ac197193161785d1bafe:src/freeton_client_lib/index.mld
 
 # begin context for src/freeton_client_lib/version.mlt
 # file src/freeton_client_lib/version.mlt
-98a385aa9a733e9efbcf47257341894d:src/freeton_client_lib/version.mlt
+74ad12631c1ecd294612cd782220ba00:src/freeton_client_lib/version.mlt
 # end context for src/freeton_client_lib/version.mlt
 
 # begin context for src/freeton_ocaml_sdk/dune
