@@ -88,10 +88,12 @@ module AbiContract = struct
   type t = {
     obsolete_abi_version : int option ; [@ key "ABI version"]
     abi_version : int option ;
+    version : string option ;    [@dft None]
     header : string list ;       [@dft []]
     functions : fonction list ;
     events : event list ;        [@dft []]
     data : data list ;           [@dft []]
+    fields : param list ;        [@dft []]
   }
   [@@deriving json_encoding ] (* {debug} *)
 
