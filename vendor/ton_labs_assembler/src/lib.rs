@@ -104,8 +104,8 @@ impl<T: Writer> CommandContext<T> {
         }
     }
     fn abort<X>(&self, error: OperationError, engine: &Engine<T>) -> Result<X, CompileError> {
-        if !engine.lines.is_empty() {
-            let pos = &engine.lines[self.line_no_cmd - 1].pos;
+        if let Some(line) = engine.lines.get(self.line_no_cmd - 1) {
+            let pos = &line.pos;
             let filename = pos.filename.clone();
             let line = pos.line_code;
             Err(CompileError::operation(line, self.char_no_cmd, self.operation.clone(), error).with_filename(filename))
@@ -130,8 +130,8 @@ impl<T: Writer> CommandContext<T> {
         let mut n = par.len();
         loop {
             let par = &par[0..n].iter().map(|(_, _, e, _)| *e).collect::<Vec<_>>();
-            let pos = if !engine.lines.is_empty() {
-                engine.lines[self.line_no_cmd - 1].pos.clone()
+            let pos = if let Some(line) = engine.lines.get(self.line_no_cmd - 1) {
+                line.pos.clone()
             } else {
                 DbgPos::default()
             };
@@ -149,11 +149,11 @@ impl<T: Writer> CommandContext<T> {
         if n > 1 {
             for (line, column, _, was_comma) in &par[1..n] {
                 if !*was_comma {
-                    if engine.lines.is_empty() {
-                        return Err(CompileError::syntax(*line, *column, "Missing comma"))
-                    } else {
-                        let pos = &engine.lines[*line - 1].pos;
+                    if let Some(line) = engine.lines.get(*line - 1) {
+                        let pos = &line.pos;
                         return Err(CompileError::syntax(pos.line_code, *column, "Missing comma").with_filename(pos.filename.clone()))
+                    } else {
+                        return Err(CompileError::syntax(*line, *column, "Missing comma"))
                     }
                 }
             }
@@ -161,13 +161,13 @@ impl<T: Writer> CommandContext<T> {
         par.drain(..n);
         if !par.is_empty() {
             let (line, column, token, was_comma) = par.remove(0);
-            let position = if engine.lines.is_empty() {
-                Position { filename: String::new(), line, column }
-            } else {
-                let pos = &engine.lines[line - 1].pos;
+            let position = if let Some(line) = engine.lines.get(line - 1) {
+                let pos = &line.pos;
                 let filename = pos.filename.clone();
                 let line = pos.line_code;
                 Position { filename, line, column }
+            } else {
+                Position { filename: String::new(), line, column }
             };
             if was_comma {
                 return Err(CompileError::Operation(
@@ -299,8 +299,12 @@ impl<T: Writer> Engine<T> {
                 continue;
             } else if ch == ',' {
                 if !expect_comma {
-                    let pos = &self.lines[y - 1].pos;
-                    return Err(CompileError::syntax(pos.line_code, x, ",").with_filename(pos.filename.clone()))
+                    if let Some(line) = self.lines.get(y - 1) {
+                        let pos = &line.pos;
+                        return Err(CompileError::syntax(pos.line_code, x, ",").with_filename(pos.filename.clone()))
+                    } else {
+                        return Err(CompileError::syntax(y, x, ","))
+                    }
                 }
                 acc = (new_s1, new_s1);
                 expect_comma = false;
@@ -310,8 +314,12 @@ impl<T: Writer> Engine<T> {
                 }
             } else if ch == '{' {
                 if expect_comma || !command_ctx.has_command() || !par.is_empty() {
-                    let pos = &self.lines[y - 1].pos;
-                    return Err(CompileError::syntax(pos.line_code, x, ch).with_filename(pos.filename.clone()))
+                    if let Some(line) = self.lines.get(y - 1) {
+                        let pos = &line.pos;
+                        return Err(CompileError::syntax(pos.line_code, x, ch).with_filename(pos.filename.clone()))
+                    } else {
+                        return Err(CompileError::syntax(y, x, ch))
+                    }
                 }
                 acc = (new_s1, new_s1);
                 in_block = 1;
@@ -319,8 +327,12 @@ impl<T: Writer> Engine<T> {
                 command_ctx.char_no_par = self.char_no;
                 continue;
             } else if ch == '}' {
-                let pos = &self.lines[y - 1].pos;
-                return Err(CompileError::syntax(pos.line_code, x, ch).with_filename(pos.filename.clone()))
+                if let Some(line) = self.lines.get(y - 1) {
+                    let pos = &line.pos;
+                    return Err(CompileError::syntax(pos.line_code, x, ch).with_filename(pos.filename.clone()))
+                } else {
+                    return Err(CompileError::syntax(y, x, ch))
+                }
             } else if ch.is_ascii_alphanumeric() || (ch == '-') || (ch == '_') || (ch == '.') {
                 acc = (s0, new_s1);
                 if s0 == s1 { //start of new token
@@ -330,8 +342,12 @@ impl<T: Writer> Engine<T> {
                 }
                 continue;
             } else { // TODO: (message for the owner: please write descriptive explanation)
-                let pos = &self.lines[y - 1].pos;
-                return Err(CompileError::syntax(pos.line_code, x, "Bad char").with_filename(pos.filename.clone()))
+                if let Some(line) = self.lines.get(y - 1) {
+                    let pos = &line.pos;
+                    return Err(CompileError::syntax(pos.line_code, x, "Bad char").with_filename(pos.filename.clone()))
+                } else {
+                    return Err(CompileError::syntax(y, x, "Bad char"))
+                }
             }
             // Token extracted
             let token = source[s0..s1].to_ascii_uppercase();
@@ -344,8 +360,12 @@ impl<T: Writer> Engine<T> {
                         was_comma = false;
                         continue
                     } else {
-                        let pos = &self.lines[y - 1].pos;
-                        return Err(CompileError::unknown(pos.line_code, x, &token).with_filename(pos.filename.clone()))
+                        if let Some(line) = self.lines.get(y - 1) {
+                            let pos = &line.pos;
+                            return Err(CompileError::unknown(pos.line_code, x, &token).with_filename(pos.filename.clone()))
+                        } else {
+                            return Err(CompileError::unknown(y, x, &token))
+                        }
                     }
                 }
                 Some(&new_rule) => {
@@ -382,7 +402,7 @@ pub fn compile_code(code: &str) -> Result<SliceData, CompileError> {
 
 pub fn compile_code_to_cell(code: &str) -> Result<Cell, CompileError> {
     log::trace!(target: "tvm", "begin compile\n");
-    Engine::<CodePage0>::new(vec![]).compile(code).map(|code| code.finalize().0.into())
+    Engine::<CodePage0>::new(vec![]).compile(code).map(|code| code.finalize().0.into_cell().map_err(|_| CompileError::unknown(0, 0, "failure while convert BuilderData to cell")))?
 }
 
 pub fn compile_code_to_builder(code: &str) -> Result<BuilderData, CompileError> {
@@ -394,7 +414,7 @@ pub fn compile_code_debuggable(code: Lines) -> Result<(SliceData, DbgInfo), Comp
     log::trace!(target: "tvm", "begin compile\n");
     let source = lines_to_string(&code);
     let (builder, dbg) = Engine::<CodePage0>::new(code).compile(source.as_str()).map(|code| code.finalize())?;
-    let cell = builder.into();
+    let cell = builder.into_cell().map_err(|_| CompileError::unknown(0, 0, "failure while convert BuilderData to cell"))?;
     let dbg_info = DbgInfo::from(&cell, &dbg);
     Ok((cell.into(), dbg_info))
 }

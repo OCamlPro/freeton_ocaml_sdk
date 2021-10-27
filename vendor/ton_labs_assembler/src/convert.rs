@@ -42,8 +42,11 @@ fn bitsize(value: &BigInt) -> usize {
 ///  "82lxxx — PUSHINT xxx, where 5-bit 0 ≤ l ≤ 30 determines the length n = 8l + 19
 ///  of signed big-endian integer xxx. The total length of this instruction
 ///  is l + 4 bytes or n + 13 = 8l + 32 bits."
-pub fn to_big_endian_octet_string(value: &BigInt) -> Vec<u8> {
+pub fn to_big_endian_octet_string(value: &BigInt) -> Option<Vec<u8>> {
     let mut n = bitsize(value);
+    if n > 257 {
+        return None
+    }
     if n < 19 {
         n = 19;
     } else {
@@ -76,7 +79,7 @@ pub fn to_big_endian_octet_string(value: &BigInt) -> Vec<u8> {
 
     ret.append(&mut prefix);
     ret.append(&mut serialized_val);
-    ret
+    Some(ret)
 }
 
 // /// Constructs new BigInt value from the little-endian slice of u32

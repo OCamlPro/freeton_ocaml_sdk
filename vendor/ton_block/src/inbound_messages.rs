@@ -246,13 +246,13 @@ impl InMsg {
     pub fn message_cell(&self) -> Result<Cell> {
         Ok(
             match self {
-                InMsg::External(ref x) => x.message_cell().clone(),
-                InMsg::IHR(ref x) => x.message_cell().clone(),
-                InMsg::Immediatelly(ref x) => x.read_message()?.message_cell().clone(),
-                InMsg::Final(ref x) => x.read_message()?.message_cell().clone(),
-                InMsg::Transit(ref x) => x.read_in_message()?.message_cell().clone(),
-                InMsg::DiscardedFinal(ref x) => x.read_message()?.message_cell().clone(),
-                InMsg::DiscardedTransit(ref x) => x.read_message()?.message_cell().clone(),
+                InMsg::External(ref x) => x.message_cell(),
+                InMsg::IHR(ref x) => x.message_cell(),
+                InMsg::Immediatelly(ref x) => x.read_message()?.message_cell(),
+                InMsg::Final(ref x) => x.read_message()?.message_cell(),
+                InMsg::Transit(ref x) => x.read_in_message()?.message_cell(),
+                InMsg::DiscardedFinal(ref x) => x.read_message()?.message_cell(),
+                InMsg::DiscardedTransit(ref x) => x.read_message()?.message_cell(),
                 InMsg::None => Default::default()
             }
         )
@@ -463,8 +463,8 @@ impl InMsgExternal {
 
 impl Serializable for InMsgExternal {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.msg.write_to_new_cell()?);
-        cell.append_reference(self.transaction.write_to_new_cell()?);
+        cell.append_reference_cell(self.msg.serialize()?);
+        cell.append_reference_cell(self.transaction.serialize()?);
         Ok(())
     }
 }
@@ -531,10 +531,10 @@ impl InMsgIHR {
 
 impl Serializable for InMsgIHR {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.msg.write_to_new_cell()?);
-        cell.append_reference(self.transaction.write_to_new_cell()?);
+        cell.append_reference_cell(self.msg.serialize()?);
+        cell.append_reference_cell(self.transaction.serialize()?);
         self.ihr_fee.write_to(cell)?;
-        cell.append_reference(BuilderData::from(&self.proof_created));
+        cell.append_reference_cell(self.proof_created.clone());
         Ok(())
     }
 }
@@ -544,7 +544,7 @@ impl Deserializable for InMsgIHR {
         self.msg.read_from_reference(cell)?;
         self.transaction.read_from_reference(cell)?;
         self.ihr_fee.read_from(cell)?;
-        self.proof_created = cell.checked_drain_reference()?.clone();
+        self.proof_created = cell.checked_drain_reference()?;
         Ok(())
     }
 }
@@ -590,8 +590,8 @@ impl InMsgFinal {
 
 impl Serializable for InMsgFinal {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.in_msg.write_to_new_cell()?);
-        cell.append_reference(self.transaction.write_to_new_cell()?);
+        cell.append_reference_cell(self.in_msg.serialize()?);
+        cell.append_reference_cell(self.transaction.serialize()?);
         self.fwd_fee.write_to(cell)?;
         Ok(())
     }
@@ -647,8 +647,8 @@ impl InMsgTransit {
 
 impl Serializable for InMsgTransit {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.in_msg.write_to_new_cell()?);
-        cell.append_reference(self.out_msg.write_to_new_cell()?);
+        cell.append_reference_cell(self.in_msg.serialize()?);
+        cell.append_reference_cell(self.out_msg.serialize()?);
         self.transit_fee.write_to(cell)?;
         Ok(())
     }
@@ -700,7 +700,7 @@ impl InMsgDiscardedFinal {
 
 impl Serializable for InMsgDiscardedFinal {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.in_msg.write_to_new_cell()?);
+        cell.append_reference_cell(self.in_msg.serialize()?);
         self.transaction_id.write_to(cell)?;
         self.fwd_fee.write_to(cell)?;
         Ok(())
@@ -730,7 +730,7 @@ impl InMsgDiscardedTransit {
         Ok(
             InMsgDiscardedTransit {
                 in_msg: ChildCell::with_struct(msg)?,
-                transaction_id: transaction_id,
+                transaction_id,
                 fwd_fee: fee,
                 proof_delivered: proof
             }
@@ -760,10 +760,10 @@ impl InMsgDiscardedTransit {
 
 impl Serializable for InMsgDiscardedTransit {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.in_msg.write_to_new_cell()?);
+        cell.append_reference_cell(self.in_msg.serialize()?);
         self.transaction_id.write_to(cell)?;
         self.fwd_fee.write_to(cell)?;
-        cell.append_reference(BuilderData::from(&self.proof_delivered));
+        cell.append_reference_cell(self.proof_delivered.clone());
         Ok(())
     }
 }
@@ -773,7 +773,7 @@ impl Deserializable for InMsgDiscardedTransit {
         self.in_msg.read_from_reference(cell)?;
         self.transaction_id.read_from(cell)?;
         self.fwd_fee.read_from(cell)?;
-        self.proof_delivered = cell.checked_drain_reference()?.clone();
+        self.proof_delivered = cell.checked_drain_reference()?;
         Ok(())
     }
 }

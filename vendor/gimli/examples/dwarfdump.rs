@@ -185,7 +185,7 @@ fn add_relocations(
                             }
                         }
                     }
-                    object::RelocationTarget::Section(_) | object::RelocationTarget::Absolute => {}
+                    _ => {}
                 }
                 if relocations.insert(offset, relocation).is_some() {
                     eprintln!(
@@ -349,7 +349,7 @@ impl<'a, R: gimli::Reader<Offset = usize>> gimli::Reader for Relocate<'a, R> {
 impl<'a, R: Reader> Reader for Relocate<'a, R> {}
 
 #[derive(Default)]
-struct Flags {
+struct Flags<'a> {
     eh_frame: bool,
     goff: bool,
     info: bool,
@@ -358,18 +358,10 @@ struct Flags {
     pubtypes: bool,
     aranges: bool,
     dwo: bool,
+    dwo_parent: Option<object::File<'a>>,
+    sup: Option<object::File<'a>>,
     raw: bool,
     match_units: Option<Regex>,
-}
-
-impl Flags {
-    fn section_name(&self, id: gimli::SectionId) -> Option<&'static str> {
-        if self.dwo {
-            id.dwo_name()
-        } else {
-            Some(id.name())
-        }
-    }
 }
 
 fn print_usage(opts: &getopts::Options) -> ! {
@@ -395,6 +387,12 @@ fn main() {
         "",
         "dwo",
         "print the .dwo versions of the selected sections",
+    );
+    opts.optopt(
+        "",
+        "dwo-parent",
+        "use the specified file as the parent of the dwo (e.g. for .debug_addr)",
+        "library path",
     );
     opts.optflag("", "raw", "print raw data values");
     opts.optopt(
@@ -472,32 +470,38 @@ fn main() {
         None
     };
 
-    let sup_mmap;
-    let sup_file = if let Some(sup_path) = matches.opt_str("sup") {
-        let file = match fs::File::open(&sup_path) {
+    let arena_mmap = Arena::new();
+    let load_file = |path| {
+        let file = match fs::File::open(&path) {
             Ok(file) => file,
             Err(err) => {
-                eprintln!("Failed to open file '{}': {}", sup_path, err);
+                eprintln!("Failed to open file '{}': {}", path, err);
                 process::exit(1);
             }
         };
-        sup_mmap = match unsafe { memmap::Mmap::map(&file) } {
+        let mmap = match unsafe { memmap::Mmap::map(&file) } {
             Ok(mmap) => mmap,
             Err(err) => {
-                eprintln!("Failed to map file '{}': {}", sup_path, err);
+                eprintln!("Failed to map file '{}': {}", path, err);
                 process::exit(1);
             }
         };
-        match object::File::parse(&*sup_mmap) {
+        let mmap_ref = (*arena_mmap.alloc(mmap)).borrow();
+        match object::File::parse(&**mmap_ref) {
             Ok(file) => Some(file),
             Err(err) => {
-                eprintln!("Failed to parse file '{}': {}", sup_path, err);
+                eprintln!("Failed to parse file '{}': {}", path, err);
                 process::exit(1);
             }
         }
-    } else {
-        None
     };
+
+    flags.sup = matches.opt_str("sup").and_then(load_file);
+    flags.dwo_parent = matches.opt_str("dwo-parent").and_then(load_file);
+    if flags.dwo_parent.is_some() && !flags.dwo {
+        eprintln!("--dwo-parent also requires --dwo");
+        process::exit(1);
+    }
 
     for file_path in &matches.free {
         if matches.free.len() != 1 {
@@ -532,7 +536,7 @@ fn main() {
         } else {
             gimli::RunTimeEndian::Big
         };
-        let ret = dump_file(&file, sup_file.as_ref(), endian, &flags);
+        let ret = dump_file(&file, endian, &flags);
         match ret {
             Ok(_) => (),
             Err(err) => eprintln!("Failed to dump '{}': {}", file_path, err,),
@@ -544,16 +548,21 @@ fn load_file_section<'input, 'arena, Endian: gimli::Endianity>(
     id: gimli::SectionId,
     file: &object::File<'input>,
     endian: Endian,
-    flags: &Flags,
+    is_dwo: bool,
     arena_data: &'arena Arena<Cow<'input, [u8]>>,
     arena_relocations: &'arena Arena<RelocationMap>,
 ) -> Result<Relocate<'arena, gimli::EndianSlice<'arena, Endian>>> {
     let mut relocations = RelocationMap::default();
-    let name = flags.section_name(id);
+    let name = if is_dwo {
+        id.dwo_name()
+    } else {
+        Some(id.name())
+    };
+
     let data = match name.and_then(|name| file.section_by_name(&name)) {
         Some(ref section) => {
             // DWO sections never have relocations, so don't bother.
-            if !flags.dwo {
+            if !is_dwo {
                 add_relocations(&mut relocations, file, section);
             }
             section.uncompressed_data()?
@@ -572,12 +581,7 @@ fn load_file_section<'input, 'arena, Endian: gimli::Endianity>(
     })
 }
 
-fn dump_file<Endian>(
-    file: &object::File,
-    sup_file: Option<&object::File>,
-    endian: Endian,
-    flags: &Flags,
-) -> Result<()>
+fn dump_file<Endian>(file: &object::File, endian: Endian, flags: &Flags) -> Result<()>
 where
     Endian: gimli::Endianity + Send + Sync,
 {
@@ -585,18 +589,47 @@ where
     let arena_relocations = Arena::new();
 
     let mut load_section = |id: gimli::SectionId| -> Result<_> {
-        load_file_section(id, file, endian, flags, &arena_data, &arena_relocations)
+        load_file_section(id, file, endian, flags.dwo, &arena_data, &arena_relocations)
     };
     let mut dwarf = gimli::Dwarf::load(&mut load_section)?;
+    let mut dwo_parent_units = HashMap::new();
     if flags.dwo {
         dwarf.file_type = gimli::DwarfFileType::Dwo;
+
+        if let Some(dwo_parent_file) = flags.dwo_parent.as_ref() {
+            let mut load_dwo_parent_section = |id: gimli::SectionId| -> Result<_> {
+                load_file_section(
+                    id,
+                    dwo_parent_file,
+                    endian,
+                    false,
+                    &arena_data,
+                    &arena_relocations,
+                )
+            };
+            let dwo_parent = gimli::Dwarf::load(&mut load_dwo_parent_section)?;
+            dwarf.debug_addr = dwo_parent.debug_addr.clone();
+            dwarf.ranges = dwo_parent.ranges.clone();
+            dwo_parent_units = match dwo_parent
+                .units()
+                .map(|unit_header| dwo_parent.unit(unit_header))
+                .filter_map(|unit| Ok(unit.dwo_id.map(|dwo_id| (dwo_id, unit))))
+                .collect()
+            {
+                Ok(units) => units,
+                Err(err) => {
+                    eprintln!("Failed to process --dwo-parent units: {}", err);
+                    return Ok(());
+                }
+            }
+        }
     }
 
-    if let Some(sup_file) = sup_file {
+    if let Some(sup_file) = flags.sup.as_ref() {
         let mut load_sup_section = |id: gimli::SectionId| -> Result<_> {
             // Note: we really only need the `.debug_str` section,
             // but for now we load them all.
-            load_file_section(id, sup_file, endian, flags, &arena_data, &arena_relocations)
+            load_file_section(id, sup_file, endian, false, &arena_data, &arena_relocations)
         };
         dwarf.load_sup(&mut load_sup_section)?;
     }
@@ -647,7 +680,7 @@ where
         )?;
     }
     if flags.info {
-        dump_info(&dwarf, flags)?;
+        dump_info(&dwarf, dwo_parent_units, flags)?;
         dump_types(&mut BufWriter::new(out.lock()), &dwarf, flags)?;
         writeln!(&mut out.lock())?;
     }
@@ -950,7 +983,11 @@ fn dump_cfi_instructions<R: Reader, W: Write>(
     }
 }
 
-fn dump_info<R: Reader>(dwarf: &gimli::Dwarf<R>, flags: &Flags) -> Result<()>
+fn dump_info<R: Reader>(
+    dwarf: &gimli::Dwarf<R>,
+    dwo_parent_units: HashMap<gimli::DwoId, gimli::Unit<R>>,
+    flags: &Flags,
+) -> Result<()>
 where
     R::Endian: Send + Sync,
 {
@@ -997,13 +1034,21 @@ where
             }
         }
 
-        let unit = match dwarf.unit(header) {
+        let mut unit = match dwarf.unit(header) {
             Ok(unit) => unit,
             Err(err) => {
                 writeln_error(buf, dwarf, err.into(), "Failed to parse unit root entry")?;
                 return Ok(());
             }
         };
+
+        if flags.dwo {
+            if let Some(dwo_id) = unit.dwo_id {
+                if let Some(parent_unit) = dwo_parent_units.get(&dwo_id) {
+                    unit.copy_relocated_attributes(parent_unit);
+                }
+            }
+        }
 
         let entries_result = dump_entries(buf, unit, dwarf, flags);
         if let Err(err) = entries_result {
@@ -1276,6 +1321,7 @@ fn dump_attr_value<R: Reader, W: Write>(
             writeln!(w, "<.debug_macro+0x{:08x}>", offset.0)?;
         }
         gimli::AttributeValue::RangeListsRef(offset) => {
+            let offset = dwarf.ranges_offset_from_raw(unit, offset);
             dump_range_list(w, offset, unit, dwarf)?;
         }
         gimli::AttributeValue::DebugRngListsBase(base) => {
@@ -1650,7 +1696,7 @@ fn dump_loc_list<R: Reader, W: Write>(
     unit: &gimli::Unit<R>,
     dwarf: &gimli::Dwarf<R>,
 ) -> Result<()> {
-    let raw_locations = dwarf.locations.raw_locations(offset, unit.encoding())?;
+    let raw_locations = dwarf.raw_locations(unit, offset)?;
     let raw_locations: Vec<_> = raw_locations.collect()?;
     let mut locations = dwarf.locations(unit, offset)?;
     writeln!(
@@ -1778,7 +1824,7 @@ fn dump_range_list<R: Reader, W: Write>(
     unit: &gimli::Unit<R>,
     dwarf: &gimli::Dwarf<R>,
 ) -> Result<()> {
-    let raw_ranges = dwarf.ranges.raw_ranges(offset, unit.encoding())?;
+    let raw_ranges = dwarf.raw_ranges(unit, offset)?;
     let raw_ranges: Vec<_> = raw_ranges.collect()?;
     let mut ranges = dwarf.ranges(unit, offset)?;
     writeln!(

@@ -12,8 +12,8 @@ pub(crate) type Key512 = [u8; 64];
 
 pub(crate) fn sha256(bytes: &[u8]) -> Vec<u8> {
     let mut hasher = sha2::Sha256::new();
-    hasher.input(bytes);
-    hasher.result().to_vec()
+    hasher.update(bytes);
+    hasher.finalize().to_vec()
 }
 
 pub(crate) fn ton_crc16(data: &[u8]) -> u16 {
@@ -38,7 +38,7 @@ fn parse_key(s: &String) -> ClientResult<Vec<u8>> {
 
 pub(crate) fn key512(slice: &[u8]) -> ClientResult<Key512> {
     if slice.len() != 64 {
-        return Err(crypto::Error::invalid_key_size(slice.len(), 64));
+        return Err(crypto::Error::invalid_key_size(slice.len(), &[64]));
     }
     let mut key = [0u8; 64];
     for (place, element) in key.iter_mut().zip(slice.iter()) {
@@ -49,7 +49,7 @@ pub(crate) fn key512(slice: &[u8]) -> ClientResult<Key512> {
 
 pub(crate) fn key256(slice: &[u8]) -> ClientResult<Key256> {
     if slice.len() != 32 {
-        return Err(crypto::Error::invalid_key_size(slice.len(), 32));
+        return Err(crypto::Error::invalid_key_size(slice.len(), &[32]));
     }
     let mut key = [0u8; 32];
     for (place, element) in key.iter_mut().zip(slice.iter()) {
@@ -60,7 +60,7 @@ pub(crate) fn key256(slice: &[u8]) -> ClientResult<Key256> {
 
 pub(crate) fn key192(slice: &[u8]) -> ClientResult<Key192> {
     if slice.len() != 24 {
-        return Err(crypto::Error::invalid_key_size(slice.len(), 24));
+        return Err(crypto::Error::invalid_key_size(slice.len(), &[24]));
     }
     let mut key = [0u8; 24];
     for (place, element) in key.iter_mut().zip(slice.iter()) {
@@ -70,14 +70,14 @@ pub(crate) fn key192(slice: &[u8]) -> ClientResult<Key192> {
 }
 
 pub(crate) fn hmac_sha512(key: &[u8], data: &[u8]) -> [u8; 64] {
-    let mut hmac = Hmac::<Sha512>::new_varkey(key).unwrap();
-    hmac.input(&data);
+    let mut hmac = Hmac::<Sha512>::new_from_slice(key).unwrap();
+    hmac.update(&data);
     let mut result = [0u8; 64];
-    result.copy_from_slice(&hmac.result().code());
+    result.copy_from_slice(&hmac.finalize().into_bytes());
     result
 }
 
-pub(crate) fn pbkdf2_hmac_sha512(password: &[u8], salt: &[u8], c: usize) -> [u8; 64] {
+pub(crate) fn pbkdf2_hmac_sha512(password: &[u8], salt: &[u8], c: u32) -> [u8; 64] {
     let mut result = [0u8; 64];
     pbkdf2::pbkdf2::<Hmac<Sha512>>(password, salt, c, &mut result);
     result

@@ -37,6 +37,7 @@ pub enum ErrorCode {
     UnexpectedCallbackResponse = 31,
     CanNotParseNumber = 32,
     InternalError = 33,
+    InvalidHandle = 34,
 }
 pub struct Error;
 
@@ -57,10 +58,14 @@ impl Error {
             || error.code == ErrorCode::WebsocketReceiveError as u32
             || error.code == ErrorCode::WebsocketSendError as u32
             || error.code == ErrorCode::HttpRequestSendError as u32
+            || (error.code == crate::net::ErrorCode::GraphqlError as u32
+                && error.data["server_code"].as_i64() >= Some(500)
+                && error.data["server_code"].as_i64() <= Some(599)
+            )
     }
 
-    pub fn internal_error(message: &str) -> ClientError {
-        error(ErrorCode::InternalError, message.into())
+    pub fn internal_error<E: Display>(message: E) -> ClientError {
+        error(ErrorCode::InternalError, message.to_string())
     }
 
     pub fn not_implemented(message: &str) -> ClientError {
@@ -193,7 +198,10 @@ impl Error {
 
         error(
             ErrorCode::InvalidParams,
-            format!("Invalid parameters: {}\nparams: {}", err, params_json_stripped),
+            format!(
+                "Invalid parameters: {}\nparams: {}",
+                err, params_json_stripped
+            ),
         )
     }
 
@@ -228,7 +236,10 @@ impl Error {
     pub fn can_not_send_request_result(id: u32) -> ClientError {
         error(
             ErrorCode::CanNotSendRequestResult,
-            format!("Can not send request result. Probably receiver is already dropped. Request ID {}", id),
+            format!(
+                "Can not send request result. Probably receiver is already dropped. Request ID {}",
+                id
+            ),
         )
     }
 
@@ -249,7 +260,10 @@ impl Error {
     pub fn unexpected_callback_response(expected: &str, received: impl Debug) -> ClientError {
         error(
             ErrorCode::UnexpectedCallbackResponse,
-            format!("Unexpected callback response. Expected {}, received {:#?}", expected, received),
+            format!(
+                "Unexpected callback response. Expected {}, received {:#?}",
+                expected, received
+            ),
         )
     }
 
@@ -259,9 +273,7 @@ impl Error {
             format!("Can not parse integer from string `{}`", string),
         )
     }
-}
 
-impl Error {
     pub fn cannot_convert_jsvalue_to_json(value: impl std::fmt::Debug) -> ClientError {
         error(
             ErrorCode::CannotConvertJsValueToJson,
@@ -280,6 +292,13 @@ impl Error {
         error(
             ErrorCode::SetTimerError,
             format!("Set timer error: {}", err),
+        )
+    }
+
+    pub fn invalid_handle(handle: u32, name: &str) -> ClientError {
+        error(
+            ErrorCode::InvalidHandle,
+            format!("Invalid {} handle: {}", name, handle),
         )
     }
 }

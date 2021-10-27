@@ -1,9 +1,8 @@
 use crate::abi;
-use crate::abi::internal::{add_sign_to_message, add_sign_to_message_body, create_tvc_image, try_to_sign_message, resolve_pubkey, update_pubkey};
+use crate::abi::internal::{add_sign_to_message, add_sign_to_message_body, create_tvc_image, try_to_sign_message, update_pubkey};
 use crate::abi::{Abi, Error, FunctionHeader, Signer};
 use crate::boc::internal::{get_boc_hash, deserialize_cell_from_boc};
 use crate::client::ClientContext;
-use crate::crypto::internal::decode_public_key;
 use crate::encoding::{account_decode, account_encode, decode_abi_number, hex_decode};
 use crate::error::ClientResult;
 use serde_json::Value;
@@ -264,16 +263,31 @@ fn encode_deploy(
     workchain: i32,
     call_set: &CallSet,
     pubkey: Option<&str>,
+    signer: &Signer,
     processing_try_index: Option<u8>,
 ) -> ClientResult<(Vec<u8>, Option<Vec<u8>>, MsgAddressInt)> {
     let address = image.msg_address(workchain);
-    let unsigned = ton_sdk::Contract::get_deploy_message_bytes_for_signing(
-        call_set.to_function_call_set(pubkey, processing_try_index, &context, &abi, false)?,
-        image,
-        workchain,
-    )
-    .map_err(|err| abi::Error::encode_deploy_message_failed(err))?;
-    Ok((unsigned.message, Some(unsigned.data_to_sign), address))
+    Ok(match signer {
+        Signer::None => {
+            let message = ton_sdk::Contract::construct_deploy_message_json(
+                call_set.to_function_call_set(pubkey, processing_try_index, &context, abi, false)?,
+                image, 
+                None,
+                workchain,
+            )
+            .map_err(|err| abi::Error::encode_run_message_failed(err, &call_set.function_name))?;
+            (message.serialized_message, None, address)
+        }
+        _ => {
+            let unsigned = ton_sdk::Contract::get_deploy_message_bytes_for_signing(
+                call_set.to_function_call_set(pubkey, processing_try_index, &context, &abi, false)?,
+                image,
+                workchain,
+            )
+            .map_err(|err| abi::Error::encode_deploy_message_failed(err))?;
+            (unsigned.message, Some(unsigned.data_to_sign), address)
+        }
+    })
 }
 
 fn encode_int_deploy(
@@ -429,12 +443,8 @@ pub async fn encode_message(
             &deploy_set.tvc,
         ).await?;
 
-        if let Some(tvc_public) = resolve_pubkey(&deploy_set, &image, &public)? {
-            image.set_public_key(&decode_public_key(&tvc_public)?)
-                .map_err(|err| Error::invalid_tvc_image(err))?;
-        }
+        required_public_key(update_pubkey(&deploy_set, &mut image, &public)?)?;
 
-        let public = required_public_key(public)?;
         if let Some(call_set) = &params.call_set {
             encode_deploy(
                 context.clone(),
@@ -442,7 +452,8 @@ pub async fn encode_message(
                 image,
                 workchain,
                 call_set,
-                Some(&public),
+                public.as_ref().map(|x| x.as_str()),
+                &params.signer,
                 params.processing_try_index,
             )?
         } else {

@@ -12,16 +12,17 @@
 */
 
 use crate::{
-    blocks::{BlockIdExt},
+    Serializable, Deserializable,
+    blocks::BlockIdExt,
     error::BlockError,
     validators::ValidatorBaseInfo,
-    Serializable, Deserializable,
     validators::ValidatorDescr
 };
 use ed25519::signature::{Signature, Verifier};
 use std::{
     io::{Cursor, Write},
-    collections::HashMap
+    collections::HashMap,
+    str::FromStr,
 };
 use ton_types::{
     error, fail, Result,
@@ -49,12 +50,8 @@ impl CryptoSignature {
         Ok(Self(ed25519::Signature::from_bytes(bytes)?))
     }
 
-    pub fn from_str(string: &str) -> Result<Self> {
-        let buf = hex::decode(string).map_err(
-            |err| BlockError::InvalidData(format!("error parsing hex string: {}", err))
-        )?;
-        Self::from_bytes(&buf)
-    }
+    // #[deprecated]
+    pub fn from_str(s: &str) -> Result<Self> { FromStr::from_str(s) }
 
     pub fn from_r_s(r: &[u8], s: &[u8]) -> Result<Self>
     {
@@ -67,8 +64,8 @@ impl CryptoSignature {
         let mut sign = [0_u8; ed25519_dalek::SIGNATURE_LENGTH];
         {
             let mut cur = Cursor::new(&mut sign[..]);
-            cur.write(r).unwrap();
-            cur.write(s).unwrap();
+            cur.write_all(r).unwrap();
+            cur.write_all(s).unwrap();
         }
         Ok(Self(ed25519::Signature::from_bytes(&sign[..])?))
     }
@@ -105,6 +102,16 @@ impl CryptoSignature {
 impl Default for CryptoSignature {
     fn default() -> Self {
         Self(ed25519::Signature::from_bytes(&[0; ed25519_dalek::SIGNATURE_LENGTH]).unwrap())
+    }
+}
+
+impl FromStr for CryptoSignature {
+    type Err = failure::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        let key_buf = hex::decode(s).map_err(
+            |err| BlockError::InvalidData(format!("error parsing hex string {} : {}", s, err))
+        )?;
+        Self::from_bytes(&key_buf)
     }
 }
 
@@ -200,17 +207,12 @@ impl SigPubKey {
         Self::default()
     }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self>
-    {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         Ok(SigPubKey(ed25519_dalek::PublicKey::from_bytes(bytes)?))
     }
 
-    pub fn from_str(string: &str) -> Result<Self> {
-        let key_buf = hex::decode(string).map_err(
-            |err| BlockError::InvalidData(format!("error parsing hex string: {}", err))
-        )?;
-        Self::from_bytes(&key_buf)
-    }
+    // #[deprecated]
+    pub fn from_str(s: &str) -> Result<Self> { FromStr::from_str(s) }
 
     pub fn key(&self) -> &ed25519_dalek::PublicKey {
         &self.0
@@ -222,6 +224,38 @@ impl SigPubKey {
 
     pub fn verify_signature(&self, data: &[u8], signature: &CryptoSignature) -> bool {
         self.0.verify(data, signature.signature()).is_ok()
+    }
+
+    pub fn as_slice(&self) -> &[u8; 32] {
+        self.0.as_bytes()
+    }
+}
+
+impl PartialEq<UInt256> for SigPubKey {
+    fn eq(&self, other: &UInt256) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
+impl AsRef<[u8]> for SigPubKey {
+    fn as_ref(&self) -> &[u8] {
+        self.as_slice()
+    }
+}
+
+impl AsRef<[u8; 32]> for SigPubKey {
+    fn as_ref(&self) -> &[u8; 32] {
+        self.as_slice()
+    }
+}
+
+impl FromStr for SigPubKey {
+    type Err = failure::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        let key_buf = hex::decode(s).map_err(
+            |err| BlockError::InvalidData(format!("error parsing hex string {}: {}", s, err))
+        )?;
+        Self::from_bytes(&key_buf)
     }
 }
 
@@ -270,25 +304,26 @@ pub struct BlockSignaturesPure {
 
 impl Default for BlockSignaturesPure {
     fn default() -> Self {
-        BlockSignaturesPure {
-            sig_count: 0,
-            sig_weight: 0,
-            signatures: HashmapE::with_bit_len(16),
-        }
+        Self::new()
     }
 }
 
 impl BlockSignaturesPure {
     /// New empty instance of BlockSignaturesPure
-    pub fn new() -> Self {
-        BlockSignaturesPure::default()
-    }
-    
-    /// New instance of BlockSignaturesPure
-    pub fn with_weight(weight: u64) -> Self {
-        BlockSignaturesPure {
+    pub const fn new() -> Self {
+        Self {
             sig_count: 0,
-            sig_weight: weight,
+            sig_weight: 0,
+            signatures: HashmapE::with_bit_len(16),
+        }
+    }
+    pub const fn default() -> Self { Self::new() }
+
+    /// New instance of BlockSignaturesPure
+    pub const fn with_weight(sig_weight: u64) -> Self {
+        Self {
+            sig_count: 0,
+            sig_weight,
             signatures: HashmapE::with_bit_len(16),
         }
     }
@@ -310,7 +345,7 @@ impl BlockSignaturesPure {
     /// Add crypto signature pair to BlockSignaturesPure
     pub fn add_sigpair(&mut self, signature: CryptoSignaturePair) {
         self.sig_count += 1;
-        let key = (self.sig_count as u16).write_to_new_cell().unwrap();
+        let key = (self.sig_count as u16).serialize().unwrap();
         self.signatures.set_builder(key.into(), &signature.write_to_new_cell().unwrap()).unwrap();
     }
 
@@ -318,7 +353,7 @@ impl BlockSignaturesPure {
         &self.signatures
     }
 
-    pub fn check_signatures(&self, validators_list: Vec<ValidatorDescr>, data: &[u8]) -> Result<u64> {
+    pub fn check_signatures(&self, validators_list: &[ValidatorDescr], data: &[u8]) -> Result<u64> {
         // Calc validators short ids
         let mut validators_map = HashMap::new();
         for vd in validators_list {
@@ -330,7 +365,7 @@ impl BlockSignaturesPure {
         self.signatures().iterate_slices(|ref mut _key, ref mut slice| {
             let sign = CryptoSignaturePair::construct_from(slice)?;
             if let Some(vd) = validators_map.get(&sign.node_id_short) {
-                if !vd.public_key.verify_signature(data, &sign.sign) {
+                if !vd.verify_signature(data, &sign.sign) {
                     fail!(BlockError::BadSignature)
                 }
                 weight += vd.weight;
@@ -447,7 +482,7 @@ impl BlockProof {
     pub fn new() -> Self {
         BlockProof {
             proof_for: BlockIdExt::default(),
-            root: BuilderData::default().into(),
+            root: Cell::default(),
             signatures: None,
         }
     }
@@ -475,7 +510,7 @@ impl Serializable for BlockProof {
         cell.checked_append_reference(self.root.clone())?;
         if let Some(s) = self.signatures.as_ref() {
             cell.append_bit_one()?;
-            cell.checked_append_reference(s.write_to_new_cell()?.into())?;
+            cell.checked_append_reference(s.serialize()?)?;
         } else {
             cell.append_bit_zero()?;
         }
@@ -495,7 +530,7 @@ impl Deserializable for BlockProof {
             )
         }
         self.proof_for.read_from(cell)?; 
-        self.root = cell.checked_drain_reference()?.clone();
+        self.root = cell.checked_drain_reference()?;
         self.signatures = if cell.get_next_bit()? {
             Some(BlockSignatures::construct_from_reference(cell)?)
         } else {

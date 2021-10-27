@@ -15,7 +15,6 @@ use super::{tc_destroy_string, tc_read_string, tc_request, tc_request_sync};
 use crate::abi::{
     encode_message, Abi, CallSet, DeploySet, ParamsOfEncodeMessage, ResultOfEncodeMessage, Signer,
 };
-use crate::boc::{ParamsOfParse, ResultOfParse};
 use crate::client::*;
 use crate::crypto::{
     ParamsOfNaclSignDetached, ParamsOfNaclSignKeyPairFromSecret, ResultOfNaclSignDetached,
@@ -26,8 +25,8 @@ use crate::processing::{ParamsOfProcessMessage, ResultOfProcessMessage};
 use crate::{
     crypto::KeyPair,
     error::{ClientError, ClientResult},
-    net::{ParamsOfWaitForCollection, ResultOfWaitForCollection},
-    tc_create_context, tc_destroy_context, ClientConfig, ContextHandle,
+    net::{ParamsOfWaitForCollection, ParamsOfQueryTransactionTree, ResultOfQueryTransactionTree},
+    tc_create_context, tc_destroy_context, ContextHandle,
 };
 use api_info::ApiModule;
 use futures::Future;
@@ -85,6 +84,7 @@ pub const HELLO: &str = "Hello";
 pub const EVENTS: &str = "Events";
 pub const TEST_DEBOT: &str = "testDebot";
 pub const TEST_DEBOT_TARGET: &str = "testDebotTarget";
+pub const EXCEPTION: &str = "Exception";
 
 struct RequestData {
     sender: Option<Sender<ClientResult<Value>>>,
@@ -94,14 +94,12 @@ struct RequestData {
 
 struct TestRuntime {
     pub next_request_id: u32,
-    pub next_callback_id: u32,
     pub requests: HashMap<u32, RequestData>,
 }
 
 impl TestRuntime {
     fn new() -> Self {
         Self {
-            next_callback_id: 1,
             next_request_id: 1,
             requests: HashMap::new(),
         }
@@ -120,7 +118,6 @@ lazy_static::lazy_static! {
 
 
 pub(crate) struct TestClient {
-    config: ClientConfig,
     context: ContextHandle,
 }
 
@@ -362,7 +359,6 @@ impl TestClient {
         unsafe {
             let response = tc_create_context(StringData::new(&config.to_string()));
             Self {
-                config: serde_json::from_value(config).unwrap(),
                 context: parse_sync_response(response).unwrap(),
             }
         }
@@ -638,34 +634,15 @@ impl TestClient {
             .unwrap();
 
         // wait for tokens reception
-        for message in run_result.out_messages.iter() {
-            let parsed: ResultOfParse = self
-                .request_async(
-                    "boc.parse_message",
-                    ParamsOfParse {
-                        boc: message.clone(),
-                    },
-                )
-                .await
-                .unwrap();
-            let message: ton_sdk::Message = serde_json::from_value(parsed.parsed).unwrap();
-            if ton_sdk::MessageType::Internal == message.msg_type() {
-                let _: ResultOfWaitForCollection = self
-                    .request_async(
-                        "net.wait_for_collection",
-                        ParamsOfWaitForCollection {
-                            collection: "transactions".to_owned(),
-                            filter: Some(json!({
-                                "in_msg": { "eq": message.id()}
-                            })),
-                            result: "id".to_owned(),
-                            timeout: Some(self.config.network.wait_for_timeout),
-                        },
-                    )
-                    .await
-                    .unwrap();
-            }
-        }
+        let _: ResultOfQueryTransactionTree = self.request_async(
+            "net.query_transaction_tree",
+            ParamsOfQueryTransactionTree {
+                in_msg: run_result.transaction["in_msg"].as_str().unwrap().to_string(),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
     }
 
     pub(crate) async fn deploy_with_giver_async(

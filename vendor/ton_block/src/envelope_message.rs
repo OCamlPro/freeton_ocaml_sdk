@@ -13,11 +13,12 @@
 
 use crate::{
     error::BlockError,
-    messages::Message,
     shard::{AccountIdPrefixFull, ShardIdent},
+    messages::Message,
     types::{AddSub, ChildCell, Grams},
     Serializable, Deserializable,
 };
+
 use std::cmp::Ordering;
 use ton_types::{
     error, fail, Result,
@@ -411,15 +412,17 @@ impl MsgEnvelope {
 
     ///
     /// Create Envelope with hypercube routing params
+    /// TBD
     ///
-    pub fn hypercube_routing(msg: &Message, src_shard: &ShardIdent, fwd_fee_remaining: Grams) -> Result<Self> {
+    #[allow(dead_code)]
+    pub(crate) fn hypercube_routing(msg: &Message, src_shard: &ShardIdent, fwd_fee_remaining: Grams) -> Result<Self> {
         let msg_cell = msg.serialize()?;
         let src = msg.src_ref().ok_or_else(|| error!("source address of message {:x} is invalid", msg_cell.repr_hash()))?;
         let src_prefix = AccountIdPrefixFull::prefix(src)?;
         let dst = msg.dst_ref().ok_or_else(|| error!("destination address of message {:x} is invalid", msg_cell.repr_hash()))?;
         let dst_prefix = AccountIdPrefixFull::prefix(dst)?;
-        let ia = IntermediateAddress::full_src();
-        let route_info = src_prefix.perform_hypercube_routing(&dst_prefix, src_shard, &ia)?;
+        let ia = IntermediateAddress::default();
+        let route_info = src_prefix.perform_hypercube_routing(&dst_prefix, src_shard, ia)?;
         Ok(MsgEnvelope {
             cur_addr: route_info.0,
             next_addr: route_info.1,
@@ -516,13 +519,13 @@ impl MsgEnvelope {
     /// is message route in one workchain
     pub fn same_workchain(&self) -> Result<bool> {
         let msg = self.read_message()?;
-        debug_assert!(msg.is_internal(), "Message with hash {} is not internal",
-            self.message_cell().repr_hash().to_hex_string());
+        debug_assert!(msg.is_internal(), "Message with hash {:x} is not internal",
+            self.message_cell().repr_hash());
         if let (Some(src), Some(dst)) = (msg.src_ref(), msg.dst_ref()) {
             return Ok(src.get_workchain_id() == dst.get_workchain_id())
         }
-        fail!("Message with hash {} has wrong type of src/dst address",
-            self.message_cell().repr_hash().to_hex_string())
+        fail!("Message with hash {:x} has wrong type of src/dst address",
+            self.message_cell().repr_hash())
     }
 }
 
@@ -534,7 +537,7 @@ impl Serializable for MsgEnvelope {
         self.cur_addr.write_to(cell)?;
         self.next_addr.write_to(cell)?;
         self.fwd_fee_remaining.write_to(cell)?;
-        cell.append_reference(self.msg.write_to_new_cell()?);
+        cell.append_reference_cell(self.msg.serialize()?);
         Ok(())
     }
 }

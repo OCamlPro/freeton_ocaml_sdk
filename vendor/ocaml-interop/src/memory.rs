@@ -14,7 +14,7 @@ pub use ocaml_sys::{
 };
 use ocaml_sys::{
     caml_alloc_string, caml_alloc_tuple, caml_copy_double, caml_copy_int32, caml_copy_int64,
-    custom_operations, string_val,
+    custom_operations, string_val, Size,
 };
 
 pub struct OCamlCell<T> {
@@ -100,6 +100,28 @@ pub fn alloc_some<'a, 'b, A>(
     }
 }
 
+pub fn alloc_ok<'a, 'b, A, Err>(
+    cr: &'a mut OCamlRuntime,
+    value: OCamlRef<'b, A>,
+) -> OCaml<'a, Result<A, Err>> {
+    unsafe {
+        let ocaml_ok = caml_alloc(1, tag::TAG_OK);
+        store_field(ocaml_ok, 0, value.get_raw());
+        OCaml::new(cr, ocaml_ok)
+    }
+}
+
+pub fn alloc_error<'a, 'b, A, Err>(
+    cr: &'a mut OCamlRuntime,
+    err: OCamlRef<'b, Err>,
+) -> OCaml<'a, Result<A, Err>> {
+    unsafe {
+        let ocaml_err = caml_alloc(1, tag::TAG_ERROR);
+        store_field(ocaml_err, 0, err.get_raw());
+        OCaml::new(cr, ocaml_err)
+    }
+}
+
 #[doc(hidden)]
 pub unsafe fn alloc_tuple<T>(cr: &mut OCamlRuntime, size: usize) -> OCaml<T> {
     let ocaml_tuple = caml_alloc_tuple(size);
@@ -120,6 +142,16 @@ pub fn alloc_cons<'a, 'b, A>(
         store_field(ocaml_cons, 1, tail.get_raw());
         OCaml::new(cr, ocaml_cons)
     }
+}
+
+#[inline]
+pub unsafe fn store_raw_field_at<A>(
+    cr: &mut OCamlRuntime,
+    block: OCamlRef<A>,
+    offset: Size,
+    raw_value: RawOCaml,
+) {
+    store_field(cr.get(block).get_raw(), offset, raw_value);
 }
 
 const BOX_OPS_DYN_DROP: custom_operations = custom_operations {

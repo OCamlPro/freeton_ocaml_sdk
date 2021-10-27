@@ -18,8 +18,11 @@ use crate::error::ClientResult;
 use crate::net::{ParamsOfQueryCollection, ServerLink, MESSAGES_COLLECTION};
 
 use crate::abi::{decode_message_body, Abi, DecodedMessageBody, ParamsOfDecodeMessageBody};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 use std::sync::Arc;
+
+const DEFAULT_WAITING_TIMEOUT: u32 = 60000;
 
 fn get_string(v: &Value, name: &str) -> Option<String> {
     v[name].as_str().map(|x| x.to_string())
@@ -41,6 +44,15 @@ pub struct ParamsOfQueryTransactionTree {
     /// List of contract ABIs that will be used to decode message bodies.
     /// Library will try to decode each returned message body using any ABI from the registry.
     pub abi_registry: Option<Vec<Abi>>,
+
+    /// Timeout used to limit waiting time for the missing messages and transaction.
+    ///
+    /// If some of the following messages and transactions are missing yet
+    //  the function will wait for their appearance.
+    /// The maximum waiting time is regulated by this option.
+    ///
+    /// Default value is 60000 (1 min).
+    pub timeout: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, ApiType, Default, Clone, Debug)]
@@ -186,8 +198,9 @@ pub struct ResultOfQueryTransactionTree {
 
 async fn query_next_portion(
     server_link: &ServerLink,
+    timeout: u32,
     queue: &mut Vec<(Option<String>, String)>,
-) -> ClientResult<(Value, HashMap<String, Option<String>>)> {
+) -> ClientResult<(Vec<Value>, HashMap<String, Option<String>>)> {
     let mut src_transactions = HashMap::new();
     let mut has_none_src_transaction = false;
     while !queue.is_empty() && src_transactions.len() < 20 {
@@ -206,39 +219,83 @@ async fn query_next_portion(
     if has_none_src_transaction {
         result_fields.push_str(" src_transaction { id }");
     }
-    let messages = server_link
-        .query_collection(
-            ParamsOfQueryCollection {
-                collection: MESSAGES_COLLECTION.to_string(),
-                result: result_fields,
-                filter: Some(json!({
-                    "id": { "in": src_transactions.keys().map(|x|x.to_string()).collect::<Vec<String>>() }
-                })),
-                limit: None,
-                order: None,
-            },
-            None,
-        )
-        .await?;
-    Ok((messages, src_transactions))
+    let mut result_messages = Vec::new();
+    let mut message_ids = src_transactions
+        .keys()
+        .map(|x| x.to_string())
+        .collect::<HashSet<String>>();
+
+    // Wait for all required messages but not more than one minute
+    let time_limit = server_link.client_env.now_ms() + timeout as u64;
+    loop {
+        let mut messages = server_link
+            .query_collection(
+                ParamsOfQueryCollection {
+                    collection: MESSAGES_COLLECTION.to_string(),
+                    result: result_fields.clone(),
+                    filter: Some(json!({
+                        "id": { "in":  Vec::from_iter(&message_ids) }
+                    })),
+                    limit: None,
+                    order: None,
+                },
+                None,
+            )
+            .await?
+            .as_array()
+            .ok_or_else(|| crate::net::Error::invalid_server_response("Message array expected"))?
+            .to_owned();
+        while let Some(message) = messages.pop() {
+            let id = message["id"].as_str().ok_or_else(|| {
+                crate::net::Error::invalid_server_response("Message id is missing")
+            })?;
+            message_ids.remove(id);
+            result_messages.push(message);
+        }
+        if message_ids.is_empty() {
+            break;
+        }
+        if server_link.client_env.now_ms() > time_limit {
+            return Err(crate::net::Error::queries_query_failed("Query transaction tree failed: some messages doesn't appear during 1 minute. Possible reason: sync problems on server side."));
+        }
+        server_link.client_env.set_timer(1000).await?;
+    }
+    Ok((result_messages, src_transactions))
 }
 
-/// Returns transactions tree for specific message.
+/// Returns a tree of transactions triggered by a specific message.
 ///
-/// Performs recursive retrieval of the transactions tree produced by the specific message:
+/// Performs recursive retrieval of a transactions tree produced by a specific message:
 /// in_msg -> dst_transaction -> out_messages -> dst_transaction -> ...
+/// If the chain of transactions execution is in progress while the function is running,
+/// it will wait for the next transactions to appear until the full tree or more than 50 transactions
+/// are received. 
 ///
-/// All retrieved messages and transactions will be included
+/// All the retrieved messages and transactions are included
 /// into `result.messages` and `result.transactions` respectively.
 ///
-/// The retrieval process will stop when the retrieved transaction count is more than 50.
+/// Function reads transactions layer by layer, by pages of 20 transactions. 
+/// 
+/// The retrieval prosess goes like this: 
+/// Let's assume we have an infinite chain of transactions and each transaction generates 5 messages.
+/// 1. Retrieve 1st message (input parameter) and corresponding transaction - put it into result.
+/// It is the first level of the tree of transactions - its root. 
+/// Retrieve 5 out message ids from the transaction for next steps.
+/// 2. Retrieve 5 messages and corresponding transactions on the 2nd layer. Put them into result. 
+/// Retrieve 5*5 out message ids from these transactions for next steps
+/// 3. Retrieve 20 (size of the page) messages and transactions (3rd layer) and 20*5=100 message ids (4th layer).
+/// 4. Retrieve the last 5 messages and 5 transactions on the 3rd layer + 15 messages and transactions (of 100) from the 4th layer
+/// + 25 message ids of the 4th layer + 75 message ids of the 5th layer.
+/// 5. Retrieve 20 more messages and 20 more transactions of the 4th layer + 100 more message ids of the 5th layer. 
+/// 6. Now we have 1+5+20+20+20 = 66 transactions, which is more than 50. Function exits with the tree of
+/// 1m->1t->5m->5t->25m->25t->35m->35t. If we see any message ids in the last transactions out_msgs, which don't have 
+/// corresponding messages in the function result, it means that the full tree was not received and we need to continue iteration. 
 ///
-/// It is guaranteed that each message in `result.messages` has the corresponding transaction
+/// To summarize, it is guaranteed that each message in `result.messages` has the corresponding transaction
 /// in the `result.transactions`.
-///
-/// But there are no guaranties that all messages from transactions `out_msgs` are
+/// But there is no guarantee that all messages from transactions `out_msgs` are
 /// presented in `result.messages`.
-/// So the application have to continue retrieval for missing messages if it requires.
+/// So the application has to continue retrieval for missing messages if it requires.
 #[api_function]
 pub async fn query_transaction_tree(
     context: std::sync::Arc<ClientContext>,
@@ -248,23 +305,23 @@ pub async fn query_transaction_tree(
     let mut transaction_nodes = Vec::new();
     let mut message_nodes = Vec::new();
     let mut query_queue: Vec<(Option<String>, String)> = vec![(None, params.in_msg.clone())];
+    let timeout = params.timeout.unwrap_or(DEFAULT_WAITING_TIMEOUT);
     while !query_queue.is_empty() && transaction_nodes.len() < 50 {
         let (messages, src_transactions) =
-            query_next_portion(server_link, &mut query_queue).await?;
-        if let Some(messages) = messages.as_array() {
-            for message in messages {
-                let message_node =
-                    MessageNode::from(message, &context, &params.abi_registry, &src_transactions).await?;
-                let transaction = &message["dst_transaction"];
-                if transaction.is_object() {
-                    let transaction_node = TransactionNode::from(&transaction, &message_node)?;
-                    for out_msg in &transaction_node.out_msgs {
-                        query_queue.push((Some(transaction_node.id.clone()), out_msg.clone()));
-                    }
-                    transaction_nodes.push(transaction_node)
-                };
-                message_nodes.push(message_node);
-            }
+            query_next_portion(server_link, timeout, &mut query_queue).await?;
+        for message in messages {
+            let message_node =
+                MessageNode::from(&message, &context, &params.abi_registry, &src_transactions)
+                    .await?;
+            let transaction = &message["dst_transaction"];
+            if transaction.is_object() {
+                let transaction_node = TransactionNode::from(&transaction, &message_node)?;
+                for out_msg in &transaction_node.out_msgs {
+                    query_queue.push((Some(transaction_node.id.clone()), out_msg.clone()));
+                }
+                transaction_nodes.push(transaction_node)
+            };
+            message_nodes.push(message_node);
         }
     }
     Ok(ResultOfQueryTransactionTree {

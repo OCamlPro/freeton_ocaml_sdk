@@ -4,18 +4,17 @@ use alloc::fmt::{self, Debug, Display, Formatter};
 use alloc::vec::Vec;
 
 #[cfg(feature = "heapless")]
-use heapless::consts::U8;
-#[cfg(feature = "heapless")]
 use heapless::Vec as HeaplessVec;
 
 use crate::constants::crc_u64::*;
+use crate::lookup_table::LookUpTable;
 
 #[allow(clippy::upper_case_acronyms)]
 /// This struct can help you compute a CRC-64 (or CRC-x where **x** is equal or less than `64`) value.
 pub struct CRCu64 {
     by_table: bool,
     poly: u64,
-    lookup_table: [u64; 256],
+    lookup_table: LookUpTable<u64>,
     sum: u64,
     pub(crate) bits: u8,
     high_bit: u64,
@@ -53,9 +52,9 @@ impl CRCu64 {
 
         if bits % 8 == 0 {
             let lookup_table = if reflect {
-                Self::crc_reflect_table(poly)
+                LookUpTable::Dynamic(Self::crc_reflect_table(poly))
             } else {
-                Self::crc_table(poly, bits)
+                LookUpTable::Dynamic(Self::crc_table(poly, bits))
             };
 
             Self::create_crc_with_exists_lookup_table(
@@ -66,13 +65,21 @@ impl CRCu64 {
                 reflect,
             )
         } else {
-            Self::create(false, [0u64; 256], poly, bits, initial, final_xor, reflect)
+            Self::create(
+                false,
+                LookUpTable::Static(&[0u64; 256]),
+                poly,
+                bits,
+                initial,
+                final_xor,
+                reflect,
+            )
         }
     }
 
     /// Create a `CRCu64` instance by providing an existing lookup table, the length of bits, expression, reflection, an initial value and a final xor value.
     pub(crate) fn create_crc_with_exists_lookup_table(
-        lookup_table: [u64; 256],
+        lookup_table: LookUpTable<u64>,
         bits: u8,
         initial: u64,
         final_xor: u64,
@@ -86,7 +93,7 @@ impl CRCu64 {
     #[inline]
     fn create(
         by_table: bool,
-        lookup_table: [u64; 256],
+        lookup_table: LookUpTable<u64>,
         mut poly: u64,
         bits: u8,
         initial: u64,
@@ -314,7 +321,7 @@ impl CRCu64 {
 impl CRCu64 {
     /// Get the current CRC value (it always returns a heapless vec instance with a length corresponding to the CRC bits). You can continue calling `digest` method even after getting a CRC value.
     #[inline]
-    pub fn get_crc_heapless_vec_le(&mut self) -> HeaplessVec<u8, U8> {
+    pub fn get_crc_heapless_vec_le(&mut self) -> HeaplessVec<u8, 8> {
         let crc = self.get_crc();
 
         let e = (self.bits as usize + 7) >> 3;
@@ -328,7 +335,7 @@ impl CRCu64 {
 
     /// Get the current CRC value (it always returns a heapless vec instance with a length corresponding to the CRC bits). You can continue calling `digest` method even after getting a CRC value.
     #[inline]
-    pub fn get_crc_heapless_vec_be(&mut self) -> HeaplessVec<u8, U8> {
+    pub fn get_crc_heapless_vec_be(&mut self) -> HeaplessVec<u8, 8> {
         let crc = self.get_crc();
 
         let e = (self.bits as usize + 7) >> 3;
@@ -341,7 +348,6 @@ impl CRCu64 {
     }
 }
 
-#[allow(clippy::unreadable_literal)]
 impl CRCu64 {
     /// |Check|Poly|Init|Ref|XorOut|
     /// |---|---|---|---|---|
@@ -358,7 +364,7 @@ impl CRCu64 {
     pub fn crc40gsm() -> CRCu64 {
         // Self::create_crc(0x0000000004820009u64, 40, 0x0000000000000000, 0x000000FFFFFFFFFF, false)
 
-        let lookup_table = NO_REF_40_0000000004820009;
+        let lookup_table = LookUpTable::Static(&NO_REF_40_0000000004820009);
         Self::create_crc_with_exists_lookup_table(
             lookup_table,
             40,
@@ -383,7 +389,7 @@ impl CRCu64 {
     pub fn crc64() -> CRCu64 {
         // Self::create_crc(0x42F0E1EBA9EA3693, 64, 0x0000000000000000, 0x0000000000000000, false)
 
-        let lookup_table = NO_REF_64_42F0E1EBA9EA3693;
+        let lookup_table = LookUpTable::Static(&NO_REF_64_42F0E1EBA9EA3693);
         Self::create_crc_with_exists_lookup_table(
             lookup_table,
             64,
@@ -408,7 +414,7 @@ impl CRCu64 {
     pub fn crc64iso() -> CRCu64 {
         // Self::create_crc(0xD800000000000000, 64, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, true)
 
-        let lookup_table = REF_64_D800000000000000;
+        let lookup_table = LookUpTable::Static(&REF_64_D800000000000000);
         Self::create_crc_with_exists_lookup_table(
             lookup_table,
             64,
@@ -433,7 +439,7 @@ impl CRCu64 {
     pub fn crc64we() -> CRCu64 {
         // Self::create_crc(0x42F0E1EBA9EA3693, 64, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, false)
 
-        let lookup_table = NO_REF_64_42F0E1EBA9EA3693;
+        let lookup_table = LookUpTable::Static(&NO_REF_64_42F0E1EBA9EA3693);
         Self::create_crc_with_exists_lookup_table(
             lookup_table,
             64,
@@ -458,7 +464,7 @@ impl CRCu64 {
     pub fn crc64jones() -> CRCu64 {
         // Self::create_crc(0x95AC9329AC4BC9B5, 64, 0x0000000000000000, 0x0000000000000000, true)
 
-        let lookup_table = REF_64_95AC9329AC4BC9B5;
+        let lookup_table = LookUpTable::Static(&REF_64_95AC9329AC4BC9B5);
         Self::create_crc_with_exists_lookup_table(
             lookup_table,
             64,

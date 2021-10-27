@@ -21,8 +21,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use num::{BigInt, BigUint, bigint::Sign, One, Zero};
 use num_traits::cast::ToPrimitive;
-use ton_types::{error, fail, Result,
-    BuilderData, Cell, CellType, IBitstring, HashmapE, HashmapType, SliceData, ExceptionCode, UInt256
+use ton_types::{
+    error, fail,
+    Result, BuilderData, Cell, CellType, IBitstring, HashmapE, HashmapType, SliceData, UInt256
 };
 
 use crate::{
@@ -47,7 +48,7 @@ use crate::{
 
 macro_rules! define_VarIntegerN {
     ( $varname:ident, $N:expr, BigInt ) => {
-        #[derive( Eq, Hash, Clone, Debug)]
+        #[derive( Eq, Clone, Debug)]
         pub struct $varname(pub BigInt);
 
         #[allow(dead_code)]
@@ -199,7 +200,7 @@ macro_rules! define_VarIntegerN {
         }
     };
     ( $varname:ident, $N:expr, $tt:ty ) => {
-        #[derive( Eq, Hash, Clone, Debug, Default, Ord, PartialEq, PartialOrd)]
+        #[derive( Eq, Clone, Debug, Default, Ord, PartialEq, PartialOrd)]
         pub struct $varname(pub $tt);
 
         impl $varname {
@@ -217,7 +218,7 @@ macro_rules! define_VarIntegerN {
                 let bits = 8 - ($N as u8).leading_zeros();
                 let bytes = ((0 as $tt).leading_zeros() / 8 - self.0.leading_zeros() / 8) as usize;
                 if bytes > $N {
-                    fail!(ExceptionCode::IntegerOverflow)
+                    fail!("cannot store {} grams, required {} bytes", self, bytes)
                 }
                 cell.append_bits(bytes, bits as usize)?;
                 let be_bytes = self.0.to_be_bytes();
@@ -477,7 +478,7 @@ impl CurrencyCollection {
     }
 
     pub fn set_other_ex(&mut self, key: u32, other: &VarUInteger32) -> Result<()> {
-        self.other.set(&key, &other)?;
+        self.other.set(&key, other)?;
         Ok(())
     }
 
@@ -815,18 +816,18 @@ macro_rules! define_HashmapE {
                 self.0.iterate_slices(|key, slice| p(key, slice))
             }
             pub fn set<K: Serializable>(&mut self, key: &K, value: &$x_type) -> Result<()> {
-                let key = key.write_to_new_cell()?.into();
+                let key = key.serialize()?.into();
                 let value = value.write_to_new_cell()?;
                 self.0.set_builder(key, &value)?;
                 Ok(())
             }
             pub fn setref<K: Serializable>(&mut self, key: &K, value: &Cell) -> Result<()> {
-                let key = key.write_to_new_cell()?.into();
+                let key = key.serialize()?.into();
                 self.0.setref(key, value)?;
                 Ok(())
             }
             pub fn add_key<K: Serializable>(&mut self, key: &K) -> Result<()> {
-                let key = key.write_to_new_cell()?.into();
+                let key = key.serialize()?.into();
                 let value = BuilderData::default();
                 self.0.set_builder(key, &value)?;
                 Ok(())
@@ -836,19 +837,19 @@ macro_rules! define_HashmapE {
                     .map(|ref mut slice| <$x_type>::construct_from(slice)).transpose()
             }
             pub fn get_as_slice<K: Serializable>(&self, key: &K) -> Result<Option<SliceData>> {
-                let key = key.write_to_new_cell()?.into();
+                let key = key.serialize()?.into();
                 self.get_raw(key)
             }
             pub fn get_raw(&self, key: SliceData) -> Result<Option<SliceData>> {
                 self.0.get(key)
             }
             pub fn remove<K: Serializable>(&mut self, key: &K) -> Result<bool> {
-                let key = key.write_to_new_cell()?.into();
+                let key = key.serialize()?.into();
                 let leaf = self.0.remove(key)?;
                 Ok(leaf.is_some())
             }
             pub fn check_key<K: Serializable>(&self, key: &K) -> Result<bool> {
-                let key = key.write_to_new_cell()?.into();
+                let key = key.serialize()?.into();
                 self.0.get(key).map(|value| value.is_some())
             }
             pub fn export_vector(&self) -> Result<Vec<$x_type>> {
@@ -907,10 +908,10 @@ macro_rules! define_HashmapE {
                 eq: bool,
                 signed_int: bool,
             ) -> Result<Option<(K, $x_type)>> {
-                let key = key.write_to_new_cell()?.into();
+                let key = key.serialize()?.into();
                 if let Some((k, mut v)) = self.0.find_leaf(key, next, eq, signed_int, &mut 0)? {
                     // BuilderData, SliceData
-                    let key = K::construct_from(&mut k.into())?;
+                    let key = K::construct_from_cell(k.into_cell()?)?;
                     let value = <$x_type>::construct_from(&mut v)?;
                     Ok(Some((key, value)))
                 } else {
@@ -955,6 +956,13 @@ impl UnixTime32 {
 impl From<u32> for UnixTime32 {
     fn from(value: u32) -> Self {
         UnixTime32(value)
+    }
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<u32> for UnixTime32 {
+    fn into(self) -> u32 {
+        self.0
     }
 }
 
@@ -1018,7 +1026,7 @@ impl<T: Default + Serializable + Deserializable + Clone> ChildCell<T> {
                         BlockError::PrunedCellAccess(std::any::type_name::<T>().into())
                     )
                 }
-                T::construct_from(&mut SliceData::from(cell.clone()))
+                T::construct_from(&mut SliceData::from(cell))
             }
             None => Ok(T::default())
         }
@@ -1074,7 +1082,7 @@ impl<T: Default + Serializable + Deserializable> Serializable for ChildCell<T> {
                 BlockError::InvalidArg("The `builder` must be empty".to_string())
             )
         }
-        *builder = match self.cell.as_ref() {
+        *builder = match self.cell.clone() {
             Some(cell) => BuilderData::from(cell),
             None => T::default().write_to_new_cell()?
         };

@@ -63,6 +63,7 @@ To simplify the usage, there are several common versions of CRC whose computing 
  * crc16
  * crc16ccitt_false
  * crc16aug_ccitt
+ * crc16buypass
  * crc16cdma2000
  * crc16dds_110
  * crc16dect_r
@@ -166,8 +167,6 @@ use alloc::fmt::{self, Display, Formatter};
 use alloc::vec::Vec;
 
 #[cfg(feature = "heapless")]
-use heapless::consts::U8;
-#[cfg(feature = "heapless")]
 use heapless::Vec as HeaplessVec;
 
 mod constants;
@@ -175,6 +174,7 @@ mod crc_u16;
 mod crc_u32;
 mod crc_u64;
 mod crc_u8;
+mod lookup_table;
 
 pub use crc_u16::CRCu16;
 pub use crc_u32::CRCu32;
@@ -315,7 +315,7 @@ impl CRC {
 #[cfg(feature = "heapless")]
 impl CRC {
     /// Get the current CRC value (it always returns a vec instance with a length corresponding to the CRC bits). You can continue calling `digest` method even after getting a CRC value.
-    pub fn get_crc_heapless_vec_le(&mut self) -> HeaplessVec<u8, U8> {
+    pub fn get_crc_heapless_vec_le(&mut self) -> HeaplessVec<u8, 8> {
         let mut vec = HeaplessVec::new();
 
         let bits = match self {
@@ -341,7 +341,7 @@ impl CRC {
     }
 
     /// Get the current CRC value (it always returns a vec instance with a length corresponding to the CRC bits). You can continue calling `digest` method even after getting a CRC value.
-    pub fn get_crc_heapless_vec_be(&mut self) -> HeaplessVec<u8, U8> {
+    pub fn get_crc_heapless_vec_be(&mut self) -> HeaplessVec<u8, 8> {
         let mut vec = HeaplessVec::new();
 
         let bits = match self {
@@ -542,7 +542,7 @@ impl CRC {
 
     /// |Check|Poly|Init|Ref|XorOut|
     /// |---|---|---|---|---|
-    /// |0x06|0x03 (0x30)|0x00|true|0x00|
+    /// |0x06|0x03 (rev: 0x30)|0x00|true|0x00|
     ///
     /// ```
     /// # extern crate crc_any;

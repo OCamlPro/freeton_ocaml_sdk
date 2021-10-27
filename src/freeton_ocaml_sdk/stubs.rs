@@ -298,6 +298,33 @@ pub fn tvc_code_hash_ml( state:  ocaml::Pointer<StateInitStruct> )
 }
 
 #[ocaml::func]
+pub fn tvc_code_depth_ml( state:  ocaml::Pointer<StateInitStruct> )
+                    -> ocp::Reply<u64>
+{
+    ocp::reply(
+        Ok( crate::tvc::state_init_code_depth(
+            &crate::types::state_init_of_ocaml ( state )) as u64))
+}
+
+#[ocaml::func]
+pub fn tvc_data_hash_ml( state:  ocaml::Pointer<StateInitStruct> )
+                    -> ocp::Reply<String>
+{
+    ocp::reply(
+        Ok( crate::tvc::state_init_data_hash(
+            &crate::types::state_init_of_ocaml ( state ))))
+}
+
+#[ocaml::func]
+pub fn tvc_data_depth_ml( state:  ocaml::Pointer<StateInitStruct> )
+                    -> ocp::Reply<u64>
+{
+    ocp::reply(
+        Ok( crate::tvc::state_init_data_depth(
+            &crate::types::state_init_of_ocaml ( state )) as u64))
+}
+
+#[ocaml::func]
 pub fn encode_internal_message_ml( p:  crate::sdk::EncodeInternalMessage )
                     -> ocp::Reply< crate::sdk::SdkMessage >
 {

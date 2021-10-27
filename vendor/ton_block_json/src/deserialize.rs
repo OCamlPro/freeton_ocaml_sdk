@@ -28,7 +28,7 @@ use ton_block::{
     ConfigParam7, ConfigParam8, ConfigParam9,
     ConfigParam10, ConfigParam11, ConfigParam12, ConfigParam13, ConfigParam14,
     ConfigParam15, ConfigParam16, ConfigParam17, ConfigParam18,
-    ConfigParam29, ConfigParam31, ConfigParam34,
+    ConfigParam29, ConfigParam31, ConfigParam34, ConfigParam40,
     ConfigParam18Map, ConfigParams,
     ConfigProposalSetup,
     ConsensusConfig,
@@ -44,7 +44,7 @@ use ton_block::{
     MsgForwardPrices,
     ParamLimits,
     ShardAccount, ShardIdent, ShardStateUnsplit,
-    SigPubKey,
+    SlashingConfig,
     StoragePrices,
     ValidatorDescr, ValidatorSet,
     Workchains, WorkchainDescr, WorkchainFormat, WorkchainFormat0, WorkchainFormat1,
@@ -175,6 +175,25 @@ impl<'m, 'a> PathMap<'m, 'a> {
                 }
                 None => fail!("{}/{} must be the integer or a string with the integer {}", self.path.join("/"), name, item)
             }
+        }
+    }
+    fn get_bigint(&self, name: &'a str) -> Result<BigInt> {
+        let item = self.get_item(name)?;
+        match item.as_i64() {
+            Some(v) => Ok(v.into()),
+            None => match item.as_str() {
+                Some(s) => {
+                    BigInt::from_str(s)
+                        .map_err(|_| error!("{}/{} must be the integer or a string with the integer {}", self.path.join("/"), name, s))
+                }
+                None => fail!("{}/{} must be the integer or a string with the integer {}", self.path.join("/"), name, item)
+            }
+        }
+    }
+    #[allow(dead_code)]
+    fn get_u32(&self, name: &'a str, value: &mut u32) {
+        if let Ok(new_value) = self.get_num(name) {
+            *value = new_value as u32;
         }
     }
     fn get_bool(&self, name: &'a str) -> Result<bool> {
@@ -319,9 +338,9 @@ pub fn parse_config(config: &Map<String, Value>) -> Result<ConfigParams> {
     }
 
     let p14 = config.get_obj("p14")?;
-    let mut block_create_fees = BlockCreateFees::default();
-    block_create_fees.masterchain_block_fee = Grams::from(p14.get_num("masterchain_block_fee")? as u64);
-    block_create_fees.basechain_block_fee   = Grams::from(p14.get_num("basechain_block_fee")? as u64);
+    let masterchain_block_fee = Grams::from(p14.get_num("masterchain_block_fee")? as u64);
+    let basechain_block_fee = Grams::from(p14.get_num("basechain_block_fee")? as u64);
+    let block_create_fees = BlockCreateFees { masterchain_block_fee, basechain_block_fee };
     set_config(&config, &mut config_params, ConfigParamEnum::ConfigParam14(ConfigParam14 {block_create_fees}))?;
 
     let p15 = config.get_obj("p15")?;
@@ -445,7 +464,7 @@ pub fn parse_config(config: &Map<String, Value>) -> Result<ConfigParams> {
     p34.get_vec("list")?.iter().try_for_each::<_, Result<()>>(|p| {
         let p = PathMap::cont(&config, "p34", p)?;
         list.push(ValidatorDescr::with_params(
-            SigPubKey::from_str(p.get_str("public_key")?)?,
+            FromStr::from_str(p.get_str("public_key")?)?,
             p.get_num("weight")? as u64,
             None
         ));
@@ -459,18 +478,32 @@ pub fn parse_config(config: &Map<String, Value>) -> Result<ConfigParams> {
         list
     )?;
     set_config(&config, &mut config_params, ConfigParamEnum::ConfigParam34(ConfigParam34 {cur_validators}))?;
+
+    let mut slashing_config = SlashingConfig::default();
+    if let Ok(p40) = config.get_obj("p40") {
+        p40.get_u32("slashing_period_mc_blocks_count", &mut slashing_config.slashing_period_mc_blocks_count);
+        p40.get_u32("resend_mc_blocks_count", &mut slashing_config.resend_mc_blocks_count);
+        p40.get_u32("min_samples_count", &mut slashing_config.min_samples_count);
+        p40.get_u32("collations_score_weight", &mut slashing_config.collations_score_weight);
+        p40.get_u32("signing_score_weight", &mut slashing_config.signing_score_weight);
+        p40.get_u32("min_slashing_protection_score", &mut slashing_config.min_slashing_protection_score);
+        p40.get_u32("z_param_numerator", &mut slashing_config.z_param_numerator);
+        p40.get_u32("z_param_denominator", &mut slashing_config.z_param_denominator);
+    }
+    set_config(&config, &mut config_params, ConfigParamEnum::ConfigParam40(ConfigParam40 {slashing_config}))?;
+
     Ok(config_params)
 }
 
 pub fn parse_state(map: &Map<String, Value>) -> Result<ShardStateUnsplit> {
-    let map_path = PathMap::new(&map);
+    let map_path = PathMap::new(map);
 
     let mut state = ShardStateUnsplit::with_ident(ShardIdent::masterchain());
     state.set_min_ref_mc_seqno(std::u32::MAX);
     state.set_global_id(map_path.get_num("global_id")? as i32);
     state.set_gen_time(map_path.get_num("gen_utime")? as u32);
-    let balance = map_path.get_num("total_balance")? as u64;
-    state.set_total_balance(CurrencyCollection::with_grams(balance));
+    let balance = Grams::from(map_path.get_bigint("total_balance")?);
+    state.set_total_balance(CurrencyCollection::from_grams(balance));
 
     let master = map_path.get_obj("master")?;
     let mut extra = McStateExtra::default();

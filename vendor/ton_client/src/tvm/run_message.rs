@@ -25,9 +25,10 @@ use crate::error::ClientResult;
 use crate::processing::{parsing::decode_output, DecodedOutput};
 use crate::tvm::{check_transaction::calc_transaction_fees, Error};
 use serde_json::Value;
+use std::convert::TryFrom;
 use std::sync::{atomic::AtomicU64, Arc};
 use ton_block::{Account, Message, Serializable, MsgAddressInt, CurrencyCollection, Transaction};
-use ton_executor::{ExecutorError, OrdinaryTransactionExecutor, TransactionExecutor};
+use ton_executor::{ExecutorError, ExecuteParams, OrdinaryTransactionExecutor, TransactionExecutor};
 use ton_sdk::TransactionFees;
 use ton_types::Cell;
 
@@ -130,7 +131,7 @@ pub struct ParamsOfRunExecutor {
     /// Cache type to put the result. The BOC itself returned if no cache type provided
     pub boc_cache: Option<BocCacheType>,
     /// Return updated account flag. Empty string is returned if the flag is `false`
-    pub return_updated_account: Option<bool>
+    pub return_updated_account: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, ApiType, Clone, Default)]
@@ -230,7 +231,7 @@ async fn parse_transaction(
 /// 
 /// If you need this emulation to be as precise as possible (for instance - emulate transaction
 /// with particular lt in particular block or use particular blockchain config, 
-/// in case you want to download it from a particular key block - then specify `ParamsOfRunExecutor` parameter.
+/// downloaded from a particular key block - then specify `execution_options` parameter.
 /// 
 /// If you need to see the aborted transaction as a result, not as an error, set `skip_transaction_check` to `true`.
 
@@ -238,6 +239,18 @@ async fn parse_transaction(
 pub async fn run_executor(
     context: std::sync::Arc<ClientContext>,
     params: ParamsOfRunExecutor,
+) -> ClientResult<ResultOfRunExecutor> {
+    run_executor_internal(
+        context,
+        params,
+        true,
+    ).await
+}
+
+pub async fn run_executor_internal(
+    context: std::sync::Arc<ClientContext>,
+    params: ParamsOfRunExecutor,
+    show_tips_on_error: bool,
 ) -> ClientResult<ResultOfRunExecutor> {
     let message = deserialize_object_from_boc::<Message>(&context, &params.message, "message").await?.object;
     let msg_address = message.dst_ref().ok_or_else(|| Error::invalid_message_type())?.clone();
@@ -255,13 +268,23 @@ pub async fn run_executor(
     };
 
     let (transaction, modified_account) =
-        call_executor(account.clone(), message, options, contract_info.clone()).await?;
+        call_executor(
+            account.clone(),
+            message,
+            options,
+            contract_info.clone(),
+            show_tips_on_error,
+        ).await?;
+
+    let sdk_transaction = ton_sdk::Transaction::try_from(&transaction)
+        .map_err(|err| crate::tvm::Error::can_not_read_transaction(err))?;
 
     let fees = calc_transaction_fees(
-        &transaction,
+        &sdk_transaction,
         false,
         params.skip_transaction_check.unwrap_or_default(),
         contract_info,
+        show_tips_on_error,
     )
     .await?;
 
@@ -351,10 +374,11 @@ pub async fn run_tvm(
 }
 
 async fn call_executor<F>(
-    mut account: Cell,
+    mut account_root: Cell,
     msg: Message,
     options: ResolvedExecutionOptions,
     contract_info: impl FnOnce() -> F,
+    show_tips_on_error: bool,
 ) -> ClientResult<(Transaction, Cell)>
 where
     F: futures::Future<Output = ClientResult<(MsgAddressInt, u64)>>,
@@ -363,16 +387,13 @@ where
         Arc::try_unwrap(options.blockchain_config)
             .unwrap_or_else(|arc| arc.as_ref().clone())
     );
-    let result = executor.execute(
-        Some(&msg),
-        &mut account,
-        options.block_time,
-        options.block_lt,
-        Arc::new(AtomicU64::new(options.transaction_lt)),
-        false,
-    );
-
-    let transaction = match result {
+    let params = ExecuteParams {
+        block_unixtime: options.block_time,
+        block_lt: options.block_lt,
+        last_tr_lt: Arc::new(AtomicU64::new(options.transaction_lt)),
+        ..ExecuteParams::default()
+    };
+    let transaction = match executor.execute_with_libs_and_params(Some(&msg), &mut account_root, params) {
         Ok(transaction) => transaction,
         Err(err) => {
             let err_message = err.to_string();
@@ -383,7 +404,14 @@ where
                             .as_ref()
                             .map(|item| serialize_item(item))
                             .transpose()?;
-                        Error::tvm_execution_failed(err_message, *code, exit_arg, &address, None)
+                        Error::tvm_execution_failed(
+                            err_message,
+                            *code,
+                            exit_arg,
+                            &address,
+                            None,
+                            show_tips_on_error,
+                        )
                     }
                     Some(ExecutorError::NoFundsToImportMsg) => {
                         Error::low_balance(&address, balance)
@@ -399,5 +427,5 @@ where
         }
     };
 
-    Ok((transaction, account))
+    Ok((transaction, account_root))
 }

@@ -55,7 +55,7 @@ impl Deserializable for MerkleProof {
         }
         self.hash.read_from(cell)?;
         self.depth = cell.get_next_u16()?;
-        self.proof = cell.checked_drain_reference()?.clone();
+        self.proof = cell.checked_drain_reference()?;
         if self.hash != Cell::hash(&self.proof, 0) {
             fail!(
                 BlockError::WrongMerkleProof(
@@ -80,7 +80,7 @@ impl Serializable for MerkleProof {
         cell.append_u8(u8::from(CellType::MerkleProof))?;
         self.hash.write_to(cell)?;
         cell.append_u16(self.depth)?;
-        cell.append_reference(BuilderData::from(&self.proof));
+        cell.append_reference_cell(self.proof.clone());
         cell.set_level_mask(LevelMask::for_merkle_cell(self.proof.level_mask()));
         Ok(())
     }
@@ -104,7 +104,7 @@ impl MerkleProof {
         Ok(MerkleProof {
             hash: root.repr_hash(),
             depth: root.repr_depth(),
-            proof: proof.into(),
+            proof: proof.into_cell()?,
         })
     }
 
@@ -141,7 +141,7 @@ impl MerkleProof {
                 pbc
             };
             child_mask |= proof_child.level_mask();
-            proof_cell.append_reference(proof_child);
+            proof_cell.append_reference_cell(proof_child.into_cell()?);
         }
         
         proof_cell.set_level_mask(if cell.is_merkle() {
@@ -335,14 +335,12 @@ pub fn check_message_proof(proof: &MerkleProof, msg: &Message, block_id: &UInt25
                     BlockError::WrongMerkleProof("Wrong message's hash in proof".to_string())
                 )
             } else {
-                return Ok(())
+                Ok(())
             }
         } else {
-            fail!(
-                BlockError::WrongMerkleProof(
-                    "Error extracting message from out message".to_string()
-                ) 
-            )
+            fail!(BlockError::WrongMerkleProof(
+                "Error extracting message from out message".to_string()
+            ))
         }
     } else {
         fail!(BlockError::WrongMerkleProof("No message in proof".to_string()))

@@ -28,14 +28,14 @@
 //!
 //! ```
 //! use lock_api::{RawMutex, Mutex, GuardSend};
-//! use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
+//! use std::sync::atomic::{AtomicBool, Ordering};
 //!
 //! // 1. Define our raw lock type
 //! pub struct RawSpinlock(AtomicBool);
 //!
 //! // 2. Implement RawMutex for this type
 //! unsafe impl RawMutex for RawSpinlock {
-//!     const INIT: RawSpinlock = RawSpinlock(ATOMIC_BOOL_INIT);
+//!     const INIT: RawSpinlock = RawSpinlock(AtomicBool::new(false));
 //!
 //!     // A spinlock guard can be sent to another thread and unlocked there
 //!     type GuardMarker = GuardSend;
@@ -47,10 +47,12 @@
 //!     }
 //!
 //!     fn try_lock(&self) -> bool {
-//!         self.0.swap(true, Ordering::Acquire)
+//!         self.0
+//!             .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+//!             .is_ok()
 //!     }
 //!
-//!     fn unlock(&self) {
+//!     unsafe fn unlock(&self) {
 //!         self.0.store(false, Ordering::Release);
 //!     }
 //! }
@@ -77,21 +79,24 @@
 //!
 //! # Cargo features
 //!
-//! This crate supports two cargo features:
+//! This crate supports three cargo features:
 //!
 //! - `owning_ref`: Allows your lock types to be used with the `owning_ref` crate.
+//! - `arc_lock`: Enables locking from an `Arc`. This enables types such as `ArcMutexGuard`. Note that this
+//!   requires the `alloc` crate to be present.
 //! - `nightly`: Enables nightly-only features. At the moment the only such
 //!   feature is `const fn` constructors for lock types.
 
 #![no_std]
 #![warn(missing_docs)]
-#![cfg_attr(feature = "nightly", feature(const_fn))]
+#![warn(rust_2018_idioms)]
+#![cfg_attr(feature = "nightly", feature(const_fn_trait_bound))]
 
 #[macro_use]
 extern crate scopeguard;
 
-#[cfg(feature = "owning_ref")]
-extern crate owning_ref;
+#[cfg(feature = "arc_lock")]
+extern crate alloc;
 
 /// Marker type which indicates that the Guard type for a lock is `Send`.
 pub struct GuardSend(());
@@ -99,11 +104,13 @@ pub struct GuardSend(());
 /// Marker type which indicates that the Guard type for a lock is not `Send`.
 pub struct GuardNoSend(*mut ());
 
+unsafe impl Sync for GuardNoSend {}
+
 mod mutex;
-pub use mutex::*;
+pub use crate::mutex::*;
 
 mod remutex;
-pub use remutex::*;
+pub use crate::remutex::*;
 
 mod rwlock;
-pub use rwlock::*;
+pub use crate::rwlock::*;

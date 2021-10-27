@@ -27,3 +27,15 @@ let code state = Freeton_types.reply @@ code_ml state
 external code_hash_ml :
   Freeton_types.state_init -> string Freeton_types.reply = "tvc_code_hash_ml"
 let code_hash state = Freeton_types.reply @@ code_hash_ml state
+
+external code_depth_ml :
+  Freeton_types.state_init -> int64 Freeton_types.reply = "tvc_code_depth_ml"
+let code_depth state = Freeton_types.reply @@ code_depth_ml state
+
+external data_hash_ml :
+  Freeton_types.state_init -> string Freeton_types.reply = "tvc_data_hash_ml"
+let data_hash state = Freeton_types.reply @@ data_hash_ml state
+
+external data_depth_ml :
+  Freeton_types.state_init -> int64 Freeton_types.reply = "tvc_data_depth_ml"
+let data_depth state = Freeton_types.reply @@ data_depth_ml state

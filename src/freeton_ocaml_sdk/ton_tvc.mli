@@ -15,8 +15,17 @@ val read : string -> Freeton_types.state_init
 (* returns "None" or base64 encoding of data *)
 val data : Freeton_types.state_init -> string
 
+(* returns hex encoding of data hash *)
+val data_hash : Freeton_types.state_init -> string
+
+(* returns depth of data cell *)
+val data_depth : Freeton_types.state_init -> int64
+
 (* returns "None" or base64 encoding of code *)
 val code : Freeton_types.state_init -> string
 
 (* returns hex encoding of code hash *)
 val code_hash : Freeton_types.state_init -> string
+
+(* returns depth of code cell *)
+val code_depth : Freeton_types.state_init -> int64

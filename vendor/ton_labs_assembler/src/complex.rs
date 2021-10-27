@@ -331,10 +331,13 @@ fn compile_pushint<T: Writer>(_engine: &mut Engine<T>, par: &Vec<&str>, destinat
         Ok(number @ -32768..=32767) =>
             Ok(vec![0x81, ((number >> 8) & 0xFF) as u8, (number & 0xFF) as u8]),
         _ => if let Ok(int) = BigInt::from_str_radix(sub_str.as_str(), radix) {
-            let mut int_bytes = to_big_endian_octet_string(&int);
-            let mut bytecode = vec![0x82];
-            bytecode.append(&mut int_bytes);
-            Ok(bytecode)
+            if let Some(mut int_bytes) = to_big_endian_octet_string(&int) {
+                let mut bytecode = vec![0x82];
+                bytecode.append(&mut int_bytes);
+                Ok(bytecode)
+            } else {
+                Err(ParameterError::OutOfRange.parameter("arg 0"))
+            }
         } else {
             Err(ParameterError::OutOfRange.parameter("arg 0"))
         }

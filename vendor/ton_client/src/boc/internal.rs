@@ -11,9 +11,11 @@
 * limitations under the License.
 */
 
-use crate::{ClientContext};
+use crate::ClientContext;
 use crate::boc::{BocCacheType, Error};
 use crate::error::ClientResult;
+#[allow(unused_imports)]
+use std::str::FromStr;
 use ton_block::{Deserializable, Serializable};
 use ton_types::{UInt256, deserialize_tree_of_cells};
 
@@ -43,8 +45,21 @@ pub(crate) fn deserialize_object_from_cell<S: Deserializable>(
     cell: ton_types::Cell,
     name: &str,
 ) -> ClientResult<S> {
+    let tip = match name {
+        "message" => "Please check that you have specified the message's BOC, not body, as a parameter.",
+        _ => "",
+    };
+    let tip_full = if tip.len() > 0 {
+        format!(".\nTip: {}", tip)
+    } else {
+        "".to_string()
+    };
     S::construct_from(&mut cell.into())
-        .map_err(|err| Error::invalid_boc(format!("cannot deserialize {} from BOC: {}", name, err)))
+        .map_err(|err|
+            Error::invalid_boc(
+                format!("cannot deserialize {} from BOC: {}{}", name, err, tip_full)
+            )
+        )
 }
 
 #[derive(Clone)]
@@ -149,7 +164,7 @@ pub(crate) async fn serialize_cell_to_boc(
     if let Some(cache_type) = boc_cache {
         context.bocs.add(cache_type, cell, None)
             .await
-            .map(|hash| format!("*{}", hash.to_hex_string()))
+            .map(|hash| format!("*{:x}", hash))
     } else {
         serialize_cell_to_base64(&cell, name)
     }

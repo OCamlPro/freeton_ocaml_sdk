@@ -15,6 +15,8 @@ pub enum ErrorCode {
     InvalidSigner = 310,
     InvalidAbi = 311,
     InvalidFunctionId = 312,
+    InvalidData = 313,
+    EncodeInitialDataFailed = 314,
 }
 
 pub struct Error;
@@ -100,6 +102,20 @@ impl Error {
         error(
             ErrorCode::InvalidFunctionId,
             format!("Invalid function {}: {}", func_id, err),
+        )
+    }
+
+    pub fn invalid_data_for_decode<E: Display>(err: E) -> ClientError {
+        error(
+            ErrorCode::InvalidData,
+            format!("Data can't be decoded: {}", err),
+        )
+    }
+
+    pub fn encode_init_data_failed<E: Display>(err: E) -> ClientError {
+        error(
+            ErrorCode::EncodeInitialDataFailed,
+            format!("Encode initial data failed: {}", err),
         )
     }
 }

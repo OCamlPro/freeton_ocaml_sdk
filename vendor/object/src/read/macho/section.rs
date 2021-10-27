@@ -128,7 +128,7 @@ where
 
     #[inline]
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?)
+        self.bytes()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
@@ -151,10 +151,20 @@ where
     }
 
     #[inline]
+    fn name_bytes(&self) -> Result<&[u8]> {
+        Ok(self.internal.section.name())
+    }
+
+    #[inline]
     fn name(&self) -> Result<&str> {
         str::from_utf8(self.internal.section.name())
             .ok()
             .read_error("Non UTF-8 Mach-O section name")
+    }
+
+    #[inline]
+    fn segment_name_bytes(&self) -> Result<Option<&[u8]>> {
+        Ok(Some(self.internal.section.segment_name()))
     }
 
     #[inline]
@@ -245,7 +255,7 @@ pub trait Section: Debug + Pod {
     /// Return the `sectname` bytes up until the null terminator.
     fn name(&self) -> &[u8] {
         let sectname = &self.sectname()[..];
-        match sectname.iter().position(|&x| x == 0) {
+        match memchr::memchr(b'\0', sectname) {
             Some(end) => &sectname[..end],
             None => sectname,
         }
@@ -254,7 +264,7 @@ pub trait Section: Debug + Pod {
     /// Return the `segname` bytes up until the null terminator.
     fn segment_name(&self) -> &[u8] {
         let segname = &self.segname()[..];
-        match segname.iter().position(|&x| x == 0) {
+        match memchr::memchr(b'\0', segname) {
             Some(end) => &segname[..end],
             None => segname,
         }

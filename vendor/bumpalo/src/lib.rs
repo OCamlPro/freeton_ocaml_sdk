@@ -154,7 +154,7 @@ Bumpalo is a `no_std` crate. It depends only on the `alloc` and `core` crates.
 
 ## Thread support
 
-The `Bump` is `!Send`, which makes it hard to use in certain situations around threads ‒ for
+The `Bump` is `!Sync`, which makes it hard to use in certain situations around threads ‒ for
 example in `rayon`.
 
 The [`bumpalo-herd`](https://crates.io/crates/bumpalo-herd) crate provides a pool of `Bump`
@@ -485,6 +485,19 @@ struct ChunkFooter {
     ptr: Cell<NonNull<u8>>,
 }
 
+impl ChunkFooter {
+    // Returns the start and length of the currently allocated region of this
+    // chunk.
+    fn as_raw_parts(&self) -> (*const u8, usize) {
+        let data = self.data.as_ptr() as usize;
+        let ptr = self.ptr.get().as_ptr() as usize;
+        debug_assert!(data <= ptr);
+        debug_assert!(ptr <= self as *const _ as usize);
+        let len = self as *const _ as usize - ptr;
+        (ptr as *const u8, len)
+    }
+}
+
 impl Default for Bump {
     fn default() -> Bump {
         Bump::new()
@@ -539,7 +552,7 @@ const MALLOC_OVERHEAD: usize = 16;
 // we want to request a chunk of memory that has at least X bytes usable for
 // allocations (where X is aligned to CHUNK_ALIGN), then we expect that the
 // after adding a footer, malloc overhead and alignment, the chunk of memory
-// the allocator actually sets asside for us is X+OVERHEAD rounded up to the
+// the allocator actually sets aside for us is X+OVERHEAD rounded up to the
 // nearest suitable size boundary.
 const OVERHEAD: usize = (MALLOC_OVERHEAD + FOOTER_SIZE + (CHUNK_ALIGN - 1)) & !(CHUNK_ALIGN - 1);
 
@@ -632,20 +645,13 @@ impl Bump {
     /// layout of the allocation request that triggered us to fall back to
     /// allocating a new chunk of memory.
     fn new_chunk(
-        old_size_with_footer: Option<usize>,
+        new_size_without_footer: Option<usize>,
         requested_layout: Option<Layout>,
         prev: Option<NonNull<ChunkFooter>>,
     ) -> Option<NonNull<ChunkFooter>> {
         unsafe {
-            // As a sane default, we want our new allocation to be about twice as
-            // big as the previous allocation
             let mut new_size_without_footer =
-                if let Some(old_size_with_footer) = old_size_with_footer {
-                    let old_size_without_footer = old_size_with_footer - FOOTER_SIZE;
-                    old_size_without_footer.checked_mul(2)?
-                } else {
-                    DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER
-                };
+                new_size_without_footer.unwrap_or(DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER);
 
             // We want to have CHUNK_ALIGN or better alignment
             let mut align = CHUNK_ALIGN;
@@ -681,7 +687,7 @@ impl Bump {
                 .unwrap_or_else(allocation_size_overflow);
             let layout = layout_from_size_align(size, align);
 
-            debug_assert!(size >= old_size_with_footer.unwrap_or(0) * 2);
+            debug_assert!(requested_layout.map_or(true, |layout| size >= layout.size()));
 
             let data = alloc(layout);
             let data = NonNull::new(data)?;
@@ -1450,11 +1456,29 @@ impl Bump {
             // Get a new chunk from the global allocator.
             let current_footer = self.current_chunk_footer.get();
             let current_layout = current_footer.as_ref().layout;
-            let new_footer = Bump::new_chunk(
-                Some(current_layout.size()),
-                Some(layout),
-                Some(current_footer),
-            )?;
+
+            // By default, we want our new chunk to be about twice as big
+            // as the previous chunk. If the global allocator refuses it,
+            // we try to divide it by half until it works or the requested
+            // size is smaller than the default footer size.
+            let min_new_chunk_size = layout.size().max(DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER);
+            let mut base_size = (current_layout.size() - FOOTER_SIZE)
+                .checked_mul(2)?
+                .max(min_new_chunk_size);
+            let sizes = iter::from_fn(|| {
+                if base_size >= min_new_chunk_size {
+                    let size = base_size;
+                    base_size = base_size / 2;
+                    Some(size)
+                } else {
+                    None
+                }
+            });
+
+            let new_footer = sizes
+                .filter_map(|size| Bump::new_chunk(Some(size), Some(layout), Some(current_footer)))
+                .next()?;
+
             debug_assert_eq!(
                 new_footer.as_ref().data.as_ptr() as usize % layout.align(),
                 0
@@ -1569,7 +1593,33 @@ impl Bump {
     /// }
     /// ```
     pub fn iter_allocated_chunks(&mut self) -> ChunkIter<'_> {
+        // SAFE: Ensured by mutable borrow of `self`.
+        let raw = unsafe { self.iter_allocated_chunks_raw() };
         ChunkIter {
+            raw,
+            bump: PhantomData,
+        }
+    }
+
+    /// Returns an iterator over raw pointers to chunks of allocated memory that
+    /// this arena has bump allocated into.
+    ///
+    /// This is an unsafe version of [`iter_allocated_chunks()`](Bump::iter_allocated_chunks),
+    /// with the caller responsible for safe usage of the returned pointers as
+    /// well as ensuring that the iterator is not invalidated by new
+    /// allocations.
+    ///
+    /// ## Safety
+    ///
+    /// Allocations from this arena must not be performed while the returned
+    /// iterator is alive. If reading the chunk data (or casting to a reference)
+    /// the caller must ensure that there exist no mutable references to
+    /// previously allocated data.
+    ///
+    /// In addition, all of the caveats when reading the chunk data from
+    /// [`iter_allocated_chunks()`](Bump::iter_allocated_chunks) still apply.
+    pub unsafe fn iter_allocated_chunks_raw(&self) -> ChunkRawIter<'_> {
+        ChunkRawIter {
             footer: Some(self.current_chunk_footer.get()),
             bump: PhantomData,
         }
@@ -1703,7 +1753,7 @@ impl Bump {
 /// [`iter_allocated_chunks`]: ./struct.Bump.html#method.iter_allocated_chunks
 #[derive(Debug)]
 pub struct ChunkIter<'a> {
-    footer: Option<NonNull<ChunkFooter>>,
+    raw: ChunkRawIter<'a>,
     bump: PhantomData<&'a mut Bump>,
 }
 
@@ -1711,22 +1761,46 @@ impl<'a> Iterator for ChunkIter<'a> {
     type Item = &'a [mem::MaybeUninit<u8>];
     fn next(&mut self) -> Option<&'a [mem::MaybeUninit<u8>]> {
         unsafe {
-            let foot = self.footer?;
-            let foot = foot.as_ref();
-            let data = foot.data.as_ptr() as usize;
-            let ptr = foot.ptr.get().as_ptr() as usize;
-            debug_assert!(data <= ptr);
-            debug_assert!(ptr <= foot as *const _ as usize);
-
-            let len = foot as *const _ as usize - ptr;
+            let (ptr, len) = self.raw.next()?;
             let slice = slice::from_raw_parts(ptr as *const mem::MaybeUninit<u8>, len);
-            self.footer = foot.prev.get();
             Some(slice)
         }
     }
 }
 
 impl<'a> iter::FusedIterator for ChunkIter<'a> {}
+
+/// An iterator over raw pointers to chunks of allocated memory that this
+/// arena has bump allocated into.
+///
+/// See [`ChunkIter`] for details regarding the returned chunks.
+///
+/// This struct is created by the [`iter_allocated_chunks_raw`] method on
+/// [`Bump`]. See that function for a safety description regarding reading from
+/// the returned items.
+///
+/// [`Bump`]: ./struct.Bump.html
+/// [`iter_allocated_chunks_raw`]: ./struct.Bump.html#method.iter_allocated_chunks_raw
+#[derive(Debug)]
+pub struct ChunkRawIter<'a> {
+    footer: Option<NonNull<ChunkFooter>>,
+    bump: PhantomData<&'a Bump>,
+}
+
+impl Iterator for ChunkRawIter<'_> {
+    type Item = (*mut u8, usize);
+    fn next(&mut self) -> Option<(*mut u8, usize)> {
+        unsafe {
+            let foot = self.footer?;
+            let foot = foot.as_ref();
+            let (ptr, len) = foot.as_raw_parts();
+            self.footer = foot.prev.get();
+            Some((ptr as *mut u8, len))
+        }
+    }
+}
+
+impl iter::FusedIterator for ChunkRawIter<'_> {}
 
 #[inline(never)]
 #[cold]

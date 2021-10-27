@@ -14,19 +14,19 @@
 use crate::{
     error::{tvm_exception_full, TvmError},
     executor::{
-        continuation::switch, engine::{handlers::Handlers, storage::{swap, copy_to_var}}, 
+        continuation::switch, engine::{handlers::Handlers, storage::{swap, copy_to_var}},
         gas::gas_state::Gas, math::DivMode, microcode::{VAR, SAVELIST, CC, CTRL},
         types::{
-            Ctx, Instruction, InstructionOptions, InstructionParameter, RegisterPair,
-            RegisterTrio, LengthAndIndex, Undo, WhereToGetParams,
+            Instruction, InstructionOptions, InstructionParameter, RegisterPair,
+            RegisterTrio, LengthAndIndex, WhereToGetParams,
         }
     },
     stack::{
-        Stack, StackItem, continuation::{ContinuationData, ContinuationType}, 
+        Stack, StackItem, continuation::{ContinuationData, ContinuationType},
         integer::IntegerData, savelist::SaveList
     },
-    smart_contract_info::SmartContractInfo, 
-    types::{Exception, Failure, ResultMut, ResultRef, Status}
+    smart_contract_info::SmartContractInfo,
+    types::{Exception, ResultMut, ResultRef, Status}
 };
 use std::{collections::HashSet, sync::Arc};
 use ton_types::{
@@ -34,7 +34,7 @@ use ton_types::{
     types::{ExceptionCode, UInt256}
 };
 
-pub(super) type ExecuteHandler = fn(&mut Engine) -> Failure;
+pub(super) type ExecuteHandler = fn(&mut Engine) -> Status;
 
 pub struct Engine {
     pub(in crate::executor) cc: ContinuationData,
@@ -54,6 +54,12 @@ pub struct Engine {
     trace: u8,
     trace_callback: Option<Box<dyn Fn(&Engine, &EngineTraceInfo)>>,
     log_string: Option<&'static str>,
+}
+
+impl Default for Engine {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(Eq, Debug, PartialEq)]
@@ -78,10 +84,7 @@ pub struct EngineTraceInfo<'a> {
 
 impl<'a> EngineTraceInfo<'a> {
     pub fn has_cmd(&self) -> bool {
-        match self.info_type {
-            EngineTraceInfoType::Normal | EngineTraceInfoType::Implicit => true,
-            _ => false
-        }
+        matches!(self.info_type, EngineTraceInfoType::Normal | EngineTraceInfoType::Implicit)
     }
 }
 
@@ -126,7 +129,9 @@ impl CommittedState {
 impl GasConsumer for Engine {
     fn finalize_cell(&mut self, builder: BuilderData) -> Result<Cell> {
         self.use_gas(Gas::finalize_price());
-        builder.into_cell()
+        builder
+            .finalize(1024)
+            .map_err(|err| exception!(ExceptionCode::CellOverflow, "too deep cell creation: {}", err))
     }
     fn load_cell(&mut self, cell: Cell) -> Result<SliceData> {
         self.load_hashed_cell(cell, true)
@@ -135,6 +140,10 @@ impl GasConsumer for Engine {
         let cell = self.finalize_cell(builder)?;
         self.load_hashed_cell(cell, true)
     }
+}
+
+lazy_static::lazy_static! {
+    static ref HANDLERS_CP0: Handlers = Handlers::new_code_page_0();
 }
 
 impl Engine {
@@ -175,7 +184,7 @@ impl Engine {
             libraries: Vec::new(),
             visited_cells: HashSet::new(),
             cstate: CommittedState::new_empty(),
-            handlers: Handlers::new_code_page_0(),
+            handlers: HANDLERS_CP0.clone(),
             time: 0,
             gas: Gas::empty(),
             code_page: 0,
@@ -192,7 +201,7 @@ impl Engine {
     pub fn assert_ctrl(&self, ctrl: usize, item: &StackItem) -> &Engine {
         match self.ctrls.get(ctrl) {
             Some(x) => assert!(Stack::eq_item(x, item)),
-            None => assert!(false),
+            None => unreachable!("ctrl[{}] is empty", ctrl),
         }
         self
     }
@@ -249,7 +258,13 @@ impl Engine {
 
     fn trace_info(&self, info_type: EngineTraceInfoType, gas: i64, log_string: Option<String>) {
         if let Some(callback) = &self.trace_callback {
-            let cmd_str = log_string.or_else(|| self.cmd.dump_with_params()).unwrap_or_else(|| String::new());
+            // bigint param has been withdrawn during execution, so take it from the stack
+            let cmd_str = if self.cmd.ictx.biginteger().is_some() {
+                format!("{}{} {}", self.cmd.name_prefix.unwrap_or(""),
+                    self.cmd.name, self.cc.stack.get(0).as_integer().unwrap())
+            } else {
+                log_string.or_else(|| self.cmd.dump_with_params()).unwrap_or_else(String::new)
+            };
             let info = EngineTraceInfo {
                 info_type,
                 step: self.step,
@@ -259,25 +274,25 @@ impl Engine {
                 gas_used: self.gas_used(),
                 gas_cmd: self.gas_used() - gas,
             };
-            callback(&self, &info);
+            callback(self, &info);
         }
     }
 
     fn defaul_trace_callback(&self, info: &EngineTraceInfo) {
         if self.trace_bit(Engine::TRACE_CODE) && info.has_cmd() {
             log::trace!(
-                target: "tvm", 
-                "{}: {}\n{}\n", 
+                target: "tvm",
+                "{}: {}\n{:x}\n",
                 info.step,
                 info.cmd_str,
-                info.cmd_code.to_hex_string(),
+                info.cmd_code,
             );
         }
         if self.trace_bit(Engine::TRACE_GAS) {
             log::trace!(
-                target: "tvm", 
-                "Gas: {} ({})\n", 
-                info.gas_used, 
+                target: "tvm",
+                "Gas: {} ({})\n",
+                info.gas_used,
                 info.gas_cmd
             );
         }
@@ -336,24 +351,13 @@ impl Engine {
     }
 
     pub fn execute(&mut self) -> Result<i32> {
-        // patch for MYCODE
-        let code_cell = StackItem::cell(self.cc.code().cell().clone());
-        if let Ok(c7) = self.ctrl_mut(7) {
-            if c7.as_tuple()?.len() == 9 {
-                let mut new_c7 = c7.as_tuple_mut()?;
-                new_c7.push(code_cell);
-                *c7 = StackItem::tuple(new_c7);
-            }
-        }
         self.trace_info(EngineTraceInfoType::Start, 0, None);
         let result = loop {
             if let Some(result) = self.seek_next_cmd()? {
-                if self.gas.get_gas_credit() != 0 &&
-                    self.gas.get_gas_remaining() < self.gas.get_gas_credit() {
-                    break result//return err!(ExceptionCode::OutOfGas)
-                } else {
-                    break result
-                }
+                // if self.gas.get_gas_credit() != 0 && self.gas.get_gas_remaining() < self.gas.get_gas_credit() {
+                //     return err!(ExceptionCode::OutOfGas)
+                // }
+                break result
             }
             let gas = self.gas_used();
             self.cmd_code = self.cc.code().clone();
@@ -366,13 +370,18 @@ impl Engine {
                     self.basic_use_gas(8);
                     Some(err)
                 }
-                Ok(handler) => handler(self).or_else(|| self.gas.check_gas_remaining().err()),
+                Ok(handler) => {
+                    match handler(self) {
+                        Err(e) => Some(e),
+                        Ok(_) => self.gas.check_gas_remaining().err(),
+                    }
+                }
             };
             self.trace_info(EngineTraceInfoType::Normal, gas, None);
             self.cmd.ictx.clear();
             self.raise_exception(execution_result, true)?;
         };
-        self.trace_info(EngineTraceInfoType::Finish, self.gas_used(), Some(format!("NORMAL TERMINATION")));
+        self.trace_info(EngineTraceInfoType::Finish, self.gas_used(), Some("NORMAL TERMINATION".to_string()));
         self.commit();
         Ok(result)
     }
@@ -392,14 +401,14 @@ impl Engine {
         }
         self.step += 1;
         self.log_string = Some("implicit RET");
-        switch(Ctx::new(self), ctrl!(0))?;
+        switch(self, ctrl!(0))?;
         Ok(None)
     }
     fn step_pushint(&mut self, code: i32) -> Result<Option<i32>> {
         self.step += 1;
         self.log_string = Some("implicit PUSHINT");
         self.cc.stack.push(int!(code));
-        switch(Ctx::new(self), ctrl!(0))?;
+        switch(self, ctrl!(0))?;
         Ok(None)
     }
     fn step_try_catch(&mut self) -> Result<Option<i32>> {
@@ -407,7 +416,7 @@ impl Engine {
         self.log_string = Some("IMPLICIT RET FROM TRY-CATCH");
         self.try_use_gas(Gas::implicit_ret_price())?;
         self.ctrls.remove(2).unwrap();
-        switch(Ctx::new(self), ctrl!(0))?;
+        switch(self, ctrl!(0))?;
         Ok(None)
     }
     fn step_while_loop(&mut self, body: SliceData, cond: SliceData) -> Result<Option<i32>> {
@@ -419,15 +428,15 @@ impl Engine {
                 let cond = ContinuationData::with_code(cond);
                 self.cmd.push_var(StackItem::Continuation(Arc::new(body)));
                 self.cmd.push_var(StackItem::Continuation(Arc::new(cond)));
-                copy_to_var(Ctx::new(self), CC)
-                .and_then(|ctx| swap(ctx, savelist!(var!(n + 2), 0), ctrl!(0)))     // ec_while.savelist[0] = c[0]
-                .and_then(|ctx| swap(ctx, savelist!(var!(n + 1), 0), var!(n + 2)))  // cond.savelist[0] = ec_while
-                .and_then(|ctx| swap(ctx, savelist!(var!(n), 0), var!(n + 1)))      // body.savelist[0] = cond
-                .and_then(|ctx| switch(ctx, var!(n)))?;
+                copy_to_var(self, CC)?;
+                swap(self, savelist!(var!(n + 2), 0), ctrl!(0))?;     // ec_while.savelist[0] = c[0]
+                swap(self, savelist!(var!(n + 1), 0), var!(n + 2))?;  // cond.savelist[0] = ec_while
+                swap(self, savelist!(var!(n), 0), var!(n + 1))?;      // body.savelist[0] = cond
+                switch(self, var!(n))?;
             }
             Ok(false) => {
                 self.log_string = Some("RET FROM WHILE");
-                switch(Ctx::new(self), ctrl!(0))?;
+                switch(self, ctrl!(0))?;
             }
             Err(err) => return Err(err)
         }
@@ -441,32 +450,32 @@ impl Engine {
                 let n = self.cmd.var_count();
                 let body = ContinuationData::with_code(body);
                 self.cmd.push_var(StackItem::Continuation(Arc::new(body)));
-                copy_to_var(Ctx::new(self), CC)
-                .and_then(|ctx| swap(ctx, savelist!(var!(n + 1), 0), ctrl!(0))) // ec_repeat.savelist[0] = cc
-                .and_then(|ctx| swap(ctx, savelist!(var!(n), 0), var!(n + 1))) // body.savelist[0] = ec_repeat
-                .and_then(|ctx| switch(ctx, var!(n)))?;
+                copy_to_var(self, CC)?;
+                swap(self, savelist!(var!(n + 1), 0), ctrl!(0))?; // ec_repeat.savelist[0] = cc
+                swap(self, savelist!(var!(n), 0), var!(n + 1))?; // body.savelist[0] = ec_repeat
+                switch(self, var!(n))?;
             } else {
                 self.log_string = Some("RET FROM REPEAT");
-                switch(Ctx::new(self), ctrl!(0))?;
+                switch(self, ctrl!(0))?;
             }
         }
         Ok(None)
     }
-    fn step_unil_loop(&mut self, body: SliceData) -> Result<Option<i32>> {
+    fn step_until_loop(&mut self, body: SliceData) -> Result<Option<i32>> {
         match self.check_until_loop_condition() {
             Ok(true) => {
                 self.log_string = Some("NEXT UNTIL ITERATION");
                 let n = self.cmd.var_count();
                 let body = ContinuationData::with_code(body);
                 self.cmd.push_var(StackItem::Continuation(Arc::new(body)));
-                copy_to_var(Ctx::new(self), CC)
-                .and_then(|ctx| swap(ctx, savelist!(var!(n + 1), 0), ctrl!(0)) )    // until.savelist[0] = c[0]
-                .and_then(|ctx| swap(ctx, savelist!(var!(n), 0), var!(n + 1)))      // body.savelist[0] = until
-                .and_then(|ctx| switch(ctx, var!(n)))?;
+                copy_to_var(self, CC)?;
+                swap(self, savelist!(var!(n + 1), 0), ctrl!(0))?;     // until.savelist[0] = c[0]
+                swap(self, savelist!(var!(n), 0), var!(n + 1))?;      // body.savelist[0] = until
+                switch(self, var!(n))?;
             }
             Ok(false) => {
                 self.log_string = Some("RET FROM UNTIL");
-                switch(Ctx::new(self), ctrl!(0))?;
+                switch(self, ctrl!(0))?;
             }
             Err(err) => return Err(err)
         }
@@ -477,9 +486,9 @@ impl Engine {
         let n = self.cmd.var_count();
         let body = ContinuationData::with_code(body);
         self.cmd.push_var(StackItem::Continuation(Arc::new(body)));
-        copy_to_var(Ctx::new(self), CC)
-        .and_then(|ctx| swap(ctx, savelist!(var!(n), 0), var!(n + 1)) ) // body.savelist[0] = ec_again
-        .and_then(|ctx| switch(ctx, var!(n)))?;
+        copy_to_var(self, CC)?;
+        swap(self, savelist!(var!(n), 0), var!(n + 1))?;  // body.savelist[0] = ec_again
+        switch(self, var!(n))?;
         Ok(None)
     }
 
@@ -498,7 +507,7 @@ impl Engine {
                     ContinuationType::TryCatch => self.step_try_catch(),
                     ContinuationType::WhileLoopCondition(body, cond) => self.step_while_loop(body, cond),
                     ContinuationType::RepeatLoopBody(code, _counter) => self.step_repeat_loop(code),
-                    ContinuationType::UntilLoopCondition(body) => self.step_unil_loop(body),
+                    ContinuationType::UntilLoopCondition(body) => self.step_until_loop(body),
                     ContinuationType::AgainLoopBody(slice) => self.step_again_loop(slice),
                 }
             };
@@ -523,7 +532,7 @@ impl Engine {
                 return lib.reference(0)
             }
         }
-        err!(ExceptionCode::CellUnderflow, "Libraries do not contain code with hash {}", hash.to_hex_string())
+        err!(ExceptionCode::CellUnderflow, "Libraries do not contain code with hash {:x}", hash)
     }
 
     /// Loads cell to slice cheking in precashed map
@@ -637,18 +646,14 @@ impl Engine {
         if let Some(stack) = stack {
             self.cc.stack = stack;
         }
-        self.gas = gas.unwrap_or(Gas::test());
-        self.ctrls.put(0, &mut StackItem::Continuation(Arc::new(ContinuationData::with_type(
-            ContinuationType::Quit(ExceptionCode::NormalTermination as i32)
-        )))).unwrap();
-        self.ctrls.put(1, &mut StackItem::Continuation(Arc::new(ContinuationData::with_type(
-            ContinuationType::Quit(ExceptionCode::AlternativeTermination as i32)
-        )))).unwrap();
-        self.ctrls.put(3, &mut StackItem::Continuation(Arc::new(
-            ContinuationData::with_code(code)
-        ))).unwrap();
-        self.ctrls.put(4, &mut StackItem::Cell(BuilderData::default().into())).unwrap();
-        self.ctrls.put(5, &mut StackItem::Cell(BuilderData::default().into())).unwrap();
+        self.gas = gas.unwrap_or_else(Gas::test);
+        let cont = ContinuationType::Quit(ExceptionCode::NormalTermination as i32);
+        self.ctrls.put(0, &mut StackItem::continuation(ContinuationData::with_type(cont))).unwrap();
+        let cont = ContinuationType::Quit(ExceptionCode::AlternativeTermination as i32);
+        self.ctrls.put(1, &mut StackItem::continuation(ContinuationData::with_type(cont))).unwrap();
+        self.ctrls.put(3, &mut StackItem::continuation(ContinuationData::with_code(code))).unwrap();
+        self.ctrls.put(4, &mut StackItem::cell(Cell::default())).unwrap();
+        self.ctrls.put(5, &mut StackItem::cell(Cell::default())).unwrap();
         self.ctrls.put(7, &mut SmartContractInfo::default().into_temp_data()).unwrap();
         if let Some(ref mut ctrls) = ctrls {
             self.apply_savelist(ctrls).unwrap();
@@ -675,16 +680,16 @@ impl Engine {
 
     // Implementation *********************************************************
 
-    pub(in crate::executor) fn load_instruction(&mut self, cmd: Instruction) -> Result<Ctx> {
+    pub(in crate::executor) fn load_instruction(&mut self, cmd: Instruction) -> Status {
         self.cmd = cmd;
         self.step += 1;
-        self.extract_instruction().map(move |_| Ctx::new(self))
-        // let result = self.extract_instruction();
+        self.extract_instruction()
+        // let result = self.extract_instruction()?;
         // old formula for command with refs and data bits
         // let refs = self.cmd_code.remaining_references() - self.cc.code().remaining_references();
         // let bits = self.cmd_code.remaining_bits() - self.cc.code().remaining_bits();
         // self.use_gas(Gas::basic_gas_price(bits, refs));
-        // result.map(move |_| Ctx::new(self))
+        // Ok(())
     }
 
     pub(in crate::executor) fn switch_debug(&mut self, on_off: bool) {
@@ -695,13 +700,13 @@ impl Engine {
         self.debug_on > 0
     }
 
-    pub(in crate::executor) fn dump(&mut self, dump: String) {
-        self.debug_buffer += &dump;
+    pub(in crate::executor) fn dump(&mut self, dump: &str) {
+        self.debug_buffer += dump;
     }
 
     pub(in crate::executor) fn flush(&mut self) {
         if self.debug_on > 0 {
-            let buffer = std::mem::replace(&mut self.debug_buffer, String::new());
+            let buffer = std::mem::take(&mut self.debug_buffer);
             if self.trace_callback.is_none() {
                 log::info!(target: "tvm", "{}", buffer);
             } else {
@@ -719,12 +724,12 @@ impl Engine {
     ///Set gas state
     pub fn set_gas(&mut self, gas: Gas) {
         self.gas = gas
-    }   
+    }
     ///Interface to gas state set_gas_limit method
     pub fn new_gas_limit(&mut self, gas: i64) {
         self.gas.new_gas_limit(gas)
-    }    
-    
+    }
+
     fn check_while_loop_condition(&mut self) -> Result<bool> {
         let x = self.cc.stack.drop(0)?;
         let y = x.as_integer()?;
@@ -732,7 +737,7 @@ impl Engine {
     }
 
     fn check_until_loop_condition(&mut self) -> Result<bool> {
-        self.check_while_loop_condition().map(|r| !r)
+        Ok(!self.check_while_loop_condition()?)
     }
 
     fn extract_slice(&mut self, offset: usize, r: usize, x: usize, mut refs: usize, mut bytes: usize) -> Result<SliceData> {
@@ -766,7 +771,7 @@ impl Engine {
 
     fn basic_use_gas(&mut self, mut bits: usize) -> i64 {
         debug_assert_eq!(self.cmd_code.cell().repr_hash(), self.cmd_code.cell().repr_hash());
-        bits += self.cc.code().pos().checked_sub(self.cmd_code.pos()).unwrap_or(0);
+        bits += self.cc.code().pos().saturating_sub(self.cmd_code.pos());
         self.use_gas(Gas::basic_gas_price(bits, 0))
     }
 
@@ -832,7 +837,7 @@ impl Engine {
                     self.basic_use_gas(0);
                     match self.cc.last_cmd() & 0x0F {
                         value @ 0..=10 => value as isize,
-                        value @ _ => value as isize - 16
+                        value => value as isize - 16
                     }
                 } else if *range == (0..32) {
                     self.basic_use_gas(0);
@@ -857,13 +862,13 @@ impl Engine {
                     self.basic_use_gas(0);
                     match self.cc.last_cmd() & 0x0F {
                         15 => return err!(ExceptionCode::RangeCheckError),
-                        value @ _ => value as isize
+                        value => value as isize
                     }
                 } else if *range == (1..15) {
                     self.basic_use_gas(0);
                     match self.cc.last_cmd() & 0x0F {
                         0 | 15 => return err!(ExceptionCode::RangeCheckError),
-                        value @ _ => value as isize
+                        value => value as isize
                     }
                 } else if *range == (-15..240) {
                     self.basic_use_gas(0);
@@ -1044,7 +1049,7 @@ impl Engine {
                 let mut code = self.cmd_code.clone();
                 code.shrink_data(offset..);
                 // TODO: need to check this failure case
-                let slice = code.get_dictionary_opt().unwrap_or_else(|| SliceData::default());
+                let slice = code.get_dictionary_opt().unwrap_or_else(SliceData::default);
                 self.cmd.ictx.params.push(InstructionParameter::Slice(slice));
                 let length = code.get_next_int(bits)? as usize;
                 *self.cc.code_mut() = code;
@@ -1082,9 +1087,6 @@ impl Engine {
         } else {
             return Ok(())
         };
-        // if undo {
-        //     self.undo();
-        // }
         if exception.exception_code() == Some(ExceptionCode::OutOfGas) {
             self.step += 1;
             log::trace!(target: "tvm", "OUT OF GAS CODE: {}\n", self.cmd_code);
@@ -1099,14 +1101,14 @@ impl Engine {
         if let Some(c2) = self.ctrls.get_mut(2) {
             self.cc.stack.push(exception.value.clone());
             self.cc.stack.push(int!(exception.exception_or_custom_code()));
-            c2.as_continuation_mut().map(|cdata| cdata.nargs = 2)?;
-            switch(Ctx::new(self), ctrl!(2))?;
+            c2.as_continuation_mut()?.nargs = 2;
+            switch(self, ctrl!(2))?;
         } else if let Some(number) = exception.is_normal_termination() {
             let cont = ContinuationData::with_type(ContinuationType::Quit(number));
             self.cmd.push_var(StackItem::Continuation(Arc::new(cont)));
-            self.cc.stack.push(exception.value.clone());
-            self.cmd.vars[n].as_continuation_mut().map(|cdata| cdata.nargs = 1)?;
-            switch(Ctx::new(self), var!(n))?;
+            self.cc.stack.push(exception.value);
+            self.cmd.vars[n].as_continuation_mut()?.nargs = 1;
+            switch(self, var!(n))?;
         } else {
             self.trace_info(EngineTraceInfoType::Exception, self.gas_used(), Some(format!("UNHANDLED EXCEPTION: {}", err)));
             log::trace!(target: "tvm", "BAD CODE: {}\n", self.cmd_code);
@@ -1139,22 +1141,6 @@ impl Engine {
         self.use_gas(Gas::tuple_gas_price(tuple.len()));
         *self.ctrl_mut(7)? = StackItem::tuple(tuple);
         Ok(())
-    }
-
-    #[allow(dead_code)]
-    fn undo(&mut self) {
-        while let Some(undo) = self.cmd.undo.pop() {
-            let mut ctx = Ctx::new(self);
-            match undo {
-                Undo::WithCode(f, c) => f(&mut ctx, c),
-                Undo::WithCodePair(f, c1, c2) => f(&mut ctx, c1, c2),
-                Undo::WithCodeTriplet(f, c1, c2, c3) => f(&mut ctx, c1, c2, c3),
-                Undo::WithAddressAndNargs(f, a, n) => f(&mut ctx, a, n),
-                Undo::WithSaveList(f, l) => f(&mut ctx, l),
-                Undo::WithSize(f, i) => f(&mut ctx, i),
-                Undo::WithSizeDataAndCode(f, i, v, a) => f(&mut ctx, i, v, a),
-            }
-        }
     }
 
 }

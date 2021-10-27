@@ -236,7 +236,6 @@
 //! - [`ring-compat`] - compatibility wrapper for [*ring*]
 //! - [`signatory-sodiumoxide`] - compatibility wrapper for [`sodiumoxide`]
 //! - [`yubihsm`] - host-side client library for YubiHSM2 devices from Yubico
-
 //!
 //! [`ed25519-dalek`]: https://docs.rs/ed25519-dalek
 //! [`ring-compat`]: https://docs.rs/ring-compat
@@ -245,19 +244,42 @@
 //! [`signatory-sodiumoxide`]: https://docs.rs/signatory-sodiumoxide/
 //! [`sodiumoxide`]: https://github.com/sodiumoxide/sodiumoxide
 //! [`yubihsm`]: https://github.com/iqlusioninc/yubihsm.rs/blob/develop/README.md
+//!
+//! # Features
+//!
+//! The following features are presently supported:
+//!
+//! - `std` *(default)*: Enable `std` support in [`signature`], which currently only affects whether
+//!   [`signature::Error`] implements `std::error::Error`.
+//! - `serde`: Implement `serde::Deserialize` and `serde::Serialize` for [`Signature`]. Signatures
+//!   are serialized as their bytes.
+//! - `serde_bytes`: Implement `serde_bytes::Deserialize` and `serde_bytes::Serialize` for
+//!   [`Signature`]. This enables more compact representations for formats with an efficient byte
+//!   array representation. As per the `serde_bytes` documentation, this can most easily be realised
+//!   using the `#[serde(with = "serde_bytes")]` annotation, e.g.:
+//!
+//!   ```ignore
+//!   # use ed25519::Signature;
+//!   # use serde::{Deserialize, Serialize};
+//!   #[derive(Deserialize, Serialize)]
+//!   #[serde(transparent)]
+//!   struct SignatureAsBytes(#[serde(with = "serde_bytes")] Signature);
+//!   ```
 
 #![no_std]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/meta/master/logo_small.png",
-    html_root_url = "https://docs.rs/ed25519/1.1.1"
+    html_root_url = "https://docs.rs/ed25519/1.2.0"
 )]
 #![forbid(unsafe_code)]
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 
 #[cfg(feature = "serde")]
 use serde::{de, ser, Deserialize, Serialize};
+#[cfg(feature = "serde_bytes")]
+use serde_bytes_crate as serde_bytes;
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(all(feature = "std", any(test, feature = "serde_bytes")))]
 extern crate std;
 
 pub use signature::{self, Error};
@@ -281,6 +303,7 @@ impl Signature {
     }
 
     /// Return the inner byte array
+    #[allow(clippy::wrong_self_convention)] // TODO: fix in next breaking release
     pub fn to_bytes(&self) -> [u8; SIGNATURE_LENGTH] {
         self.0
     }
@@ -401,6 +424,49 @@ impl<'de> Deserialize<'de> for Signature {
     }
 }
 
+#[cfg(feature = "serde_bytes")]
+impl serde_bytes::Serialize for Signature {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
+    }
+}
+
+#[cfg(feature = "serde_bytes")]
+impl<'de> serde_bytes::Deserialize<'de> for Signature {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct ByteArrayVisitor;
+
+        impl<'de> de::Visitor<'de> for ByteArrayVisitor {
+            type Value = [u8; SIGNATURE_LENGTH];
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("bytestring of length 64")
+            }
+
+            fn visit_bytes<E>(self, bytes: &[u8]) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                use de::Error;
+
+                bytes
+                    .try_into()
+                    .map_err(|_| Error::invalid_length(bytes.len(), &self))
+            }
+        }
+
+        deserializer
+            .deserialize_bytes(ByteArrayVisitor)
+            .map(Signature::from)
+    }
+}
+
 #[cfg(all(test, feature = "serde", feature = "std"))]
 mod tests {
     use super::*;
@@ -423,6 +489,44 @@ mod tests {
     #[test]
     fn test_deserialize() {
         let signature = bincode::deserialize::<Signature>(&EXAMPLE_SIGNATURE).unwrap();
+        assert_eq!(&EXAMPLE_SIGNATURE[..], signature.as_bytes());
+    }
+
+    #[cfg(feature = "serde_bytes")]
+    #[test]
+    fn test_serialize_bytes() {
+        use bincode::Options;
+
+        let signature = Signature::try_from(&EXAMPLE_SIGNATURE[..]).unwrap();
+
+        let mut encoded_signature = Vec::new();
+        let options = bincode::DefaultOptions::new()
+            .with_fixint_encoding()
+            .allow_trailing_bytes();
+        let mut serializer = bincode::Serializer::new(&mut encoded_signature, options);
+        serde_bytes::serialize(&signature, &mut serializer).unwrap();
+
+        let mut expected = Vec::from(SIGNATURE_LENGTH.to_le_bytes());
+        expected.extend(&EXAMPLE_SIGNATURE[..]);
+        assert_eq!(&expected[..], &encoded_signature[..]);
+    }
+
+    #[cfg(feature = "serde_bytes")]
+    #[test]
+    fn test_deserialize_bytes() {
+        use bincode::Options;
+
+        let mut encoded_signature = Vec::from(SIGNATURE_LENGTH.to_le_bytes());
+        encoded_signature.extend(&EXAMPLE_SIGNATURE[..]);
+
+        let options = bincode::DefaultOptions::new()
+            .with_fixint_encoding()
+            .allow_trailing_bytes();
+        let mut deserializer =
+            bincode::de::Deserializer::from_slice(&encoded_signature[..], options);
+
+        let signature: Signature = serde_bytes::deserialize(&mut deserializer).unwrap();
+
         assert_eq!(&EXAMPLE_SIGNATURE[..], signature.as_bytes());
     }
 }

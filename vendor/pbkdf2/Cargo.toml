@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -11,58 +11,72 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "pbkdf2"
-version = "0.3.0"
+version = "0.8.0"
 authors = ["RustCrypto Developers"]
 description = "Generic implementation of PBKDF2"
 documentation = "https://docs.rs/pbkdf2"
+readme = "README.md"
 keywords = ["crypto", "password", "hashing"]
 categories = ["cryptography", "no-std"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/RustCrypto/password-hashing"
-[dependencies.base64]
-version = "0.9"
-optional = true
-
-[dependencies.byteorder]
+repository = "https://github.com/RustCrypto/password-hashes/tree/master/pbkdf2"
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+[dependencies.base64ct]
 version = "1"
+optional = true
 default-features = false
 
 [dependencies.crypto-mac]
-version = "0.7"
+version = "0.11"
 
 [dependencies.hmac]
-version = "0.7"
+version = "0.11"
 optional = true
+default-features = false
 
-[dependencies.rand]
-version = "0.5"
+[dependencies.password-hash]
+version = "0.2"
+features = ["rand_core"]
 optional = true
+default-features = false
 
 [dependencies.rayon]
 version = "1"
 optional = true
 
-[dependencies.sha2]
-version = "0.8"
-optional = true
-
-[dependencies.subtle]
-version = "1"
+[dependencies.sha1]
+version = "0.9"
 optional = true
 default-features = false
-[dev-dependencies.hmac]
-version = "0.7"
+package = "sha-1"
 
-[dev-dependencies.sha-1]
-version = "0.8"
+[dependencies.sha2]
+version = "0.9"
+optional = true
+default-features = false
+[dev-dependencies.hex-literal]
+version = "0.3"
+
+[dev-dependencies.hmac]
+version = "0.11"
+
+[dev-dependencies.rand_core]
+version = "0.6"
+features = ["std"]
+
+[dev-dependencies.sha1]
+version = "0.9"
+package = "sha-1"
 
 [dev-dependencies.sha2]
-version = "0.8"
+version = "0.9"
 
 [features]
-default = ["include_simple"]
-include_simple = ["sha2", "hmac", "rand", "base64", "subtle"]
-parallel = ["rayon"]
-[badges.travis-ci]
-repository = "RustCrypto/password-hashing"
+default = ["simple"]
+parallel = ["rayon", "std"]
+simple = ["sha2", "hmac", "password-hash", "base64ct"]
+std = ["password-hash/std"]

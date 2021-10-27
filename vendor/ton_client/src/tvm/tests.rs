@@ -18,16 +18,17 @@ use crate::abi::{
     Abi, CallSet, DeploySet, ParamsOfEncodeMessage, ResultOfEncodeMessage, Signer,
     encode_account::{ParamsOfEncodeAccount, StateInitSource},
 };
+use crate::tvm::types::mainnet_config;
 use crate::boc::{
     BocCacheType,
     internal::{deserialize_object_from_base64, serialize_cell_to_base64},
 };
-use crate::boc::tests::BLOCK_CONFIG;
 use crate::json_interface::modules::{AbiModule, TvmModule};
-use crate::tests::{TestClient, HELLO, SUBSCRIBE};
+use crate::net::{ParamsOfQueryCollection, ResultOfQueryCollection};
+use crate::processing::{ParamsOfProcessMessage, ResultOfProcessMessage};
+use crate::tests::{TestClient, HELLO, SUBSCRIBE, EXCEPTION};
 use api_info::ApiModule;
 use serde_json::Value;
-use ton_executor::BlockchainConfig;
 use ton_types::{BuilderData, Cell};
 use ton_vm::stack::{StackItem, continuation::ContinuationData};
 use std::sync::Arc;
@@ -149,10 +150,8 @@ async fn test_run_executor() {
                     boc: account,
                     unlimited_balance: None,
                 },
-                execution_options: None,
-                skip_transaction_check: None,
                 return_updated_account: Some(true),
-                boc_cache: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -308,12 +307,10 @@ async fn test_run_account_none() {
     let result = run_executor
         .call(ParamsOfRunExecutor {
             message: message.to_owned(),
-            abi: None,
             account: AccountForExecutor::None,
-            execution_options: None,
             skip_transaction_check: Some(true),
             return_updated_account: Some(true),
-            boc_cache: None,
+            ..Default::default()
         })
         .await
         .unwrap();
@@ -367,12 +364,9 @@ async fn test_run_account_uninit() {
     let result = run_executor
         .call(ParamsOfRunExecutor {
             message: message.message.to_owned(),
-            abi: None,
             account: AccountForExecutor::Uninit,
-            execution_options: None,
-            skip_transaction_check: None,
             return_updated_account: Some(true),
-            boc_cache: None,
+            ..Default::default()
         })
         .await
         .unwrap();
@@ -684,6 +678,116 @@ fn test_stack_serialization() {
     );
 }
 
+#[tokio::test]
+async fn test_tvm_error_message() {
+    let client = Arc::new(TestClient::new());
+
+    let (abi, tvc) = TestClient::package(EXCEPTION, None);
+    let keys = client.generate_sign_keys();
+
+    let address = client
+        .deploy_with_giver_async(
+            ParamsOfEncodeMessage {
+                abi: abi.clone(),
+                deploy_set: DeploySet::some_with_tvc(tvc.clone()),
+                call_set: CallSet::some_with_function("constructor"),
+                signer: Signer::Keys { keys: keys.clone() },
+                ..Default::default()
+            },
+            None,
+        )
+        .await;
+
+    let accounts = client
+        .request_async::<_, ResultOfQueryCollection>(
+            "net.query_collection",
+            ParamsOfQueryCollection {
+                collection: "accounts".to_owned(),
+                filter: Some(json!({
+                    "id": { "eq": address }
+                })),
+                result: "boc".to_owned(),
+                order: None,
+                limit: Some(1),
+            },
+        )
+        .await
+        .unwrap()
+        .result;
+
+    let account_boc = accounts.first().unwrap()["boc"].as_str().unwrap();
+
+    let message_encode_params = ParamsOfEncodeMessage {
+        abi: abi.clone(),
+        address: Some(address.clone()),
+        call_set: CallSet::some_with_function("fail"),
+        signer: Signer::None,
+        ..Default::default()
+    };
+
+    let message = client
+        .request_async::<_, ResultOfEncodeMessage>(
+            "abi.encode_message",
+            message_encode_params.clone(),
+        )
+        .await
+        .unwrap()
+        .message;
+
+    let error = client
+        .request_async::<_, ResultOfRunTvm>(
+            "tvm.run_tvm",
+            ParamsOfRunTvm {
+                message: message.clone(),
+                account: account_boc.to_string(),
+                abi: Some(abi.clone()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_err();
+
+    const EXPECTED_ERROR: &str = "This is long error message (just for testing purposes). \
+        If you see this error, you can be sure that this contract works as expected.";
+
+    assert_eq!(error.data["contract_error"].as_str().unwrap(), EXPECTED_ERROR);
+
+    let error = client
+        .request_async::<_, ResultOfRunExecutor>(
+            "tvm.run_executor",
+            ParamsOfRunExecutor {
+                message,
+                account: AccountForExecutor::Account {
+                    boc: account_boc.to_string(),
+                    unlimited_balance: None,
+                },
+                abi: Some(abi.clone()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_err();
+
+    assert_eq!(error.data["contract_error"].as_str().unwrap(), EXPECTED_ERROR);
+
+    let error = client
+        .request_async::<_, ResultOfProcessMessage>(
+            "processing.process_message",
+            ParamsOfProcessMessage {
+                message_encode_params,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_err();
+
+    if TestClient::node_se() {
+        assert_eq!(error.data["contract_error"].as_str().unwrap(), EXPECTED_ERROR);
+    } else {
+        assert_eq!(error.data["local_error"]["data"]["contract_error"].as_str().unwrap(), EXPECTED_ERROR);
+    }
+}
+
 #[tokio::test(core_threads = 2)]
 async fn test_resolve_blockchain_config() {
     if TestClient::node_se() {
@@ -695,16 +799,15 @@ async fn test_resolve_blockchain_config() {
     let net_context = Arc::new(crate::ClientContext::new(config).unwrap());
 
     let local_context = Arc::new(crate::ClientContext::new(crate::ClientConfig::default()).unwrap());
+    let block_config = base64::encode(&include_bytes!("../boc/test_data/block_config.boc"));
+    let custom_config_params = deserialize_object_from_base64(&block_config, "config").unwrap();
 
-    let custom_config_params = deserialize_object_from_base64(BLOCK_CONFIG, "config").unwrap();
-    let default_config = BlockchainConfig::default();
-
-    let config = resolve_blockchain_config(&local_context, Some(BLOCK_CONFIG.to_owned())).await.unwrap();
+    let config = resolve_blockchain_config(&local_context, Some(block_config)).await.unwrap();
     assert_eq!(config.raw_config(), &custom_config_params.object);
 
     let config = resolve_blockchain_config(&local_context, None).await.unwrap();
-    assert_eq!(config.raw_config(), default_config.raw_config());
+    assert_eq!(config.raw_config(), mainnet_config().raw_config());
 
     let config = resolve_blockchain_config(&net_context, None).await.unwrap();
-    assert_ne!(config.raw_config(), default_config.raw_config());
+    assert_ne!(config.raw_config(), mainnet_config().raw_config());
 }

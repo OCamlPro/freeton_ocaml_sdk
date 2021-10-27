@@ -13,11 +13,11 @@
 
 //! Contract function call builder.
 
-use crate::{error::AbiError, param::Param, token::{Token, TokenValue}};
+use crate::{contract::ABI_VERSION_1_0, error::AbiError, param::Param, token::{SerializedValue, Token, TokenValue}};
  
 use std::collections::HashMap;
 use sha2::{Digest, Sha256};
-use contract::SerdeFunction;
+use contract::{AbiVersion, SerdeFunction};
 use ed25519::signature::Signer;
 use ed25519_dalek::{Keypair, SIGNATURE_LENGTH};
 use ton_block::Serializable;
@@ -27,7 +27,7 @@ use ton_types::{BuilderData, Cell, error, fail, IBitstring, Result, SliceData};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     /// ABI version
-    pub abi_version: u8,
+    pub abi_version: AbiVersion,
     /// Function name.
     pub name: String,
     /// Function header parameters.
@@ -44,7 +44,7 @@ pub struct Function {
 
 impl Function {
     /// Creates `Function` struct from parsed JSON struct `SerdeFunction`
-    pub(crate) fn from_serde(abi_version: u8, serde_function: SerdeFunction, header: Vec<Param>) -> Self {
+    pub(crate) fn from_serde(abi_version: AbiVersion, serde_function: SerdeFunction, header: Vec<Param>) -> Self {
         let mut function = Function {
             abi_version,
             name: serde_function.name,
@@ -93,7 +93,7 @@ impl Function {
     /// Retruns ABI function signature
     pub fn get_function_signature(&self) -> String {
         let mut input_types = vec![];
-        if self.abi_version == 1 {
+        if self.abi_version.major == 1 {
             input_types.append(&mut self.header.iter()
                 .map(|param| param.kind.type_signature())
                 .collect::<Vec<String>>())
@@ -110,7 +110,7 @@ impl Function {
             .collect::<Vec<String>>()
             .join(",");
 
-        format!("{}({})({})v{}", self.name, input_types, output_types, self.abi_version)
+        format!("{}({})({})v{}", self.name, input_types, output_types, self.abi_version.major)
     }
 
     pub fn calc_function_id(signature: &str) -> u32 {
@@ -149,21 +149,21 @@ impl Function {
     pub fn decode_output(&self, mut data: SliceData, _internal: bool) -> Result<Vec<Token>> {
         let id = data.get_next_u32()?;
         if id != self.get_output_id() { Err(AbiError::WrongId { id } )? }
-        TokenValue::decode_params(self.output_params(), data, self.abi_version)
+        TokenValue::decode_params(self.output_params(), data, &self.abi_version)
     }
 
     /// Parses the ABI function call to list of tokens.
     pub fn decode_input(&self, data: SliceData, internal: bool) -> Result<Vec<Token>> {
-        let (_, id, cursor) = Self::decode_header(self.abi_version, data, &self.header, internal)?;
+        let (_, id, cursor) = Self::decode_header(&self.abi_version, data, &self.header, internal)?;
 
         if id != self.get_input_id() { Err(AbiError::WrongId { id } )? }
 
-        TokenValue::decode_params(self.input_params(), cursor, self.abi_version)
+        TokenValue::decode_params(self.input_params(), cursor, &self.abi_version)
     }
 
     /// Decodes function id from contract answer
     pub fn decode_input_id(
-        abi_version: u8,
+        abi_version: &AbiVersion,
         cursor: SliceData,
         header: &Vec<Param>,
         internal: bool
@@ -192,12 +192,12 @@ impl Function {
                 Some(pair) => {
                     let signature = pair.sign(&hash).to_bytes().to_vec();
                     Self::fill_sign(
-                        self.abi_version,
+                        &self.abi_version,
                         Some(&signature),
                         Some(&pair.public.to_bytes()),
                         builder)?
                 },
-                None => Self::fill_sign(self.abi_version, None, None, builder)?
+                None => Self::fill_sign(&self.abi_version, None, None, builder)?
             }
         }
 
@@ -211,8 +211,8 @@ impl Function {
         input: &[Token]
     ) -> Result<BuilderData> {
         let mut vec = vec![];
-        vec.push(answer_id.write_to_new_cell()?);
-        let builder = TokenValue::pack_values_into_chain(input, vec, self.abi_version)?;
+        vec.push(answer_id.write_to_new_cell()?.into());
+        let builder = TokenValue::pack_values_into_chain(input, vec, &self.abi_version)?;
         Ok(builder)
     }
 
@@ -221,7 +221,7 @@ impl Function {
         &self,
         header_tokens: &HashMap<String, TokenValue>,
         internal: bool
-    ) -> Result<Vec<BuilderData>> {
+    ) -> Result<Vec<SerializedValue>> {
         let mut vec = vec![];
         if !internal {
             for param in &self.header {
@@ -229,35 +229,35 @@ impl Function {
                     if !token.type_check(&param.kind) {
                         return Err(AbiError::WrongParameterType.into());
                     }
-                    vec.push(token.pack_into_chain(self.abi_version)?);
+                    vec.append(&mut token.write_to_cells(&self.abi_version)?);
                 } else {
-                    vec.push(TokenValue::get_default_value_for_header(&param.kind)?.pack_into_chain(self.abi_version)?);
+                    vec.append(&mut TokenValue::get_default_value_for_header(&param.kind)?.write_to_cells(&self.abi_version)?);
                 }
             }
         }
-        if self.abi_version == 1 {
-            vec.insert(0, self.get_input_id().write_to_new_cell()?);
+        if self.abi_version.major == 1 {
+            vec.insert(0, self.get_input_id().write_to_new_cell()?.into());
         } else {
-            vec.push(self.get_input_id().write_to_new_cell()?);
+            vec.push(self.get_input_id().write_to_new_cell()?.into());
         }
         Ok(vec)
     }
 
     /// Encodes function header with provided header parameters
     pub fn decode_header(
-        abi_version: u8,
+        abi_version: &AbiVersion,
         mut cursor: SliceData,
         header: &Vec<Param>,
         internal: bool
     ) -> Result<(Vec<Token>, u32, SliceData)> {
         let mut tokens = vec![];
         let mut id = 0;
-        if abi_version == 1 {
+        if abi_version == &ABI_VERSION_1_0 {
             id = cursor.get_next_u32()?;
         }
         if !internal {
             // skip signature
-            if abi_version == 1 {
+            if abi_version == &ABI_VERSION_1_0 {
                 cursor.checked_drain_reference()?;
             } else {
                 if cursor.get_next_bit()? {
@@ -272,7 +272,7 @@ impl Function {
                 tokens.push(Token { name: param.name.clone(), value: token_value });
             }
         }
-        if abi_version != 1 {
+        if abi_version != &ABI_VERSION_1_0 {
             id = cursor.get_next_u32()?;
         }
         Ok((tokens, id, cursor))
@@ -300,7 +300,7 @@ impl Function {
         let mut remove_bits = 0;
         if !internal {
             let mut sign_builder = BuilderData::new();
-            if self.abi_version == 1 {
+            if self.abi_version.major == 1 {
                 // reserve reference for sign
                 sign_builder.append_reference(BuilderData::new());
                 remove_ref = true;
@@ -315,11 +315,15 @@ impl Function {
                     remove_bits = 1;
                 }
             }
-            cells.insert(0, sign_builder);
+            cells.insert(0, SerializedValue {
+                data: sign_builder,
+                max_bits: 1 + SIGNATURE_LENGTH * 8,
+                max_refs: 0
+            });
         }
 
         // encoding itself
-        let mut builder = TokenValue::pack_values_into_chain(input, cells, self.abi_version)?;
+        let mut builder = TokenValue::pack_values_into_chain(input, cells, &self.abi_version)?;
 
         if !internal {
             // delete reserved sign before hash
@@ -340,13 +344,13 @@ impl Function {
 
     /// Add sign to messsage body returned by `prepare_input_for_sign` function
     pub fn fill_sign(
-        abi_version: u8,
+        abi_version: &AbiVersion,
         signature: Option<&[u8]>,
         public_key: Option<&[u8]>,
         mut builder: BuilderData
     ) -> Result<BuilderData> {
 
-        if abi_version == 1 {
+        if abi_version == &ABI_VERSION_1_0 {
             // sign in reference
             if builder.references_free() == 0 {
                 fail!(AbiError::InvalidInputData { msg: "No free reference for signature".to_owned() } );
@@ -380,7 +384,7 @@ impl Function {
 
     /// Add sign to messsage body returned by `prepare_input_for_sign` function
     pub fn add_sign_to_encoded_input(
-        abi_version: u8,
+        abi_version: &AbiVersion,
         signature: &[u8],
         public_key: Option<&[u8]>,
         function_call: SliceData
@@ -392,7 +396,7 @@ impl Function {
 
     /// Check if message body is related to this function
     pub fn is_my_input_message(&self, data: SliceData, internal: bool) -> Result<bool> {
-        let decoded_id = Self::decode_input_id(self.abi_version, data, &self.header, internal)?;
+        let decoded_id = Self::decode_input_id(&self.abi_version, data, &self.header, internal)?;
         Ok(self.get_input_id() == decoded_id)
     }
 

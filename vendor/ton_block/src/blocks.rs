@@ -59,12 +59,13 @@ pub struct BlockIdExt {
 
 impl BlockIdExt {
     /// New instance of BlockIdExt structure
-    pub fn new(shard_id: ShardIdent, seq_no: u32) -> Self {
-        Self::with_params(shard_id, seq_no, Default::default(), Default::default())
+    #[deprecated]
+    pub const fn new(shard_id: ShardIdent, seq_no: u32) -> Self {
+        Self::with_params(shard_id, seq_no, UInt256::default(), UInt256::default())
     }
 
     // New instance of BlockIdExt structure
-    pub fn with_params(
+    pub const fn with_params(
         shard_id: ShardIdent,
         seq_no: u32,
         root_hash: UInt256,
@@ -77,20 +78,12 @@ impl BlockIdExt {
             file_hash,
         }
     }
-    pub fn from_ext_blk(blk: ExtBlkRef) -> Self {
+    pub const fn from_ext_blk(blk: ExtBlkRef) -> Self {
         BlockIdExt {
             shard_id: ShardIdent::masterchain(),
             seq_no: blk.seq_no,
             root_hash: blk.root_hash,
             file_hash: blk.file_hash,
-        }
-    }
-    pub fn dummy_masterchain() -> Self {
-        BlockIdExt {
-            shard_id: ShardIdent::masterchain(),
-            seq_no: 0,
-            root_hash: UInt256::default(),
-            file_hash: UInt256::default(),
         }
     }
 
@@ -129,12 +122,12 @@ impl Deserializable for BlockIdExt {
 
 impl Display for BlockIdExt {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "({}:{}, {}, rh {}, fh {})", 
+        write!(f, "({}:{}, {}, rh {:x}, fh {:x})", 
             self.shard_id.workchain_id(), 
             self.shard_id.shard_prefix_as_str_with_tag(), 
             self.seq_no,
-            self.root_hash.to_hex_string(),
-            self.file_hash.to_hex_string())
+            self.root_hash,
+            self.file_hash)
     }
 }
 
@@ -548,8 +541,8 @@ impl Serializable for BlkPrevInfo {
                 prev.write_to(cell)?;
             }
             BlkPrevInfo::Blocks{prev1, prev2} => {
-                cell.append_reference(prev1.write_to_new_cell()?);
-                cell.append_reference(prev2.write_to_new_cell()?);
+                cell.append_reference_cell(prev1.serialize()?);
+                cell.append_reference_cell(prev2.serialize()?);
             },
         }
         Ok(())
@@ -652,30 +645,25 @@ impl Block {
         let mut data = [0_u8; Self::DATA_FOR_SIGN_SIZE];
         {
             let mut cur = Cursor::new(&mut data[..]);
-            cur.write(&Self::DATA_FOR_SIGN_TAG).unwrap();
-            cur.write(root_hash.as_slice()).unwrap();
-            cur.write(file_hash.as_slice()).unwrap();
+            cur.write_all(&Self::DATA_FOR_SIGN_TAG).unwrap();
+            cur.write_all(root_hash.as_slice()).unwrap();
+            cur.write_all(file_hash.as_slice()).unwrap();
         }
         data
     }
 
     pub fn read_cur_validator_set_and_cc_conf(&self) -> Result<(ValidatorSet, CatchainConfig)> {
-        let custom = self
+        self
             .read_extra()?
             .read_custom()?
             .ok_or_else(|| error!(BlockError::InvalidArg(
                 "Block doesn't contain `extra->custom` field".to_string()
-            )))?;
-        let config = custom
+            )))?
             .config()
             .ok_or_else(|| error!(BlockError::InvalidArg(
                 "Block doesn't contain `extra->custom->config` field, maybe no key block is used? ".to_string()
-            )))?;
-
-        Ok((
-            config.validator_set()?,
-            config.catchain_config()?
-        ))
+            )))?
+            .read_cur_validator_set_and_cc_conf()
     }
 }
 
@@ -830,18 +818,15 @@ impl Deserializable for BlockExtra {
 impl Serializable for BlockExtra {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
         cell.append_u32(BLOCK_EXTRA_TAG)?;
-        cell.append_reference(self.in_msg_descr.write_to_new_cell()?);
-        cell.append_reference(self.out_msg_descr.write_to_new_cell()?);
-
-        let mut account_blocks_builder = BuilderData::new();
-        self.account_blocks.write_to(&mut account_blocks_builder)?;
-        cell.append_reference(account_blocks_builder);
+        cell.append_reference_cell(self.in_msg_descr.serialize()?);
+        cell.append_reference_cell(self.out_msg_descr.serialize()?);
+        cell.append_reference_cell(self.account_blocks.serialize()?);
 
         self.rand_seed.write_to(cell)?;
         self.created_by.write_to(cell)?;
         if let Some(custrom) = &self.custom {
             cell.append_bit_one()?;
-            cell.append_reference(custrom.write_to_new_cell()?);
+            cell.append_reference_cell(custrom.serialize()?);
         } else {
             cell.append_bit_zero()?;
         }
@@ -1011,11 +996,11 @@ impl Serializable for BlockInfo {
         }
 
         if let Some(ref master) = self.master_ref {
-            cell.append_reference(master.write_to_new_cell()?);
+            cell.append_reference_cell(master.serialize()?);
         }
-        cell.append_reference(self.prev_ref.write_to_new_cell()?);
+        cell.append_reference_cell(self.prev_ref.serialize()?);
         if let Some(prev_vert_ref) = self.prev_vert_ref.as_ref() {
-            cell.append_reference(prev_vert_ref.write_to_new_cell()?);
+            cell.append_reference_cell(prev_vert_ref.serialize()?);
         }
 
         Ok(())
@@ -1033,7 +1018,7 @@ impl Serializable for ValueFlow {
         self.to_next_blk.write_to(&mut cell1)?;
         self.imported.write_to(&mut cell1)?;
         self.exported.write_to(&mut cell1)?;
-        cell.append_reference(cell1);
+        cell.append_reference_cell(cell1.into_cell()?);
         self.fees_collected.write_to(cell)?;
 
         let mut cell2 = BuilderData::new();
@@ -1041,7 +1026,7 @@ impl Serializable for ValueFlow {
         self.recovered.write_to(&mut cell2)?;
         self.created.write_to(&mut cell2)?;
         self.minted.write_to(&mut cell2)?;
-        cell.append_reference(cell2);
+        cell.append_reference_cell(cell2.into_cell()?);
 
         Ok(())
     }
@@ -1058,14 +1043,14 @@ impl Deserializable for ValueFlow {
                 }
             )
         }
-        let ref mut cell1 = cell.checked_drain_reference()?.into();
+        let cell1 = &mut cell.checked_drain_reference()?.into();
         self.from_prev_blk.read_from(cell1)?;
         self.to_next_blk.read_from(cell1)?;
         self.imported.read_from(cell1)?;
         self.exported.read_from(cell1)?;
         self.fees_collected.read_from(cell)?;
 
-        let ref mut cell2 = cell.checked_drain_reference()?.into();
+        let cell2 = &mut cell.checked_drain_reference()?.into();
         self.fees_imported.read_from(cell2)?;
         self.recovered.read_from(cell2)?;
         self.created.read_from(cell2)?;
@@ -1165,10 +1150,10 @@ impl Serializable for Block {
     fn write_to(&self, builder: &mut BuilderData) -> Result<()> {
         builder.append_u32(BLOCK_TAG)?;
         builder.append_i32(self.global_id)?;
-        builder.append_reference(self.info.write_to_new_cell()?); // info:^BlockInfo
-        builder.append_reference(self.value_flow.write_to_new_cell()?); // value_flow:^ValueFlow
-        builder.append_reference(self.state_update.write_to_new_cell()?); // state_update:^(MERKLE_UPDATE ShardState)
-        builder.append_reference(self.extra.write_to_new_cell()?); // extra:^BlockExtra
+        builder.append_reference_cell(self.info.serialize()?); // info:^BlockInfo
+        builder.append_reference_cell(self.value_flow.serialize()?); // value_flow:^ValueFlow
+        builder.append_reference_cell(self.state_update.serialize()?); // state_update:^(MERKLE_UPDATE ShardState)
+        builder.append_reference_cell(self.extra.serialize()?); // extra:^BlockExtra
         Ok(())
     }
 }
@@ -1247,14 +1232,14 @@ impl Serializable for TopBlockDescr {
         let mut prev = BuilderData::new();
         for (i, c) in self.chain.iter().rev().enumerate() {
             let mut builder = BuilderData::new();
-            builder.append_reference(BuilderData::from(&c));
+            builder.append_reference_cell(c.clone());
             if i != 0 {
-                builder.append_reference(prev);
+                builder.append_reference_cell(prev.into_cell()?);
             }
             prev = builder;
         }
         cell.append_bits(self.chain.len(), 8)?;
-        cell.checked_append_references_and_data(&prev.into())?;
+        cell.append_builder(&prev)?;
         Ok(())
     }
 }
@@ -1273,7 +1258,7 @@ impl Deserializable for TopBlockDescr {
         self.proof_for.read_from(slice)?;
         self.signatures = BlockSignatures::read_maybe_from(slice)?;
         let len = slice.get_next_int(8)?;
-        if !(len >= 1 && len <= 8) {
+        if !(1..=8).contains(&len) {
             fail!(
                 BlockError::InvalidData(
                     "Failed check: `len >= 1 && len <= 8`".to_string()
@@ -1286,7 +1271,7 @@ impl Deserializable for TopBlockDescr {
                 if slice.remaining_references() == 0 {
                     fail!(BlockError::TvmException(ExceptionCode::CellUnderflow))
                 }
-                self.chain.push(slice.checked_drain_reference()?.clone());
+                self.chain.push(slice.checked_drain_reference()?);
                 if i != 0 {
                     if slice.remaining_references() == 0 {
                         fail!(BlockError::TvmException(ExceptionCode::CellUnderflow))
@@ -1311,14 +1296,14 @@ pub struct TopBlockDescrSet {
 impl TopBlockDescrSet {
     pub fn get_top_block_descr(&self, shard: &ShardIdent) -> Result<Option<TopBlockDescr>> {
         match self.collection.0.get(shard.full_key_with_tag()?)? {
-            Some(slice) => TopBlockDescr::construct_from_cell(slice.reference(0)?).map(|r| Some(r)),
+            Some(slice) => TopBlockDescr::construct_from_cell(slice.reference(0)?).map(Some),
             None => Ok(None)
         }
     }
     pub fn insert(&mut self, shard: &ShardIdent, descr: &TopBlockDescr) -> Result<()> {
         let key = shard.full_key_with_tag()?;
-        let value = descr.write_to_new_cell()?;
-        self.collection.0.setref(key, &value.into()).map(|_|())
+        let value = descr.serialize()?;
+        self.collection.0.setref(key, &value).map(|_|())
     }
     pub fn is_empty(&self) -> bool {
         self.collection.is_empty()
