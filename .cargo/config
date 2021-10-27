@@ -24,6 +24,7 @@ replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-abi.git"]
 git = "https://github.com/tonlabs/ton-labs-abi.git"
+tag = "2.1.1"
 replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-assembler.git"]
@@ -38,7 +39,7 @@ replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-block.git"]
 git = "https://github.com/tonlabs/ton-labs-block.git"
-tag = "1.7.28"
+tag = "1.7.27"
 replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-executor.git"]
@@ -48,7 +49,7 @@ replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-types.git"]
 git = "https://github.com/tonlabs/ton-labs-types.git"
-tag = "1.10.11"
+tag = "1.10.10"
 replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-vm.git"]
