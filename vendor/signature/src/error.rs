@@ -5,6 +5,11 @@ use core::fmt::{self, Debug, Display};
 #[cfg(feature = "std")]
 use std::boxed::Box;
 
+/// Result type.
+///
+/// A result with the `signature` crate's [`Error`] type.
+pub type Result<T> = core::result::Result<T, Error>;
+
 /// Signature errors.
 ///
 /// This type is deliberately opaque as to avoid sidechannel leakage which
@@ -73,7 +78,16 @@ impl Debug for Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("signature error")
+        f.write_str("signature error")?;
+
+        #[cfg(feature = "std")]
+        {
+            if let Some(source) = &self.source {
+                write!(f, ": {}", source)?;
+            }
+        }
+
+        Ok(())
     }
 }
 

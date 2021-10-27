@@ -5,8 +5,7 @@ use super::context::{
 };
 use super::debot_abi::DEBOT_ABI;
 use super::errors::Error;
-use super::calltype;
-use super::calltype::DebotCallType;
+use super::calltype::{ContractCall, DebotCallType};
 use super::routines;
 use super::run_output::RunOutput;
 use super::{JsonValue, TonClient, DInfo};
@@ -118,7 +117,7 @@ impl DEngine {
     }
 
     pub async fn fetch(ton: TonClient, addr: String) -> Result<DInfo, String> {
-        let state = Self::load_state(ton.clone(), addr.clone()).await?;
+        let state = Self::load_state(ton.clone(), addr.clone(), true).await?;
         Self::fetch_info(ton, addr, state).await
     }
 
@@ -185,7 +184,7 @@ impl DEngine {
     }
 
     async fn fetch_state(&mut self) -> Result<(), String> {
-        self.state = Self::load_state(self.ton.clone(), self.addr.clone()).await?;
+        self.state = Self::load_state(self.ton.clone(), self.addr.clone(), true).await?;
         self.info = Self::fetch_info(self.ton.clone(), self.addr.clone(), self.state.clone()).await?;
         if let Some(dabi) = self.info.dabi.as_ref() {
             self.raw_abi = dabi.clone();
@@ -599,7 +598,7 @@ impl DEngine {
             return Err(format!("target address is undefined"));
         }
         let (addr, abi) = self.get_target()?;
-        let state = Self::load_state(self.ton.clone(), addr.clone()).await?;
+        let state = Self::load_state(self.ton.clone(), addr.clone(), false).await?;
         let result = Self::run(self.ton.clone(), state, addr, abi, getmethod, args).await;
         let result = match result {
             Ok(r) => Ok(r.return_value),
@@ -609,7 +608,30 @@ impl DEngine {
         Ok(result.return_value)
     }
 
-    pub(crate) async fn load_state(ton: TonClient, addr: String) -> Result<String, String> {
+    pub(crate) async fn load_state(ton: TonClient,
+                                   addr: String,
+                                   use_cache: bool) -> Result<String, String> {
+        if use_cache {
+            match std::env::var("DEBOT_LOAD_DIR") {
+                Ok( debot_dir ) => {
+                    match std::fs::read_to_string (
+                        format!("{}/DEBOT_{}.boc",&debot_dir,&addr[2..]) ) {
+                        Ok( state ) => {
+                            println!("Using state from DEBOT_LOAD_DIR");
+                            return Ok( state );
+                        },
+                        Err(_e) => {}
+                    }
+                },
+                Err(_e) => {}
+            };
+            match std::env::var(format!("DEBOT_{}",&addr[2..])) {
+                Ok( state ) => {
+                    println!("Using state from DEBOT_BOC");
+                    return Ok( state ); },
+                Err(_e) => {}
+            }
+        }
         let account_request = query_collection(
             ton,
             ParamsOfQueryCollection {
@@ -631,6 +653,24 @@ impl DEngine {
             ));
         }
         let state = acc.result[0]["boc"].as_str().unwrap().to_owned();
+
+        if use_cache {
+            match std::env::var("DEBOT_BOC_PRINT") {
+                Ok(_s) => { println!("export DEBOT_{}={}", &addr[2..], state); }
+                Err(_e) => {}
+            }
+            match std::env::var("DEBOT_SAVE_DIR") {
+                Ok( debot_dir ) => {
+                    match std::fs::write(
+                        format!("{}/DEBOT_{}.boc",&debot_dir,&addr[2..]) ,
+                        state.clone() ) {
+                        Ok ( _ ) => { println!("State saved in DEBOT_SAVE_DIR");},
+                        Err(_e) => { println!("Could not save BOC"); }
+                    }
+                },
+                Err(_e) => {}
+            }
+        }
         Ok(state)
     }
 
@@ -830,33 +870,34 @@ impl DEngine {
                 },
                 DebotCallType::GetMethod{msg, dest} => {
                     debug!("GetMethod call");
-                    let target_state = Self::load_state(self.ton.clone(), dest.clone()).await
+                    let target_state = Self::load_state(self.ton.clone(), dest.clone(), false).await
                         .map_err(|e| Error::execute_failed(e))?;
-                    let answer_msg = calltype::run_get_method(
-                        self.browser.clone(),
-                        self.ton.clone(),
-                        msg,
-                        target_state,
-                        &self.addr,
-                    )
-                    .await?;
-                    debug!("GetMethod succeeded");
-                    output.append(self.send_to_debot(answer_msg).await?);
-                },
-                DebotCallType::External{msg, dest} => {
-                    debug!("External call");
-                    let target_state = Self::load_state(self.ton.clone(), dest.clone()).await
-                        .map_err(|e| Error::execute_failed(e))?;
-                    let answer_msg = calltype::send_ext_msg(
+                    let callobj = ContractCall::new(
                         self.browser.clone(),
                         self.ton.clone(),
                         msg,
                         Signer::None,
                         target_state,
-                        &self.addr,
-                    )
-                    .await?;
-                    debug!("External call succeeded");
+                        self.addr.clone(),
+                        true,
+                    ).await?;
+                    let answer_msg = callobj.execute().await?;
+                    output.append(self.send_to_debot(answer_msg).await?);
+                },
+                DebotCallType::External{msg, dest} => {
+                    debug!("External call");
+                    let target_state = Self::load_state(self.ton.clone(), dest.clone(), false).await
+                        .map_err(|e| Error::execute_failed(e))?;
+                    let callobj = ContractCall::new(
+                        self.browser.clone(),
+                        self.ton.clone(),
+                        msg,
+                        Signer::None,
+                        target_state,
+                        self.addr.clone(),
+                        false,
+                    ).await?;
+                    let answer_msg = callobj.execute().await?;
                     output.append(self.send_to_debot(answer_msg).await?);
                 },
                 DebotCallType::Invoke{msg} => {

@@ -111,7 +111,7 @@ impl Augmentation<u64> for EnqueuedMsg {
 impl Serializable for EnqueuedMsg {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
         self.enqueued_lt.write_to(cell)?;
-        cell.append_reference(self.out_msg.write_to_new_cell()?);
+        cell.append_reference_cell(self.out_msg.serialize()?);
         Ok(())
     }
 }
@@ -152,7 +152,7 @@ impl OutMsgDescr {
     }
 
     pub fn full_exported(&self) -> &CurrencyCollection {
-        &self.root_extra()
+        self.root_extra()
     }
 }
 
@@ -217,6 +217,7 @@ impl OutMsgQueueKey {
         acc.clone().get_next_u64().unwrap()
     }
 
+    // #[deprecated(note = "use Display converter in format!")]
     pub fn to_hex_string(&self) -> String {
         format!("{}:{:016X}, hash: {:x}", self.workchain_id, self.prefix, self.hash)
     }
@@ -245,7 +246,7 @@ impl fmt::LowerHex for OutMsgQueueKey {
         if f.alternate() {
             write!(f, "0x")?;
         }
-        write!(f, "{}", self.to_hex_string())
+        write!(f, "{}:{:016X}, hash: {:x}", self.workchain_id, self.prefix, self.hash)
     }
 }
 
@@ -391,20 +392,6 @@ impl OutMsg {
         }
     }
     /// Create Dequeue internal message
-    pub fn dequeue(env: &MsgEnvelope, import_block_lt: u64, short: bool) -> Result<OutMsg> {
-        if short {
-            let (_, next_prefix) = env.calc_cur_next_prefix()?;
-            Ok(OutMsg::DequeueShort(OutMsgDequeueShort {
-                msg_env_hash: env.serialize()?.repr_hash(),
-                next_workchain: next_prefix.workchain_id,
-                next_addr_pfx: next_prefix.prefix,
-                import_block_lt,
-            }))
-        } else {
-            Ok(OutMsg::Dequeue(OutMsgDequeue::with_params(env, import_block_lt)?))
-        }
-    }
-    /// Create Dequeue internal message
     pub fn dequeue_long(env: &MsgEnvelope, import_block_lt: u64) -> Result<OutMsg> {
         Ok(OutMsg::Dequeue(OutMsgDequeue::with_params(env, import_block_lt)?))
     }
@@ -521,14 +508,14 @@ impl OutMsg {
     pub fn message_cell(&self) -> Result<Option<Cell>> {
         Ok(
             match self {
-                OutMsg::External(ref x) => Some(x.message_cell().clone()),
-                OutMsg::Immediately(ref x) => Some(x.read_out_message()?.message_cell().clone()),
-                OutMsg::New(ref x) => Some(x.read_out_message()?.message_cell().clone()),
-                OutMsg::Transit(ref x) => Some(x.read_out_message()?.message_cell().clone()),
-                OutMsg::Dequeue(ref x) => Some(x.read_out_message()?.message_cell().clone()),
+                OutMsg::External(ref x) => Some(x.message_cell()),
+                OutMsg::Immediately(ref x) => Some(x.read_out_message()?.message_cell()),
+                OutMsg::New(ref x) => Some(x.read_out_message()?.message_cell()),
+                OutMsg::Transit(ref x) => Some(x.read_out_message()?.message_cell()),
+                OutMsg::Dequeue(ref x) => Some(x.read_out_message()?.message_cell()),
                 OutMsg::DequeueShort(_) => None,
-                OutMsg::DequeueImmediately(ref x) => Some(x.read_out_message()?.message_cell().clone()),
-                OutMsg::TransitRequeued(ref x) => Some(x.read_out_message()?.message_cell().clone()),
+                OutMsg::DequeueImmediately(ref x) => Some(x.read_out_message()?.message_cell()),
+                OutMsg::TransitRequeued(ref x) => Some(x.read_out_message()?.message_cell()),
                 OutMsg::None => fail!("wrong message type")
             }
         )
@@ -604,31 +591,31 @@ impl Augmentation<CurrencyCollection> for OutMsg {
                 let env = x.read_out_message()?;
                 let msg = env.read_message()?;
                 // exported value = msg.value + msg.ihr_fee + fwd_fee_remaining
-                exported.add(&msg.header().get_value().unwrap())?;
+                exported.add(msg.header().get_value().unwrap())?;
                 if let CommonMsgInfo::IntMsgInfo(header) = msg.header() {
                     exported.grams.add(&header.ihr_fee)?;
                 }
-                exported.grams.add(&env.fwd_fee_remaining())?;
+                exported.grams.add(env.fwd_fee_remaining())?;
             }
             OutMsg::Transit(ref x) => {
                 let env = x.read_out_message()?;
                 let msg = env.read_message()?;
                 // exported value = msg.value + msg.ihr_fee + fwd_fee_remaining
-                exported.add(&msg.header().get_value().unwrap())?;
+                exported.add(msg.header().get_value().unwrap())?;
                 if let CommonMsgInfo::IntMsgInfo(header) = msg.header() {
                     exported.grams.add(&header.ihr_fee)?;
                 }
-                exported.grams.add(&env.fwd_fee_remaining())?;
+                exported.grams.add(env.fwd_fee_remaining())?;
             }
             OutMsg::TransitRequeued(ref x) => {
                 let env = x.read_out_message()?;
                 let msg = env.read_message()?;
                 // exported value = msg.value + msg.ihr_fee + fwd_fee_remaining
-                exported.add(&msg.header().get_value().unwrap())?;
+                exported.add(msg.header().get_value().unwrap())?;
                 if let CommonMsgInfo::IntMsgInfo(header) = msg.header() {
                     exported.grams.add(&header.ihr_fee)?;
                 }
-                exported.grams.add(&env.fwd_fee_remaining())?;
+                exported.grams.add(env.fwd_fee_remaining())?;
             }
             OutMsg::None => fail!("wrong OutMsg type"),
             // for other types - no value exported
@@ -688,7 +675,7 @@ impl Deserializable for OutMsg {
             OUT_MSG_TR => read_out_msg_descr!(cell, OutMsgTransit, Transit),
             OUT_MSG_DEQ_IMM => read_out_msg_descr!(cell, OutMsgDequeueImmediately, DequeueImmediately),
             OUT_MSG_TRDEQ => read_out_msg_descr!(cell, OutMsgTransitRequeued, TransitRequeued),
-            tag if cell.remaining_bits() > 0 && (tag == OUT_MSG_DEQ >> 1 || tag == OUT_MSG_DEQ_SHORT >> 1) => {
+            tag if cell.remaining_bits() != 0 && (tag == OUT_MSG_DEQ >> 1 || tag == OUT_MSG_DEQ_SHORT >> 1) => {
                 match (tag << 1) | cell.get_next_bit_int().unwrap() as u8 {
                     OUT_MSG_DEQ => read_out_msg_descr!(cell, OutMsgDequeue, Dequeue),
                     OUT_MSG_DEQ_SHORT => read_out_msg_descr!(cell, OutMsgDequeueShort, DequeueShort),
@@ -747,8 +734,8 @@ impl OutMsgExternal {
 
 impl Serializable for OutMsgExternal {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.msg.write_to_new_cell()?);
-        cell.append_reference(self.transaction.write_to_new_cell()?);
+        cell.append_reference_cell(self.msg.serialize()?);
+        cell.append_reference_cell(self.transaction.serialize()?);
         Ok(())
     }
 }
@@ -810,9 +797,9 @@ impl OutMsgImmediately {
 
 impl Serializable for OutMsgImmediately {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.out_msg.write_to_new_cell()?);
-        cell.append_reference(self.transaction.write_to_new_cell()?);
-        cell.append_reference(self.reimport.write_to_new_cell()?);
+        cell.append_reference_cell(self.out_msg.serialize()?);
+        cell.append_reference_cell(self.transaction.serialize()?);
+        cell.append_reference_cell(self.reimport.serialize()?);
         Ok(())
     }
 }
@@ -865,8 +852,8 @@ impl OutMsgNew {
 
 impl Serializable for OutMsgNew {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.out_msg.write_to_new_cell()?);
-        cell.append_reference(self.transaction.write_to_new_cell()?);
+        cell.append_reference_cell(self.out_msg.serialize()?);
+        cell.append_reference_cell(self.transaction.serialize()?);
         Ok(())
     }
 }
@@ -918,8 +905,8 @@ impl OutMsgTransit {
 
 impl Serializable for OutMsgTransit {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.out_msg.write_to_new_cell()?);
-        cell.append_reference(self.imported.write_to_new_cell()?);
+        cell.append_reference_cell(self.out_msg.serialize()?);
+        cell.append_reference_cell(self.imported.serialize()?);
         Ok(())
     }
 }
@@ -971,8 +958,8 @@ impl OutMsgDequeueImmediately {
 
 impl Serializable for OutMsgDequeueImmediately {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.out_msg.write_to_new_cell()?);
-        cell.append_reference(self.reimport.write_to_new_cell()?);
+        cell.append_reference_cell(self.out_msg.serialize()?);
+        cell.append_reference_cell(self.reimport.serialize()?);
         Ok(())
     }
 }
@@ -1031,7 +1018,7 @@ impl OutMsgDequeue {
 
 impl Serializable for OutMsgDequeue {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.out_msg.write_to_new_cell()?);
+        cell.append_reference_cell(self.out_msg.serialize()?);
         cell.append_bits(self.import_block_lt as usize, 63)?;
         Ok(())
     }
@@ -1116,8 +1103,8 @@ impl OutMsgTransitRequeued {
 
 impl Serializable for OutMsgTransitRequeued {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(self.out_msg.write_to_new_cell()?);
-        cell.append_reference(self.imported.write_to_new_cell()?);
+        cell.append_reference_cell(self.out_msg.serialize()?);
+        cell.append_reference_cell(self.imported.serialize()?);
         Ok(())
     }
 }

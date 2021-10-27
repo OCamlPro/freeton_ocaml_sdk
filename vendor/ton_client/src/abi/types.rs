@@ -35,6 +35,11 @@ impl Abi {
             )),
         }
     }
+
+    pub(crate) fn abi(&self) -> ClientResult<ton_abi::Contract> {
+        ton_abi::Contract::load(self.json_string()?.as_bytes())
+            .map_err(|x| Error::invalid_json(x))
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, ApiType, Default)]
@@ -44,6 +49,8 @@ pub struct AbiContract {
     #[serde(default = "default_abi_version")]
     pub abi_version: u32,
     #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
     pub header: Vec<String>,
     #[serde(default)]
     pub functions: Vec<AbiFunction>,
@@ -51,6 +58,8 @@ pub struct AbiContract {
     pub events: Vec<AbiEvent>,
     #[serde(default)]
     pub data: Vec<AbiData>,
+    #[serde(default)]
+    pub fields: Vec<AbiParam>,
 }
 
 fn default_abi_version() -> u32 {

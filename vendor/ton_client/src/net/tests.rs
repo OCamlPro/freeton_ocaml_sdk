@@ -3,7 +3,7 @@ use tokio::sync::Mutex;
 use crate::abi::{CallSet, DeploySet, ParamsOfEncodeMessage, Signer};
 use crate::error::ClientError;
 use crate::processing::ParamsOfProcessMessage;
-use crate::tests::{TestClient, EVENTS, HELLO, SUBSCRIBE, TEST_DEBOT, TEST_DEBOT_TARGET};
+use crate::tests::{TestClient, HELLO};
 
 use super::*;
 use crate::client::NetworkMock;
@@ -11,6 +11,7 @@ use crate::ClientConfig;
 use serde_json::Value;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::vec;
 
 #[tokio::test(core_threads = 2)]
 async fn batch_query() {
@@ -454,8 +455,10 @@ async fn subscribe_for_transactions_with_addresses() {
     // and both subscriptions received notification about resume
     let notifications = notifications.lock().await;
     assert_eq!(notifications.len(), 4);
-    assert_eq!(notifications[2], Error::network_module_resumed());
-    assert_eq!(notifications[3], Error::network_module_resumed());
+    assert_eq!(notifications[2].code, Error::network_module_resumed().code);
+    assert!(!notifications[2].data["query_url"].is_null());
+    assert_eq!(notifications[3].code, Error::network_module_resumed().code);
+    assert!(!notifications[3].data["query_url"].is_null());
 
     let _: () = subscription_client
         .request_async("net.unsubscribe", handle1)
@@ -689,10 +692,44 @@ async fn retry_query_on_network_errors() {
         .network_err()
         .election(now, 1000)
         .blocks("2")
+        .status(502, "")
+        .election(now, 1000)
+        .blocks("3")
+        .ok(&json!({
+            "errors": [
+              {
+                "message": "Service Unavailable",
+                "locations": [
+                  {
+                    "line": 2,
+                    "column": 3
+                  }
+                ],
+                "path": [
+                  "counterparties"
+                ],
+                "extensions": {
+                  "code": "INTERNAL_SERVER_ERROR",
+                  "exception": {
+                    "source": "graphql",
+                    "code": 503
+                  }
+                }
+              }
+            ],
+            "data": {
+              "blocks": null
+            }
+          })
+        .to_string())
+        .election(now, 1000)
+        .blocks("4")
         .reset_client(&client)
         .await;
     assert_eq!(query_block_id(&client).await, "1");
     assert_eq!(query_block_id(&client).await, "2");
+    assert_eq!(query_block_id(&client).await, "3");
+    assert_eq!(query_block_id(&client).await, "4");
 }
 
 #[tokio::test(core_threads = 2)]
@@ -955,21 +992,31 @@ fn collect(loaded_messages: &Vec<Value>, messages: &mut Vec<Value>, transactions
 
 #[tokio::test(core_threads = 2)]
 async fn transaction_tree() {
-    let client = Arc::new(
-        ClientContext::new(ClientConfig {
-            network: NetworkConfig {
-                endpoints: Some(TestClient::endpoints()),
-                ..Default::default()
+    let client = TestClient::new();
+
+    let run_result = client
+        .net_process_function(
+            client.giver_address().await,
+            TestClient::giver_abi(),
+            "sendTransaction",
+            json!({
+                "dest": "0:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                "value": 500_000_000,
+                "bounce": true,
+            }),
+            Signer::Keys {
+                keys: TestClient::giver_keys(),
             },
-            ..Default::default()
-        })
-        .unwrap(),
-    );
-    let messages = query_collection(
-        client.clone(),
+        )
+        .await
+        .unwrap();
+
+    let messages: ResultOfQueryCollection = client.request_async(
+        "net.query_collection",
         ParamsOfQueryCollection {
-            collection: MESSAGES_COLLECTION.to_string(),
+            collection: "messages".to_owned(),
             filter: Some(json!({
+                "id": { "eq": run_result.transaction["in_msg"].as_str() },
                 "msg_type": { "eq": 1 },
             })),
             result: r#"
@@ -986,8 +1033,8 @@ async fn transaction_tree() {
             }
         "#
             .to_string(),
-            order: None,
             limit: None,
+            order: None,
         },
     )
     .await
@@ -995,52 +1042,47 @@ async fn transaction_tree() {
 
     let abi_registry = vec![
         TestClient::giver_abi(),
-        TestClient::abi(SUBSCRIBE, None),
-        TestClient::abi(HELLO, None),
-        TestClient::abi(EVENTS, None),
-        TestClient::abi(TEST_DEBOT, None),
-        TestClient::abi(TEST_DEBOT_TARGET, None),
     ];
 
     let mut has_decoded_bodies = false;
-    for message in messages.result {
-        let result = query_transaction_tree(
-            client.clone(),
-            ParamsOfQueryTransactionTree {
-                in_msg: message["id"].as_str().unwrap().to_string(),
-                abi_registry: Some(abi_registry.clone()),
-            },
-        )
-        .await
-        .unwrap();
-        let mut ref_messages = Vec::new();
-        let mut ref_transactions = Vec::new();
-        collect(&vec![message], &mut ref_messages, &mut ref_transactions);
-        let ref_message_ids = ref_messages
-            .iter()
-            .map(|x| x["id"].as_str().unwrap().to_string())
-            .collect::<HashSet<String>>();
-        let ref_transaction_ids = ref_transactions
-            .iter()
-            .map(|x| x["id"].as_str().unwrap().to_string())
-            .collect::<HashSet<String>>();
-        let actual_message_ids = result
-            .messages
-            .iter()
-            .map(|x| x.id.clone())
-            .collect::<HashSet<String>>();
-        let actual_transaction_ids = result
-            .transactions
-            .iter()
-            .map(|x| x.id.clone())
-            .collect::<HashSet<String>>();
+    let result: ResultOfQueryTransactionTree = client.request_async(
+        "net.query_transaction_tree",
+        ParamsOfQueryTransactionTree {
+            in_msg: messages.result[0]["id"].as_str().unwrap().to_string(),
+            abi_registry: Some(abi_registry.clone()),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+    let mut ref_messages = Vec::new();
+    let mut ref_transactions = Vec::new();
+    collect(&messages.result, &mut ref_messages, &mut ref_transactions);
+    let ref_message_ids = ref_messages
+        .iter()
+        .map(|x| x["id"].as_str().unwrap().to_string())
+        .collect::<HashSet<String>>();
+    let ref_transaction_ids = ref_transactions
+        .iter()
+        .map(|x| x["id"].as_str().unwrap().to_string())
+        .collect::<HashSet<String>>();
+    let actual_message_ids = result
+        .messages
+        .iter()
+        .map(|x| x.id.clone())
+        .collect::<HashSet<String>>();
+    assert_eq!(actual_message_ids.len(), 3);
+    let actual_transaction_ids = result
+        .transactions
+        .iter()
+        .map(|x| x.id.clone())
+        .collect::<HashSet<String>>();
 
-        assert_eq!(ref_message_ids, actual_message_ids);
-        assert_eq!(ref_transaction_ids, actual_transaction_ids);
-        for msg in result.messages {
-            if msg.decoded_body.is_some() {
-                has_decoded_bodies = true;
-            }
+    assert_eq!(ref_message_ids, actual_message_ids);
+    assert_eq!(ref_transaction_ids, actual_transaction_ids);
+    for msg in result.messages {
+        if msg.decoded_body.is_some() {
+            has_decoded_bodies = true;
         }
     }
     assert!(has_decoded_bodies);
@@ -1067,7 +1109,8 @@ async fn order_by_fallback() {
             "orderBy": [{"path": "id", "direction": "ASC"}]
         }
         "#,
-    ).is_err());
+    )
+    .is_err());
     assert!(serde_json::from_str::<ParamsOfQueryCollection>(
         r#"
         {
@@ -1123,4 +1166,52 @@ async fn order_by_fallback() {
         println!("{:?}", err);
     }
     assert!(result.is_err());
+}
+
+#[test]
+fn test_endpoints_replacement() {
+    let client = TestClient::new_with_config(json!({
+        "network": {
+            "endpoints": ["main.ton.dev", "net.ton.dev"],
+        }
+    }));
+
+    let endpoints: ResultOfGetEndpoints = client
+        .request(
+            "net.get_endpoints",
+            json!({}),
+        ).unwrap();
+
+    assert_eq!(
+        endpoints.endpoints,
+        vec![
+            "main2.ton.dev".to_owned(),
+            "main3.ton.dev".to_owned(),
+            "main4.ton.dev".to_owned(),
+            "net1.ton.dev".to_owned(),
+            "net5.ton.dev".to_owned(),
+        ]
+    );
+
+
+    let client = TestClient::new_with_config(json!({
+        "network": {
+            "endpoints": ["https://main2.ton.dev", "https://main.ton.dev/", "http://main3.ton.dev", "main2.ton.dev", ],
+        }
+    }));
+
+    let endpoints: ResultOfGetEndpoints = client
+        .request(
+            "net.get_endpoints",
+            json!({}),
+        ).unwrap();
+
+    assert_eq!(
+        endpoints.endpoints,
+        vec![
+            "https://main2.ton.dev".to_owned(),
+            "http://main3.ton.dev".to_owned(),
+            "main4.ton.dev".to_owned(),
+        ]
+    );
 }

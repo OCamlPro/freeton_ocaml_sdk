@@ -18,10 +18,10 @@ use crate::types::StringId;
 use crate::{Message, MessageId};
 
 use ton_block::{
-    AccStatusChange, ComputeSkipReason, Serializable, TrComputePhase, TransactionDescr,
-    TransactionProcessingStatus,
+    AccStatusChange, ComputeSkipReason, GetRepresentationHash,
+    TrComputePhase, TransactionDescr, TransactionProcessingStatus,
 };
-use ton_types::{Cell, Result};
+use ton_types::Result;
 
 use std::convert::TryFrom;
 
@@ -125,7 +125,7 @@ impl TryFrom<&ton_block::Transaction> for Transaction {
             Some(ActionPhase {
                 success: phase.success,
                 valid: phase.valid,
-                no_funds: phase.valid,
+                no_funds: phase.no_funds,
                 result_code: phase.result_code,
                 total_fwd_fees: grams_to_u64(&phase.total_fwd_fees.unwrap_or_default())?,
                 total_action_fees: grams_to_u64(&phase.total_action_fees.unwrap_or_default())?,
@@ -137,11 +137,11 @@ impl TryFrom<&ton_block::Transaction> for Transaction {
         let in_msg = transaction
             .in_msg
             .as_ref()
-            .map(|msg| msg.hash().to_hex_string().into());
+            .map(|msg| msg.hash().into());
         let mut out_msgs = vec![];
         transaction.out_msgs.iterate_slices(|slice| {
             if let Ok(cell) = slice.reference(0) {
-                out_msgs.push(cell.repr_hash().to_hex_string().into());
+                out_msgs.push(cell.repr_hash().into());
             }
             Ok(true)
         })?;
@@ -152,10 +152,7 @@ impl TryFrom<&ton_block::Transaction> for Transaction {
         })?;
 
         Ok(Transaction {
-            id: Cell::from(transaction.write_to_new_cell()?)
-                .repr_hash()
-                .to_hex_string()
-                .into(),
+            id: transaction.hash()?.into(),
             status: TransactionProcessingStatus::Finalized,
             now: transaction.now(),
             in_msg,

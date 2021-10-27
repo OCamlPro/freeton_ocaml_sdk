@@ -22,7 +22,7 @@ impl Mapping {
         let map = super::mmap(path)?;
         let (macho, data) = find_header(&map)?;
         let endian = macho.endian().ok()?;
-        let uuid = macho.uuid(endian, data).ok()??;
+        let uuid = macho.uuid(endian, data, 0).ok()?;
 
         // Next we need to look for a `*.dSYM` file. For now we just probe the
         // containing directory and look around for something that matches
@@ -30,9 +30,11 @@ impl Mapping {
         // contains and try to find a macho file which has a matching UUID as
         // the one of our own file. If we find a match that's the dwarf file we
         // want to return.
-        if let Some(parent) = path.parent() {
-            if let Some(mapping) = Mapping::load_dsym(parent, uuid) {
-                return Some(mapping);
+        if let Some(uuid) = uuid {
+            if let Some(parent) = path.parent() {
+                if let Some(mapping) = Mapping::load_dsym(parent, uuid) {
+                    return Some(mapping);
+                }
             }
         }
 
@@ -43,7 +45,7 @@ impl Mapping {
             let (macho, data) = find_header(data)?;
             let endian = macho.endian().ok()?;
             let obj = Object::parse(macho, endian, data)?;
-            Context::new(stash, obj)
+            Context::new(stash, obj, None)
         })
     }
 
@@ -75,12 +77,12 @@ impl Mapping {
             let candidate = Mapping::mk(map, |data, stash| {
                 let (macho, data) = find_header(data)?;
                 let endian = macho.endian().ok()?;
-                let entry_uuid = macho.uuid(endian, data).ok()??;
+                let entry_uuid = macho.uuid(endian, data, 0).ok()??;
                 if entry_uuid != uuid {
                     return None;
                 }
                 let obj = Object::parse(macho, endian, data)?;
-                Context::new(stash, obj)
+                Context::new(stash, obj, None)
             });
             if let Some(candidate) = candidate {
                 return Some(candidate);
@@ -150,7 +152,7 @@ fn find_header(data: &'_ [u8]) -> Option<(&'_ Mach, &'_ [u8])> {
         _ => return None,
     }
 
-    Mach::parse(data.0).ok().map(|h| (h, data.0))
+    Mach::parse(data.0, 0).ok().map(|h| (h, data.0))
 }
 
 // This is used both for executables/libraries and source object files.
@@ -172,7 +174,7 @@ impl<'a> Object<'a> {
         let mut dwarf = None;
         let mut syms = Vec::new();
         let mut syms_sort_by_name = false;
-        let mut commands = mach.load_commands(endian, data).ok()?;
+        let mut commands = mach.load_commands(endian, data, 0).ok()?;
         let mut object_map = None;
         let mut object_mappings = Vec::new();
         while let Ok(Some(command)) = commands.next() {
@@ -307,7 +309,7 @@ fn object_mapping(path: &[u8]) -> Option<Mapping> {
         let (macho, data) = find_header(data)?;
         let endian = macho.endian().ok()?;
         let obj = Object::parse(macho, endian, data)?;
-        Context::new(stash, obj)
+        Context::new(stash, obj, None)
     })
 }
 

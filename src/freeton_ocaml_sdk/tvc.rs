@@ -10,6 +10,9 @@
 /*                                                                        */
 /**************************************************************************/
 
+/* Inspired from ton_client/src/boc/tvc.rs */
+
+
 use std::io::Cursor;
 use ton_types::{//Cell, SliceData,
     BuilderData,
@@ -58,6 +61,20 @@ pub fn state_init_code( state : &StateInit ) -> String {
 pub fn state_init_code_hash( state : &StateInit ) -> String {
     state.code.clone().unwrap().repr_hash().to_hex_string()
 }
+
+pub fn state_init_code_depth( state : &StateInit ) -> u32 {
+    state.code.clone().unwrap().repr_depth() as u32
+}
+
+pub fn state_init_data_hash( state : &StateInit ) -> String {
+    state.data.clone().unwrap().repr_hash().to_hex_string()
+}
+
+pub fn state_init_data_depth( state : &StateInit ) -> u32 {
+    state.data.clone().unwrap().repr_depth() as u32
+}
+
+
 
 /*
 pub fn get_code_hash

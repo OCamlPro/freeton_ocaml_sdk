@@ -95,7 +95,7 @@ where
         let bit_len = K::default().write_to_new_cell()?.length_in_bits();
         let mut dictionary = HashmapE::with_bit_len(bit_len);
         for (key, value) in self.iter() {
-            let key = key.write_to_new_cell()?;
+            let key = key.serialize()?;
             dictionary.set_builder(key.into(), &value.write_to_new_cell()?)?;
         }
         dictionary.write_to(cell)
@@ -155,7 +155,7 @@ pub trait Serializable {
     }
 
     fn serialize(&self) -> Result<Cell> {
-        Ok(self.write_to_new_cell()?.into())
+        self.write_to_new_cell()?.into_cell()
     }
 }
 
@@ -164,6 +164,12 @@ pub trait Deserializable: Default {
         let mut x = Self::default();
         x.read_from(slice)?;
         Ok(x)
+    }
+    fn construct_maybe_from(slice: &mut SliceData) -> Result<Option<Self>> {
+        match slice.get_next_bit()? {
+            true => Ok(Some(Self::construct_from(slice)?)),
+            false => Ok(None)
+        }
     }
     fn construct_from_cell(cell: Cell) -> Result<Self> {
         Self::construct_from(&mut cell.into())
@@ -209,14 +215,14 @@ pub trait MaybeSerialize {
 
 impl Deserializable for Cell {
     fn read_from(&mut self, cell: &mut SliceData) -> Result<()> {
-        *self = cell.checked_drain_reference()?.clone();
+        *self = cell.checked_drain_reference()?;
         Ok(())
     }
 }
 
 impl Serializable for Cell {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_reference(BuilderData::from(self));
+        cell.append_reference_cell(self.clone());
         Ok(())
     }
 }
@@ -296,7 +302,7 @@ impl Serializable for AccountId {
         if self.remaining_bits() != 256 {
             fail!("account_id must contain 256 bits, but {}", self.remaining_bits())
         }
-        cell.append_bytestring(&self)?;
+        cell.append_bytestring(self)?;
         Ok(())
     }
 }
@@ -306,7 +312,7 @@ impl Deserializable for () {
         if cell.remaining_bits() == 0 && cell.remaining_references() == 0 {
             Ok(())
         } else {
-            fail!("It must be True by TLB, but some data is present: {}", cell.to_hex_string())
+            fail!("It must be True by TLB, but some data is present: {:x}", cell)
         }
     }
 }

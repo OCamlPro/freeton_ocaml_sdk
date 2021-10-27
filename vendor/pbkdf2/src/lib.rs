@@ -1,110 +1,138 @@
 //! This crate implements the PBKDF2 key derivation function as specified
 //! in [RFC 2898](https://tools.ietf.org/html/rfc2898).
 //!
-//! If you are not using convinience functions `pbkdf2_check` and `pbkdf2_simple`
-//! it's recommended to disable `pbkdf2` default features in your `Cargo.toml`:
+//! If you are only using the low-level [`pbkdf2`] function instead of the
+//! higher-level [`Pbkdf2`] struct to produce/verify hash strings,
+//! it's recommended to disable default features in your `Cargo.toml`:
+//!
 //! ```toml
 //! [dependencies]
-//! pbkdf2 = { version = "0.2", default-features = false }
+//! pbkdf2 = { version = "0.7", default-features = false }
 //! ```
+//!
+//! # Usage (simple with default params)
+//!
+//! Note: this example requires the `rand_core` crate with the `std` feature
+//! enabled for `rand_core::OsRng` (embedded platforms can substitute their
+//! own RNG)
+//!
+//! Add the following to your crate's `Cargo.toml` to import it:
+//!
+//! ```toml
+//! [dependencies]
+//! pbkdf2 = "0.7"
+//! rand_core = { version = "0.6", features = ["std"] }
+//! ```
+//!
+//! The following example demonstrates the high-level password hashing API:
+//!
+//! ```
+//! # #[cfg(feature = "password-hash")]
+//! # {
+//! use pbkdf2::{
+//!     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+//!     Pbkdf2
+//! };
+//! use rand_core::OsRng;
+//!
+//! let password = b"hunter42"; // Bad password; don't actually use!
+//! let salt = SaltString::generate(&mut OsRng);
+//!
+//! // Hash password to PHC string ($pbkdf2-sha256$...)
+//! let password_hash = Pbkdf2.hash_password_simple(password, salt.as_ref()).unwrap().to_string();
+//!
+//! // Verify password against PHC string
+//! let parsed_hash = PasswordHash::new(&password_hash).unwrap();
+//! assert!(Pbkdf2.verify_password(password, &parsed_hash).is_ok());
+//! # }
+//! ```
+
 #![no_std]
-#![doc(html_logo_url =
-    "https://raw.githubusercontent.com/RustCrypto/meta/master/logo_small.png")]
-#![cfg_attr(feature = "cargo-clippy", allow(inline_always))]
-extern crate crypto_mac;
-extern crate byteorder;
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![doc(html_logo_url = "https://raw.githubusercontent.com/RustCrypto/meta/master/logo_small.png")]
 
-#[cfg(feature="parallel")]
-extern crate rayon;
+#[cfg(feature = "std")]
+extern crate std;
 
-#[cfg(feature="include_simple")]
-extern crate subtle;
-#[cfg(feature="include_simple")]
-extern crate base64;
-#[cfg(feature="include_simple")]
-extern crate rand;
-#[cfg(feature="include_simple")]
-extern crate hmac;
-#[cfg(feature="include_simple")]
-extern crate sha2;
-#[cfg(feature="include_simple")]
-#[macro_use] extern crate std;
+#[cfg(feature = "simple")]
+extern crate alloc;
 
+#[cfg(feature = "simple")]
+#[cfg_attr(docsrs, doc(cfg(feature = "simple")))]
+pub use password_hash;
 
-mod errors;
+#[cfg(feature = "simple")]
 mod simple;
 
-#[cfg(feature="include_simple")]
-pub use errors::CheckError;
-#[cfg(feature="include_simple")]
-pub use simple::{pbkdf2_simple, pbkdf2_check};
+#[cfg(feature = "simple")]
+pub use crate::simple::{Algorithm, Params, Pbkdf2};
 
-#[cfg(feature="parallel")]
+#[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crypto_mac::Mac;
 use crypto_mac::generic_array::typenum::Unsigned;
-use byteorder::{ByteOrder, BigEndian};
+use crypto_mac::{Mac, NewMac};
 
 #[inline(always)]
 fn xor(res: &mut [u8], salt: &[u8]) {
     debug_assert!(salt.len() >= res.len(), "length mismatch in xor");
-
     res.iter_mut().zip(salt.iter()).for_each(|(a, b)| *a ^= b);
 }
 
 #[inline(always)]
-fn pbkdf2_body<F>(i: usize, chunk: &mut [u8], prf: &F, salt: &[u8], c: usize)
-    where F: Mac + Clone
+fn pbkdf2_body<F>(i: u32, chunk: &mut [u8], prf: &F, salt: &[u8], rounds: u32)
+where
+    F: Mac + Clone,
 {
-    for v in chunk.iter_mut() { *v = 0; }
+    for v in chunk.iter_mut() {
+        *v = 0;
+    }
 
     let mut salt = {
         let mut prfc = prf.clone();
-        prfc.input(salt);
+        prfc.update(salt);
+        prfc.update(&(i + 1).to_be_bytes());
 
-        let mut buf = [0u8; 4];
-        BigEndian::write_u32(&mut buf, (i + 1) as u32);
-        prfc.input(&buf);
-
-        let salt = prfc.result().code();
+        let salt = prfc.finalize().into_bytes();
         xor(chunk, &salt);
         salt
     };
 
-    for _ in 1..c {
+    for _ in 1..rounds {
         let mut prfc = prf.clone();
-        prfc.input(&salt);
-        salt = prfc.result().code();
+        prfc.update(&salt);
+        salt = prfc.finalize().into_bytes();
 
         xor(chunk, &salt);
     }
 }
 
 /// Generic implementation of PBKDF2 algorithm.
-#[cfg(feature="parallel")]
+#[cfg(feature = "parallel")]
 #[inline]
-pub fn pbkdf2<F>(password: &[u8], salt: &[u8], c: usize, res: &mut [u8])
-    where F: Mac + Clone + Sync
+pub fn pbkdf2<F>(password: &[u8], salt: &[u8], rounds: u32, res: &mut [u8])
+where
+    F: Mac + NewMac + Clone + Sync,
 {
     let n = F::OutputSize::to_usize();
-    let prf = F::new_varkey(password).expect("HMAC accepts all key sizes");
+    let prf = F::new_from_slice(password).expect("HMAC accepts all key sizes");
 
     res.par_chunks_mut(n).enumerate().for_each(|(i, chunk)| {
-        pbkdf2_body(i, chunk, &prf, salt, c);
+        pbkdf2_body(i as u32, chunk, &prf, salt, rounds);
     });
 }
 
 /// Generic implementation of PBKDF2 algorithm.
-#[cfg(not(feature="parallel"))]
+#[cfg(not(feature = "parallel"))]
 #[inline]
-pub fn pbkdf2<F>(password: &[u8], salt: &[u8], c: usize, res: &mut [u8])
-    where F: Mac + Clone + Sync
+pub fn pbkdf2<F>(password: &[u8], salt: &[u8], rounds: u32, res: &mut [u8])
+where
+    F: Mac + NewMac + Clone + Sync,
 {
     let n = F::OutputSize::to_usize();
-    let prf = F::new_varkey(password).expect("HMAC accepts all key sizes");
+    let prf = F::new_from_slice(password).expect("HMAC accepts all key sizes");
 
     for (i, chunk) in res.chunks_mut(n).enumerate() {
-        pbkdf2_body(i, chunk, &prf, salt, c);
+        pbkdf2_body(i as u32, chunk, &prf, salt, rounds);
     }
 }

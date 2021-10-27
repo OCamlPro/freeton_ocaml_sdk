@@ -22,7 +22,7 @@ use crate::cell::{Cell, CellType, DataCell, LevelMask};
 use crate::types::ByteOrderRead;
 use crate::types::UInt256;
 use crate::{Result, fail};
-
+use smallvec::SmallVec;
 
 pub const SHA256_SIZE: usize = 32;
 pub const DEPTH_SIZE: usize = 2;
@@ -46,9 +46,9 @@ pub enum BocSerialiseMode {
 #[derive(Clone, Debug, PartialEq)]
 pub struct BagOfCells {
     cells: HashMap<UInt256, Cell>,
-    sorted: Vec<UInt256>,
+    sorted_rev: Vec<UInt256>,
     absent: HashSet<UInt256>,
-    roots_count: usize,
+    roots_indexes_rev: Vec<usize>,
     absent_count: usize,
 }
 
@@ -63,28 +63,26 @@ impl BagOfCells {
     
     pub fn with_roots_and_absent(root_cells: Vec<&Cell>, absent_cells: Vec<&Cell>) -> Self {
         let mut	cells = HashMap::<UInt256, Cell>::new();
-        let mut sorted = Vec::<UInt256>::new();
+        let mut sorted_rev = Vec::<UInt256>::new();
         let mut absent_cells_hashes = HashSet::<UInt256>::new();
-        let mut roots = Vec::<UInt256>::new();
-                
+
         for cell in absent_cells.iter() {
             absent_cells_hashes.insert(cell.repr_hash());
         }
 
+        let mut roots_indexes_rev = Vec::with_capacity(root_cells.len());
         for root_cell in root_cells.iter() {
-            Self::traverse(root_cell, &mut cells, &mut sorted, &absent_cells_hashes);
-            
-            // roots must be firtst at final list, so it stored in separate list 
-            roots.push(sorted.pop().unwrap());
+            Self::traverse(root_cell, &mut cells, &mut sorted_rev, &absent_cells_hashes);
+            roots_indexes_rev.push(sorted_rev.len() - 1); // root must be added into `sorted_rev` back
         }
 
         // roots must be firtst
         // TODO: due to real ton sorces it is not necceary to write roots first
         BagOfCells {
-            cells: cells,
-            sorted: roots.iter().chain(sorted.iter().rev()).map(|h| h.clone()).collect(),
+            cells,
+            sorted_rev,
             absent: absent_cells_hashes,
-            roots_count: root_cells.len(),
+            roots_indexes_rev,
             absent_count: absent_cells.len(),
         }
     }
@@ -97,20 +95,20 @@ impl BagOfCells {
         self.cells
     }
 
-    pub fn sorted_cells_hashes(&self) -> &Vec<UInt256> {
-        &self.sorted
+    pub fn sorted_cells_hashes(&self) -> impl Iterator<Item = &UInt256> {
+        self.sorted_rev.iter().rev()
     }
 
     pub fn roots_count(&self) -> usize {
-        self.roots_count
+        self.roots_indexes_rev.len()
     }
 
     pub fn cells_count(&self) -> usize {
-        self.sorted.len()
+        self.sorted_rev.len()
     }
 
     pub fn get_cell_by_index(&self, index: usize) -> Option<Cell> {
-        if let Some(hash) = self.sorted.get(index) {
+        if let Some(hash) = self.sorted_rev.get(index) {
             if let Some(cell) = self.cells.get(hash) {
                 return Some(cell.clone());
             } else {
@@ -191,37 +189,36 @@ impl BagOfCells {
 
         match mode {
             BocSerialiseMode::Indexed | BocSerialiseMode::IndexedCrc => {
-                dest.write(&[ref_size as u8])?; // size:(## 8) { size <= 4 }
+                dest.write_all(&[ref_size as u8])?; // size:(## 8) { size <= 4 }
             },
             BocSerialiseMode::Generic {index, crc, cache_bits, flags} => {
                 let mut b = ref_size as u8; // size:(## 3) { size <= 4 }
-                if index { b = b | 0b1000_0000; } // has_idx:(## 1) 
-                if crc { b = b | 0b0100_0000; } // has_crc32c:(## 1) 
-                if cache_bits { b = b | 0b0010_0000; } // has_cache_bits:(## 1)
-                if flags != 0 { b = b | flags << 3; }  // flags:(## 2) { flags = 0 }
-                dest.write(&[b])?;
+                if index { b |= 0b1000_0000; } // has_idx:(## 1) 
+                if crc { b |= 0b0100_0000; } // has_crc32c:(## 1) 
+                if cache_bits { b |= 0b0010_0000; } // has_cache_bits:(## 1)
+                if flags != 0 { b |= flags << 3; }  // flags:(## 2) { flags = 0 }
+                dest.write_all(&[b])?;
             },
         };
 
-        dest.write(&[offset_size as u8])?; // off_bytes:(## 8) { off_bytes <= 8 }
+        dest.write_all(&[offset_size as u8])?; // off_bytes:(## 8) { off_bytes <= 8 }
         dest.write_all(&(self.cells.len() as u64).to_be_bytes()[(8-ref_size)..8])?;
-        dest.write_all(&(self.roots_count as u64).to_be_bytes()[(8-ref_size)..8])?;
+        dest.write_all(&(self.roots_count() as u64).to_be_bytes()[(8-ref_size)..8])?;
         dest.write_all(&(self.absent_count as u64).to_be_bytes()[(8-ref_size)..8])?;
         dest.write_all(&(total_cells_size as u64).to_be_bytes()[(8-offset_size)..8])?;
 
         // Root list 
         if include_root_list {
             // Write root's indexes 
-            // TODO: due to real ton sorces it is not necceary to write roots first
-            for i in 0..self.roots_count {
-                dest.write_all(&(i as u64).to_be_bytes()[(8-ref_size)..8])?;
+            for index in self.roots_indexes_rev.iter() {
+                dest.write_all(&((self.cells.len() - *index - 1) as u64).to_be_bytes()[(8-ref_size)..8])?;
             }
         }
 
         // Index
         if include_index { 
             let mut total_size = 0;
-            for cell_hash in self.sorted.iter() {
+            for cell_hash in self.sorted_rev.iter().rev() {
                 total_size += self.cell_serialized_size(&self.cells[cell_hash], ref_size);
                 let for_write = 
                     if !include_cache_bits { total_size }
@@ -235,12 +232,11 @@ impl BagOfCells {
 
         // Cells
         let mut hashes_to_indexes = HashMap::<&UInt256, u32>::new();
-        for (index, cell_hash) in self.sorted.iter().enumerate() {
+        for (index, cell_hash) in self.sorted_rev.iter().rev().enumerate() {
             hashes_to_indexes.insert(cell_hash, index as u32);
         }
 
-        let mut cell_index = 0;
-        for cell_hash in self.sorted.iter() {
+        for (cell_index, cell_hash) in self.sorted_rev.iter().rev().enumerate() {
             if let Some(cell) = &self.cells.get(cell_hash) {
                 if self.absent.contains(cell_hash) {
                     Self::serialize_absent_cell(cell, dest)?;
@@ -250,19 +246,18 @@ impl BagOfCells {
                     for i in 0..cell.references_count() {
                         let child = cell.reference(i).unwrap();
                         let child_index = hashes_to_indexes[&child.repr_hash()] as u64;
-                        assert!(child_index > cell_index);
-                        dest.write(&(child_index).to_be_bytes()[(8-ref_size)..8])?;
+                        assert!(child_index > cell_index as u64);
+                        dest.write_all(&(child_index).to_be_bytes()[(8-ref_size)..8])?;
                     }
                 }
             } else {
                 panic!("Bag of cells is corrupted!");
             }
-            cell_index += 1;
         }
 
         if include_crc {
             let crc = dest.sum32();
-            dest.write(&crc.to_le_bytes())?;
+            dest.write_all(&crc.to_le_bytes())?;
         }
 
         Ok(())
@@ -291,8 +286,8 @@ impl BagOfCells {
         let l = cell.level();
         assert!(l == 0);
         assert_eq!(cell.bit_length(), SHA256_SIZE * 8);
-        write.write(&[23 + 32 * l])?;
-        write.write(&cell.data()[..SHA256_SIZE])?;
+        write.write_all(&[23 + 32 * l])?;
+        write.write_all(&cell.data()[..SHA256_SIZE])?;
         Ok(())
     }
 
@@ -307,28 +302,33 @@ impl BagOfCells {
             cell.level_mask().mask(),
             cell.cell_type() != CellType::Ordinary,
             cell.store_hashes());
-        write.write(&[d1])?;
-        write.write(&[d2])?;
+        write.write_all(&[d1])?;
+        write.write_all(&[d2])?;
 
         // hashes and depths if exists
         if cell.store_hashes() {
             for hash in cell.hashes() {
-                write.write(hash.as_slice())?;
+                write.write_all(hash.as_slice())?;
             }
             for depth in cell.depths() {
-                write.write(&[(depth >> 8) as u8, (depth & 0xff) as u8])?;
+                write.write_all(&[(depth >> 8) as u8, (depth & 0xff) as u8])?;
             }
         }
 
         // data
         let data_size = (data_bit_len / 8) + if data_bit_len % 8 != 0 { 1 } else { 0 };
-        write.write(&cell.data()[..data_size])?;
+        write.write_all(&cell.data()[..data_size])?;
 
         Ok(())
     }
 
-    pub fn calculate_descriptor_bytes(data_bit_len: usize, refs: u8, level_mask: u8, exotic: bool, 
-        store_hashes: bool) -> (u8, u8) {
+    pub fn calculate_descriptor_bytes(
+        data_bit_len: usize,
+        refs: u8,
+        level_mask: u8,
+        exotic: bool, 
+        store_hashes: bool
+    ) -> (u8, u8) {
         let h = if store_hashes { 1 } else { 0 };
         let s: u8 = if exotic { 1 } else { 0 };
         let d1 = (refs + 8 * s + 16 * h + 32 * level_mask) as u8;
@@ -351,13 +351,13 @@ impl BagOfCells {
     }
 }
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 impl fmt::Display for BagOfCells {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "total unique cells: {}", self.cells.len())?;
-        for i in 0..self.roots_count() {
-            let root = &self.cells[&self.sorted[i]];
-            write!(f, "\nroot #{}:{}", i, root)?;
+        for (n, index) in self.roots_indexes_rev.iter().enumerate() {
+            let root = &self.cells[&self.sorted_rev[*index]];
+            write!(f, "\nroot #{}:{:#.1024}", n, root)?;
         }
         Ok(())
     }
@@ -366,8 +366,8 @@ impl fmt::Display for BagOfCells {
 struct RawCell {
     pub cell_type: CellType,
     pub level: u8,
-    pub data: Vec<u8>,
-    pub refs: Vec<u32>,
+    pub data: SmallVec<[u8; 128]>,
+    pub refs: SmallVec<[u32; 4]>,
     pub hashes: Option<[UInt256; 4]>,
     pub depths: Option<[u16; 4]>,
 }
@@ -461,26 +461,32 @@ pub fn deserialize_cells_tree_ex<T>(src: &mut T) -> Result<(Vec<Cell>, BocSerial
     let _tot_cells_size = src.read_be_uint(offset_size); // tot_cells_size:(##(off_bytes * 8))
 
     // Root list
-    if magic == BOC_GENERIC_TAG {
+
+    let roots_indexes = if magic == BOC_GENERIC_TAG {
         // root_list:(roots * ##(size * 8)) 
-        // TODO what is it? root's indexes?
-        let mut buf = vec!(0; roots_count * ref_size);
-        src.read(&mut buf)?;
-    }
+        let mut roots_indexes = Vec::with_capacity(roots_count);
+        for _ in 0..roots_count {
+            roots_indexes.push(src.read_be_uint(ref_size)?); // cells:(##(size * 8))
+        }
+        roots_indexes
+    } else {
+        Vec::with_capacity(0)
+    };
+
 
     // Index processing - extract cell's sizes to check and correct future deserialization 
     let mut cells_sizes = vec![0_usize; cells_count];
     let mut prev_offset = 0;
     if index_included {
         let mut raw_index = vec![0; cells_count * offset_size];
-        src.read(&mut raw_index)?;
+        src.read_exact(&mut raw_index)?;
 
         for i in 0_usize..cells_count {
             let mut offset = std::io::Cursor::new(&raw_index[i * offset_size..i * offset_size + offset_size])
                 .read_be_uint(offset_size)?;
 
             if has_cache_bits {
-                offset = offset >> 1;	
+                offset >>= 1;
             } 
             if prev_offset > offset {
                 fail!("cell[{}]'s offset is wrong", i)
@@ -520,8 +526,12 @@ pub fn deserialize_cells_tree_ex<T>(src: &mut T) -> Result<(Vec<Cell>, BocSerial
     }
 
     let mut roots = Vec::with_capacity(roots_count);
-    for i in 0..roots_count {
-        roots.push(done_cells.get(&(i as u32)).unwrap().clone());
+    if magic == BOC_GENERIC_TAG {
+        for index in roots_indexes {
+            roots.push(done_cells.get(&(index as u32)).unwrap().clone());
+        }
+    } else {
+        roots.push(done_cells.get(&0).unwrap().clone());
     }
 
     if has_crc {
@@ -539,45 +549,50 @@ pub fn deserialize_cells_tree_ex<T>(src: &mut T) -> Result<(Vec<Cell>, BocSerial
 Deserialization separately data and referensed cells indexes.
 Returns cell data, their refs (as indexes), and total read data size.
 */
-fn deserialize_cell<T>(src: &mut T, ref_size: usize, cell_index: usize, cells_count: usize, 
-    cell_size_opt: Option<usize>) -> Result<RawCell> where T: Read {
+fn deserialize_cell<T>(
+    src: &mut T,
+    ref_size: usize,
+    cell_index: usize,
+    cells_count: usize, 
+    cell_size_opt: Option<usize>
+) -> Result<RawCell> where T: Read {
 
     let d1 = src.read_byte()? as usize;
-    let l = (d1 >> 5) as u8; // level // TODO not foget about level mask
-    let h = (d1 & 16) == 16; // with hashes
-    let s = (d1 & 8) == 8; // exotic
-    let r = d1 & 7;	// refs count
-    let absent = r == 7 && h;
+    let level = (d1 >> 5) as u8; // level // TODO not foget about level mask
+    let hashes = (d1 & 16) == 16; // with hashes
+    let exotic = (d1 & 8) == 8; // exotic
+    let refs = d1 & 7;	// refs count
+    let absent = refs == 7 && hashes;
 
     if absent {
         // TODO ABSENT CELLS are NOT serialized right way. 
         // Need to rewrite as soon as right way will be known.
         //
         // For absent cells (i.e., external references), only d1 is present, always equal to 23 + 32l.
-        let data_size = SHA256_SIZE * ((LevelMask::with_mask(l).level() + 1) as usize);
-        let mut cell_data = vec![0; data_size + 1];
-        src.read(&mut cell_data[..data_size])?;
+        let data_size = SHA256_SIZE * ((LevelMask::with_mask(level).level() + 1) as usize);
+        let mut cell_data = [0; 128];
+        src.read_exact(&mut cell_data[..data_size])?;
         cell_data[data_size] = 0x80;
 
         return Ok(RawCell { 
-            data: cell_data,
-            refs: Vec::new(),
-            level: l,
+            data: SmallVec::from_slice(&cell_data[0..data_size + 1]),
+            refs: SmallVec::new(),
+            level,
             cell_type: CellType::Ordinary,
             hashes: None,
             depths: None, 
         });
     }
     
-    if r > 4 {
-        fail!("refs count has to be less or equal 4, actual value: {}", r)
+    if refs > 4 {
+        fail!("refs count has to be less or equal 4, actual value: {}", refs)
     }
 
     let d2 = src.read_byte()?;
     let data_size = ((d2 >> 1) + if d2 & 1 != 0 { 1 } else { 0 }) as usize;	
     let no_completion_tag = d2 & 1 == 0;		
-    let full_cell_size = ref_size * r + 2 + data_size +
-                            if h { (1 + l as usize) * (SHA256_SIZE + DEPTH_SIZE) } else { 0 };
+    let full_cell_size = ref_size * refs + 2 + data_size +
+                            if hashes { (1 + level as usize) * (SHA256_SIZE + DEPTH_SIZE) } else { 0 };
     
     if let Some(cell_size) = cell_size_opt {
         if full_cell_size != cell_size {
@@ -585,51 +600,50 @@ fn deserialize_cell<T>(src: &mut T, ref_size: usize, cell_index: usize, cells_co
         }
     }
     
-    let (hashes_opt, depths_opt) = if h {
-        let mut hashes = [UInt256::default(); 4];
+    let (hashes_opt, depths_opt) = if hashes {
+        let mut hashes = [UInt256::default(), UInt256::default(), UInt256::default(), UInt256::default()];
         let mut depths = [0; 4];
-        let level = LevelMask::with_mask(l).level() as usize;
-        for i in 0..=level {
-            let mut hash = [0; SHA256_SIZE];
-            src.read(&mut hash)?;
-            hashes[i] = UInt256::from(hash);
+        let mut u256 = [0; SHA256_SIZE];
+        let level = LevelMask::with_mask(level).level() as usize;
+        for hash in hashes.iter_mut().take(level + 1) {
+            src.read_exact(&mut u256)?;
+            *hash = UInt256::from(u256);
         }
-        for i in 0..=level {
-            depths[i] = src.read_be_uint(DEPTH_SIZE)? as u16;
+        for depth in depths.iter_mut().take(level + 1) {
+            *depth = src.read_be_uint(DEPTH_SIZE)? as u16;
         }
         (Some(hashes), Some(depths))
     } else {
         (None, None)
     };
 
-    let mut cell_data = vec![0; data_size + if no_completion_tag { 1 } else { 0 }];
-    src.read(&mut cell_data[..data_size])?;
+    let cell_size = data_size + if no_completion_tag { 1 } else { 0 };
+    let mut cell_data = [0; 128];
+    src.read_exact(&mut cell_data[..data_size])?;
 
     // If complition tag was not serialized, we must add it (it is need for SliceData)
     if no_completion_tag {
         cell_data[data_size] = 0x80; 
     }
     
-    let cell_type = if !s { CellType::Ordinary } else { CellType::from(cell_data[0]) };
+    let cell_type = if !exotic { CellType::Ordinary } else { CellType::from(cell_data[0]) };
 
-    //println!("{} l={} h={} s={} r={}", cell_type, l, h, s, r);
+    //println!("{} l={} h={} s={} r={}", cell_type, level, hashes, exotic, refs);
 
-    let mut references = Vec::with_capacity(r);
-    if r > 0 {	
-        for _ in 0..r {
-            let i = src.read_be_uint(ref_size)?;
-            if i > cells_count || i <= cell_index {
-                fail!("reference out of range, {} < (value: {}) <= {}", cells_count, i, cell_index)
-            } else {
-                references.push(i as u32);
-            }
+    let mut references = SmallVec::with_capacity(refs);
+    for _ in 0..refs {
+        let i = src.read_be_uint(ref_size)?;
+        if i > cells_count || i <= cell_index {
+            fail!("reference out of range, {} < (value: {}) <= {}", cells_count, i, cell_index)
+        } else {
+            references.push(i as u32);
         }
     }
 
     Ok(RawCell { 
-        data: cell_data,
+        data: SmallVec::from_slice(&cell_data[0..cell_size]),
         refs: references,
-        level: l,
+        level,
         cell_type,
         hashes: hashes_opt,
         depths: depths_opt, 
@@ -685,3 +699,4 @@ impl<'a, T> Read for IoCrcFilter<'a, T> where T: Read {
         res
     }
 }
+

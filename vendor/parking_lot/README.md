@@ -1,7 +1,8 @@
 parking_lot
 ============
 
-[![Build Status](https://travis-ci.org/Amanieu/parking_lot.svg?branch=master)](https://travis-ci.org/Amanieu/parking_lot) [![Build status](https://ci.appveyor.com/api/projects/status/wppcc32ttpud0a30/branch/master?svg=true)](https://ci.appveyor.com/project/Amanieu/parking-lot/branch/master) [![Crates.io](https://img.shields.io/crates/v/parking_lot.svg)](https://crates.io/crates/parking_lot)
+![Rust](https://github.com/Amanieu/parking_lot/workflows/Rust/badge.svg)
+[![Crates.io](https://img.shields.io/crates/v/parking_lot.svg)](https://crates.io/crates/parking_lot)
 
 [Documentation (synchronization primitives)](https://docs.rs/parking_lot/)
 
@@ -34,7 +35,7 @@ in the Rust standard library:
    parallelism.
 2. Since they consist of just a single atomic variable, have constant
    initializers and don't need destructors, these primitives can be used as
-    `static` global variables. The standard library primitives require
+   `static` global variables. The standard library primitives require
    dynamic initialization and thus need to be lazily initialized with
    `lazy_static!`.
 3. Uncontended lock acquisition and release is done through fast inline
@@ -68,6 +69,11 @@ in the Rust standard library:
     can be enabled via the `deadlock_detection` feature.
 17. `RwLock` supports atomically upgrading an "upgradable" read lock into a
     write lock.
+18. Optional support for [serde](https://docs.serde.rs/serde/).  Enable via the
+    feature `serde`.  **NOTE!** this support is for `Mutex`, `ReentrantMutex`,
+    and `RwLock` only; `Condvar` and `Once` are not currently supported.
+19. Lock guards can be sent to other threads when the `send_guard` feature is
+    enabled.
 
 ## The parking lot
 
@@ -84,11 +90,13 @@ lock.
 
 There are a few restrictions when using this library on stable Rust:
 
-- `Mutex` and `Once` will use 1 word of space instead of 1 byte.
-- You will have to use `lazy_static!` to statically initialize `Mutex`,
-  `Condvar` and `RwLock` types instead of `const fn`.
+- You will have to use the `const_*` functions (e.g. `const_mutex(val)`) to
+  statically initialize the locking primitives. Using e.g. `Mutex::new(val)`
+  does not work on stable Rust yet.
 - `RwLock` will not be able to take advantage of hardware lock elision for
   readers, which improves performance when there are multiple readers.
+- The `wasm32-unknown-unknown` target is only supported on nightly and requires
+  `-C target-feature=+atomics` in `RUSTFLAGS`.
 
 To enable nightly-only functionality, you need to enable the `nightly` feature
 in Cargo (see below).
@@ -99,24 +107,24 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-parking_lot = "0.6"
-```
-
-and this to your crate root:
-
-```rust
-extern crate parking_lot;
+parking_lot = "0.11"
 ```
 
 To enable nightly-only features, add this to your `Cargo.toml` instead:
 
 ```toml
 [dependencies]
-parking_lot = {version = "0.6", features = ["nightly"]}
+parking_lot = { version = "0.11", features = ["nightly"] }
 ```
 
 The experimental deadlock detector can be enabled with the
 `deadlock_detection` Cargo feature.
+
+To allow sending `MutexGuard`s and `RwLock*Guard`s to other threads, enable the
+`send_guard` option.
+
+Note that the `deadlock_detection` and `send_guard` features are incompatible
+and cannot be used together.
 
 The core parking lot API is provided by the `parking_lot_core` crate. It is
 separate from the synchronization primitives in the `parking_lot` crate so that
@@ -124,7 +132,7 @@ changes to the core API do not cause breaking changes for users of `parking_lot`
 
 ## Minimum Rust version
 
-The current minimum required Rust version is 1.24. Any change to this is
+The current minimum required Rust version is 1.36. Any change to this is
 considered a breaking change and will require a major version bump.
 
 ## License

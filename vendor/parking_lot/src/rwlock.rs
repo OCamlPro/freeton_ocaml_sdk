@@ -5,8 +5,8 @@
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 
+use crate::raw_rwlock::RawRwLock;
 use lock_api;
-use raw_rwlock::RawRwLock;
 
 /// A reader-writer lock
 ///
@@ -31,18 +31,18 @@ use raw_rwlock::RawRwLock;
 ///
 /// A typical unfair lock can often end up in a situation where a single thread
 /// quickly acquires and releases the same lock in succession, which can starve
-/// other threads waiting to acquire the rwlock. While this improves performance
+/// other threads waiting to acquire the rwlock. While this improves throughput
 /// because it doesn't force a context switch when a thread tries to re-acquire
 /// a rwlock it has just released, this can starve other threads.
 ///
 /// This rwlock uses [eventual fairness](https://trac.webkit.org/changeset/203350)
 /// to ensure that the lock will be fair on average without sacrificing
-/// performance. This is done by forcing a fair unlock on average every 0.5ms,
+/// throughput. This is done by forcing a fair unlock on average every 0.5ms,
 /// which will force the lock to go to the next thread waiting for the rwlock.
 ///
 /// Additionally, any critical section longer than 1ms will always use a fair
-/// unlock, which has a negligible performance impact compared to the length of
-/// the critical section.
+/// unlock, which has a negligible impact on throughput considering the length
+/// of the critical section.
 ///
 /// You can also force a fair unlock by calling `RwLockReadGuard::unlock_fair`
 /// or `RwLockWriteGuard::unlock_fair` when unlocking a mutex instead of simply
@@ -88,6 +88,13 @@ use raw_rwlock::RawRwLock;
 /// ```
 pub type RwLock<T> = lock_api::RwLock<RawRwLock, T>;
 
+/// Creates a new instance of an `RwLock<T>` which is unlocked.
+///
+/// This allows creating a `RwLock<T>` in a constant context on stable Rust.
+pub const fn const_rwlock<T>(val: T) -> RwLock<T> {
+    RwLock::const_new(<RawRwLock as lock_api::RawRwLock>::INIT, val)
+}
+
 /// RAII structure used to release the shared read access of a lock when
 /// dropped.
 pub type RwLockReadGuard<'a, T> = lock_api::RwLockReadGuard<'a, RawRwLock, T>;
@@ -120,14 +127,16 @@ pub type RwLockUpgradableReadGuard<'a, T> = lock_api::RwLockUpgradableReadGuard<
 
 #[cfg(test)]
 mod tests {
-    extern crate rand;
-    use self::rand::Rng;
+    use crate::{RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
+    use rand::Rng;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::mpsc::channel;
     use std::sync::Arc;
     use std::thread;
     use std::time::Duration;
-    use {RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
+
+    #[cfg(feature = "serde")]
+    use bincode::{deserialize, serialize};
 
     #[derive(Eq, PartialEq, Debug)]
     struct NonCopy(i32);
@@ -320,7 +329,7 @@ mod tests {
     fn test_rw_arc_access_in_unwind() {
         let arc = Arc::new(RwLock::new(1));
         let arc2 = arc.clone();
-        let _ = thread::spawn(move || -> () {
+        let _ = thread::spawn(move || {
             struct Unwinder {
                 i: Arc<RwLock<isize>>,
             }
@@ -530,14 +539,27 @@ mod tests {
     fn test_rwlock_recursive() {
         let arc = Arc::new(RwLock::new(1));
         let arc2 = arc.clone();
-        let _lock1 = arc.read();
-        thread::spawn(move || {
+        let lock1 = arc.read();
+        let t = thread::spawn(move || {
             let _lock = arc2.write();
         });
-        thread::sleep(Duration::from_millis(100));
+
+        if cfg!(not(all(target_env = "sgx", target_vendor = "fortanix"))) {
+            thread::sleep(Duration::from_millis(100));
+        } else {
+            // FIXME: https://github.com/fortanix/rust-sgx/issues/31
+            for _ in 0..100 {
+                thread::yield_now();
+            }
+        }
 
         // A normal read would block here since there is a pending writer
-        let _lock2 = arc.read_recursive();
+        let lock2 = arc.read_recursive();
+
+        // Unblock the thread and join it.
+        drop(lock1);
+        drop(lock2);
+        t.join().unwrap();
     }
 
     #[test]
@@ -545,17 +567,8 @@ mod tests {
         let x = RwLock::new(vec![0u8, 10]);
 
         assert_eq!(format!("{:?}", x), "RwLock { data: [0, 10] }");
-        assert_eq!(
-            format!("{:#?}", x),
-            "RwLock {
-    data: [
-        0,
-        10
-    ]
-}"
-        );
         let _lock = x.write();
-        assert_eq!(format!("{:?}", x), "RwLock { <locked> }");
+        assert_eq!(format!("{:?}", x), "RwLock { data: <locked> }");
     }
 
     #[test]
@@ -564,5 +577,42 @@ mod tests {
         let a = rwlock.read_recursive();
         let b = a.clone();
         assert_eq!(Arc::strong_count(&b), 2);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde() {
+        let contents: Vec<u8> = vec![0, 1, 2];
+        let mutex = RwLock::new(contents.clone());
+
+        let serialized = serialize(&mutex).unwrap();
+        let deserialized: RwLock<Vec<u8>> = deserialize(&serialized).unwrap();
+
+        assert_eq!(*(mutex.read()), *(deserialized.read()));
+        assert_eq!(contents, *(deserialized.read()));
+    }
+
+    #[test]
+    fn test_issue_203() {
+        struct Bar(RwLock<()>);
+
+        impl Drop for Bar {
+            fn drop(&mut self) {
+                let _n = self.0.write();
+            }
+        }
+
+        thread_local! {
+            static B: Bar = Bar(RwLock::new(()));
+        }
+
+        thread::spawn(|| {
+            B.with(|_| ());
+
+            let a = RwLock::new(());
+            let _a = a.read();
+        })
+        .join()
+        .unwrap();
     }
 }

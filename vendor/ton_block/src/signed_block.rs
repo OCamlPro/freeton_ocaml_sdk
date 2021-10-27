@@ -23,7 +23,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::io::{Write, Read, Cursor};
 use ton_types::{
-    BuilderData, Cell, error, fail, Result, SliceData,
+    BuilderData, error, fail, Result, SliceData,
     BagOfCells, deserialize_tree_of_cells,
     ExceptionCode, UInt256
 };
@@ -58,9 +58,7 @@ impl Deserializable for BlockSignature {
 impl Default for BlockSignature {
     fn default() -> Self {
         BlockSignature(
-            ed25519::Signature::from_bytes(
-                &vec!(0; ed25519_dalek::SIGNATURE_LENGTH)
-            ).unwrap()
+            ed25519::Signature::from_bytes(&[0; ed25519_dalek::SIGNATURE_LENGTH]).unwrap()
         )
     }
 }
@@ -99,7 +97,7 @@ impl SignedBlock {
         pub fn with_block_and_key(block: Block, key: &ed25519_dalek::Keypair) -> Result<Self> {
 
 		// block serialization 
-		let block_root: Cell = block.write_to_new_cell()?.into();
+		let block_root = block.serialize()?;
 		let bag = BagOfCells::with_root(&block_root);
 		let mut serialized_block = Vec::<u8>::new();
 		bag.write_to(&mut serialized_block, true)?;
@@ -107,8 +105,8 @@ impl SignedBlock {
 		// hashes calculation
 		let serlz_hash = Self::calc_merkle_hash(&serialized_block)?;
 		let mut combined_data = Vec::<u8>::with_capacity(SHA256_SIZE * 2);
-		combined_data.write(block_root.repr_hash().as_slice()).unwrap();
-		combined_data.write(&serlz_hash).unwrap();
+		combined_data.write_all(block_root.repr_hash().as_slice()).unwrap();
+		combined_data.write_all(&serlz_hash).unwrap();
 
 		let mut hasher = sha2::Sha256::new();
 		hasher.input(combined_data.as_slice());
@@ -144,13 +142,13 @@ impl SignedBlock {
 		&self.signatures
 	}
 	
-	pub fn add_signature(self: &mut Self, key: &ed25519_dalek::Keypair) {
+	pub fn add_signature(&mut self, key: &ed25519_dalek::Keypair) {
 		let signature = key.sign(self.combined_hash.as_slice());
 		let key = super::id_from_key(&key.public);
 		self.signatures.insert(key, BlockSignature {0: signature});
 	}
 
-	pub fn verify_signature(self: &Self, key: &ed25519_dalek::PublicKey) -> Result<bool> {
+	pub fn verify_signature(&self, key: &ed25519_dalek::PublicKey) -> Result<bool> {
 		let key_id = super::id_from_key(key);
 		let signature = match self.signatures.get(&key_id) {
 			Some(s) => &s.0,
@@ -159,7 +157,7 @@ impl SignedBlock {
 		Ok(key.verify(self.combined_hash.as_slice(), signature).is_ok())
 	}
 
-	pub fn write_to<T: Write>(self: &Self, dest: &mut T) -> Result<()> {
+	pub fn write_to<T: Write>(&self, dest: &mut T) -> Result<()> {
 		// Transform signed block into tree of cells
 		//
 		// signed_block
@@ -171,15 +169,15 @@ impl SignedBlock {
 		let block_absent_cell = self.block_repr_hash.write_to_new_cell()?;
 
 		let mut cell = self.block_serialize_hash.write_to_new_cell()?;
-		cell.append_reference(block_absent_cell.clone());
-		cell.append_reference(self.signatures.write_to_new_cell()?);
+		cell.append_reference_cell(block_absent_cell.clone().into_cell()?);
+		cell.append_reference_cell(self.signatures.serialize()?);
 
 		// Transfom tree into bag 
-		let bag = BagOfCells::with_roots_and_absent(vec![&cell.into()], vec![&block_absent_cell.into()]);
+		let bag = BagOfCells::with_roots_and_absent(vec![&cell.into_cell()?], vec![&block_absent_cell.into_cell()?]);
 
 		// Write signed block's bytes and then unsigned block's bytes
 		bag.write_to(dest, true)?;
-		dest.write(&self.serialized_block)?;
+		dest.write_all(&self.serialized_block)?;
 
 		Ok(())
 	}
@@ -235,7 +233,7 @@ impl SignedBlock {
 			let n = Self::largest_power_of_two_less_than(l);
 			let data1_hash = Self::calc_merkle_hash(&data[..n])?;
 			let data2_hash = Self::calc_merkle_hash(&data[n..])?;
-			let mut data_for_hash = [0 as u8; 8 + SHA256_SIZE * 2];
+			let mut data_for_hash = [0; 8 + SHA256_SIZE * 2];
 			data_for_hash[..8].copy_from_slice(&(l as u64).to_be_bytes());
 			data_for_hash[8..8 + SHA256_SIZE].copy_from_slice(&data1_hash);
 			data_for_hash[8 + SHA256_SIZE..].copy_from_slice(&data2_hash);

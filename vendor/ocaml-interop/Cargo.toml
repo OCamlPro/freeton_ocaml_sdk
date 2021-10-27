@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "ocaml-interop"
-version = "0.8.4"
+version = "0.8.7"
 authors = ["Bruno Deferrari <utizoc@gmail.com>"]
 exclude = [".github/*"]
 description = "Utilities for Rust and OCaml interoperability"
@@ -27,11 +27,12 @@ features = ["without-ocamlopt"]
 version = "0.2"
 
 [dependencies.ocaml-sys]
-version = "^0.20.1"
+version = "0.22"
 
 [dependencies.static_assertions]
 version = "1.1.0"
 
 [features]
 caml-state = ["ocaml-sys/caml-state"]
+no-caml-startup = []
 without-ocamlopt = ["ocaml-sys/without-ocamlopt", "ocaml-boxroot-sys/without-ocamlopt"]

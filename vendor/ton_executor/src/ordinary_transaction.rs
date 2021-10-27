@@ -13,10 +13,12 @@
 
 use crate::{
     blockchain_config::{BlockchainConfig, CalcMsgFwdFees}, error::ExecutorError,
-    TransactionExecutor,
+    TransactionExecutor, ExecuteParams,
 };
 
-use std::sync::{atomic::{AtomicU64, Ordering}, Arc};
+use std::sync::{atomic::Ordering, Arc};
+#[cfg(feature="timings")]
+use std::sync::atomic::AtomicU64;
 #[cfg(feature="timings")]
 use std::time::Instant;
 use ton_block::{
@@ -25,10 +27,13 @@ use ton_block::{
     Transaction, TransactionDescrOrdinary, TransactionDescr,
     TrComputePhase, TrBouncePhase,
 };
-use ton_types::{error, fail, Result, HashmapE};
+use ton_types::{error, fail, Result};
 use ton_vm::{
     boolean, int, stack::{Stack, StackItem, integer::IntegerData}
 };
+
+
+
 
 
 pub struct OrdinaryTransactionExecutor {
@@ -57,15 +62,11 @@ impl OrdinaryTransactionExecutor {
 impl TransactionExecutor for OrdinaryTransactionExecutor {
     ///
     /// Create end execute transaction from message for account
-    fn execute_for_account(
+    fn execute_with_params(
         &self,
         in_msg: Option<&Message>,
         account: &mut Account,
-        state_libs: HashmapE, // masterchain libraries
-        block_unixtime: u32,
-        block_lt: u64,
-        last_tr_lt: Arc<AtomicU64>,
-        debug: bool
+        params: ExecuteParams,
     ) -> Result<Transaction> {
         #[cfg(feature="timings")]
         let mut now = Instant::now();
@@ -89,7 +90,7 @@ impl TransactionExecutor for OrdinaryTransactionExecutor {
                 account_id
             }
             None => {
-                log::debug!(target: "executor", "Account = None, address = {}", account_address.address());
+                log::debug!(target: "executor", "Account = None, address = {:x}", account_address.address());
                 account_address.address()
             }
         };
@@ -97,22 +98,28 @@ impl TransactionExecutor for OrdinaryTransactionExecutor {
         // TODO: add and process ihr_delivered parameter (if ihr_delivered ihr_fee is added to total fees)
         let mut acc_balance = account.balance().cloned().unwrap_or_default();
         let mut msg_balance = in_msg.get_value().cloned().unwrap_or_default();
+        let ihr_delivered = false;  // ihr is disabled because it does not work
+        if !ihr_delivered {
+            msg_balance.grams.0 += in_msg.int_header().map_or(0, |h| h.ihr_fee.0);
+        }
         log::debug!(target: "executor", "acc_balance: {}, msg_balance: {}, credit_first: {}",
             acc_balance.grams, msg_balance.grams, !bounce);
 
         let is_special = self.config.is_special_account(account_address)?;
-        let lt = last_tr_lt.load(Ordering::Relaxed);
+        let lt = params.last_tr_lt.load(Ordering::Relaxed);
         let mut tr = Transaction::with_address_and_status(account_id, account.status());
         tr.set_logical_time(lt);
-        tr.set_now(block_unixtime);
+        tr.set_now(params.block_unixtime);
         tr.set_in_msg_cell(in_msg_cell.clone());
 
-        let mut description = TransactionDescrOrdinary::default();
-        description.credit_first = !bounce;
+        let mut description = TransactionDescrOrdinary {
+            credit_first: !bounce,
+            ..TransactionDescrOrdinary::default()
+        };
 
         // first check if contract can pay for importing external message
         if is_ext_msg && !is_special {
-            // extranal message is come serailized
+            // extranal message comes serialized
             let in_fwd_fee = self.config.get_fwd_prices(is_masterchain).fwd_fee(&in_msg_cell);
             log::debug!(target: "executor", "import message fee: {}, acc_balance: {}", in_fwd_fee, acc_balance.grams);
             if !acc_balance.grams.sub(&in_fwd_fee)? {
@@ -133,7 +140,8 @@ impl TransactionExecutor for OrdinaryTransactionExecutor {
         );
         log::debug!(target: "executor",
             "storage_phase: {}", if description.storage_ph.is_some() {"present"} else {"none"});
-        let old_acc_balance = acc_balance.clone();
+        let mut original_acc_balance = account.balance().cloned().unwrap_or_default();
+        original_acc_balance.sub(tr.total_fees())?;
 
         if !description.credit_first && !is_ext_msg {
             description.credit_ph = self.credit_phase(&msg_balance, &mut acc_balance);
@@ -141,7 +149,9 @@ impl TransactionExecutor for OrdinaryTransactionExecutor {
         log::debug!(target: "executor", 
             "credit_phase: {}", if description.credit_ph.is_some() {"present"} else {"none"});
 
-        account.set_last_paid(block_unixtime);
+        if !is_special {
+            account.set_last_paid(params.block_unixtime);
+        }
         // TODO: check here
         // if bounce && (msg_balance.grams > acc_balance.grams) {
         //     msg_balance.grams = acc_balance.grams.clone();
@@ -151,7 +161,7 @@ impl TransactionExecutor for OrdinaryTransactionExecutor {
             now = Instant::now();
         }
 
-        let smci = self.build_contract_info(&acc_balance, &account_address, block_unixtime, block_lt, lt); 
+        let smci = self.build_contract_info(&acc_balance, account_address, params.block_unixtime, params.block_lt, lt, params.seed_block);
         let mut stack = Stack::new();
         stack
             .push(int!(acc_balance.grams.0))
@@ -160,17 +170,17 @@ impl TransactionExecutor for OrdinaryTransactionExecutor {
             .push(StackItem::Slice(in_msg.body().unwrap_or_default()))
             .push(boolean!(is_ext_msg));
         log::debug!(target: "executor", "compute_phase");
-        let (compute_ph, actions) = self.compute_phase(
-            Some(&in_msg), 
+        let (compute_ph, actions, new_data) = self.compute_phase(
+            Some(in_msg), 
             account,
             &mut acc_balance,
             &msg_balance,
-            state_libs,
-            &smci,
+            params.state_libs,
+            smci,
             stack,
             is_masterchain,
             is_special,
-            debug
+            params.debug
         )?;
         let gas_fees;
         let mut out_msgs = vec![];
@@ -183,7 +193,7 @@ impl TransactionExecutor for OrdinaryTransactionExecutor {
                     log::debug!(target: "executor", "compute_phase: success");
                     log::debug!(target: "executor", "action_phase: lt={}", lt);
                     gas_fees = None;
-                    match self.action_phase(&mut tr, account, &mut acc_balance, &mut msg_balance, actions.unwrap_or_default(), is_special) {
+                    match self.action_phase(&mut tr, account, &original_acc_balance, &mut acc_balance, &mut msg_balance, actions.unwrap_or_default(), new_data, is_special) {
                         Some((action_ph, msgs)) => {
                             out_msgs = msgs;
                             Some(action_ph)
@@ -233,7 +243,10 @@ impl TransactionExecutor for OrdinaryTransactionExecutor {
         if description.aborted && !is_ext_msg && bounce {
             if let Some(gas_fees) = gas_fees {
                 log::debug!(target: "executor", "bounce_phase");
-                description.bounce = match self.bounce_phase(&in_msg, &mut tr, gas_fees) {
+                let my_addr = account.get_addr().unwrap_or(&in_msg.dst().ok_or_else(|| ExecutorError::TrExecutorError(
+                    format!("Or account address or in_msg dst address should be present")
+                ))?).clone();
+                description.bounce = match self.bounce_phase(in_msg, &mut tr, gas_fees, &my_addr) {
                     Some((bounce_ph, Some(bounce_msg))) => {
                         out_msgs.push(bounce_msg);
                         Some(bounce_ph)
@@ -245,14 +258,14 @@ impl TransactionExecutor for OrdinaryTransactionExecutor {
             // if money can be returned to sender
             // restore account balance - storage fee
             if let Some(TrBouncePhase::Ok(_)) = description.bounce {
-                log::debug!(target: "executor", "restore balance {} => {}", acc_balance.grams, old_acc_balance.grams);
-                acc_balance = old_acc_balance;
+                log::debug!(target: "executor", "restore balance {} => {}", acc_balance.grams, original_acc_balance.grams);
+                acc_balance = original_acc_balance;
             }
         }
         log::debug!(target: "executor", "set balance {}", acc_balance.grams);
         account.set_balance(acc_balance);
         log::debug!(target: "executor", "add messages");
-        let lt = self.add_messages(&mut tr, out_msgs, last_tr_lt)?;
+        let lt = self.add_messages(&mut tr, out_msgs, params.last_tr_lt)?;
         account.set_last_tr_time(lt);
         tr.write_description(&TransactionDescr::Ordinary(description))?;
         #[cfg(feature="timings")]
@@ -267,7 +280,7 @@ impl TransactionExecutor for OrdinaryTransactionExecutor {
             Some(in_msg) => in_msg,
             None => return stack
         };
-        let acc_balance = int!(account.balance().map(|value| value.grams.0.clone()).unwrap_or_default());
+        let acc_balance = int!(account.balance().map(|value| value.grams.0).unwrap_or_default());
         let msg_balance = int!(in_msg.get_value().map(|value| value.grams.0).unwrap_or_default());
         let function_selector = boolean!(in_msg.is_inbound_external());
         let body_slice = in_msg.body().unwrap_or_default();

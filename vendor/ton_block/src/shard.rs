@@ -86,7 +86,7 @@ impl AccountIdPrefixFull {
             cell.append_i32(self.workchain_id).unwrap();
         }
         cell.append_u64(self.prefix).unwrap();
-        cell.into()
+        cell.into_cell().unwrap().into()
     }
 
     /// Constructs AccountIdPrefixFull prefix for specified address.
@@ -153,13 +153,16 @@ impl AccountIdPrefixFull {
     /// (using count from IntermediateAddress::Regular)
     pub fn interpolate_addr_intermediate(&self, dest: &Self, ia: &IntermediateAddress) -> Result<Self> {
         if let IntermediateAddress::Regular(regular) = ia {
-            return Ok(self.interpolate_addr(&dest, regular.use_dest_bits()))
+            Ok(self.interpolate_addr(dest, regular.use_dest_bits()))
+        } else {
+            fail!("IntermediateAddress::Regular is expected")
         }
-        fail!("IntermediateAddress::Regular is expected")
     }
 
     /// Returns count of the first bits matched in both addresses
-    pub fn count_matching_bits(&self, other: &Self) -> u8 {
+    /// TBD
+    #[allow(dead_code)]
+    pub(crate) fn count_matching_bits(&self, other: &Self) -> u8 {
         if self.workchain_id != other.workchain_id {
             (self.workchain_id ^ other.workchain_id).leading_zeros() as u8
         } else if self.prefix != other.prefix {
@@ -171,29 +174,32 @@ impl AccountIdPrefixFull {
 
     /// Performs Hypercube Routing from self to dest address.
     /// Result: (transit_addr_dest_bits, nh_addr_dest_bits)
-    pub fn perform_hypercube_routing(
+    /// TBD
+    #[allow(dead_code)]
+    #[allow(clippy::many_single_char_names)]
+    pub(crate) fn perform_hypercube_routing(
         &self,
         dest: &AccountIdPrefixFull,
         cur_shard: &ShardIdent,
-        ia: &IntermediateAddress
+        ia: IntermediateAddress
     ) -> Result<(IntermediateAddress, IntermediateAddress)> {
-        let transit = self.interpolate_addr_intermediate(dest, ia)?;
+        let transit = self.interpolate_addr_intermediate(dest, &ia)?;
         if !cur_shard.contains_full_prefix(&transit) {
             fail!("Shard {} must fully contain transit prefix {}", cur_shard, transit)
         }
 
-        if cur_shard.contains_full_prefix(&dest) {
+        if cur_shard.contains_full_prefix(dest) {
             // If destination is in this shard, set cur:=next_hop:=dest
             return Ok((IntermediateAddress::full_dest(), IntermediateAddress::full_dest()))
         }
 
         if transit.is_masterchain() || dest.is_masterchain() {
             // Route messages to/from masterchain directly
-            return Ok((ia.clone(), IntermediateAddress::full_dest()))
+            return Ok((ia, IntermediateAddress::full_dest()))
         }
 
         if transit.workchain_id != dest.workchain_id {
-            return Ok((ia.clone(), IntermediateAddress::use_dest_bits(32)?))
+            return Ok((ia, IntermediateAddress::use_dest_bits(32)?))
         }
 
         let x = cur_shard.prefix & (cur_shard.prefix - 1);
@@ -229,7 +235,7 @@ shard_ident$00
     shard_prefix: uint64
 = ShardIdent;
 */
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct ShardIdent {
     workchain_id: i32,
     prefix: u64, // with terminated bit!
@@ -245,9 +251,15 @@ impl Default for ShardIdent {
 }
 
 impl ShardIdent {
-    pub fn masterchain() -> Self {
+    pub const fn masterchain() -> Self {
         ShardIdent {
             workchain_id: MASTERCHAIN_ID,
+            prefix: SHARD_FULL,
+        }
+    }
+    pub const fn full(workchain_id: i32) -> Self {
+        ShardIdent {
+            workchain_id,
             prefix: SHARD_FULL,
         }
     }
@@ -288,7 +300,7 @@ impl ShardIdent {
         let mut shard_prefix = 0;
         while let Some(bit) = shard_prefix_slice.get_next_bit_opt() {
             shard_pfx_bits += 1;
-            shard_prefix = shard_prefix | ((bit as u64) << 64 - shard_pfx_bits)
+            shard_prefix |= (bit as u64) << (64 - shard_pfx_bits)
         }
         if shard_pfx_bits > MAX_SPLIT_DEPTH {
             fail!(
@@ -336,7 +348,7 @@ impl ShardIdent {
             let prefix = self.shard_prefix_with_tag() >> (64 - prefix_len);
             cell.append_bits(prefix as usize, prefix_len as usize).unwrap();
         }
-        cell.into()
+        cell.into_cell().unwrap().into()
     }
 
     /// Get bitstring-key for BinTree operation for Shard
@@ -344,14 +356,14 @@ impl ShardIdent {
         let mut cell = BuilderData::new();
         cell.append_i32(self.workchain_id)?
             .append_u64(self.shard_prefix_without_tag())?;
-        Ok(cell.into())
+        Ok(cell.into_cell()?.into())
     }
 
     pub fn full_key_with_tag(&self) -> Result<SliceData> {
         let mut cell = BuilderData::new();
         cell.append_i32(self.workchain_id)?
             .append_u64(self.shard_prefix_with_tag())?;
-        Ok(cell.into())
+        Ok(cell.into_cell()?.into())
     }
 
     pub fn workchain_id(&self) -> i32 {
@@ -527,7 +539,7 @@ impl ShardIdent {
         self.prefix
     }
 
-    pub fn shard_prefix_without_tag(self) -> u64 {
+    pub fn shard_prefix_without_tag(&self) -> u64 {
         self.prefix - self.prefix_lower_bits()
     }
 
@@ -559,7 +571,7 @@ impl ShardIdent {
 
     pub fn split(&self) -> Result<(ShardIdent, ShardIdent)> {
         let lb = self.prefix_lower_bits() >> 1;
-        if lb & (!0 >> MAX_SPLIT_DEPTH + 1) != 0 {
+        if lb & (!0 >> (MAX_SPLIT_DEPTH + 1)) != 0 {
             fail!(
                 BlockError::InvalidArg(
                     format!("Can't split shard {}, because of max split depth is {}",
@@ -587,7 +599,7 @@ impl ShardIdent {
 
     // TODO: need to check max split first
     pub fn right_ancestor_mask(&self) -> Result<Self> {
-        Self::with_tagged_prefix(self.workchain_id, self.prefix + (1 << 64 - MAX_SPLIT_DEPTH))
+        Self::with_tagged_prefix(self.workchain_id, self.prefix + (1 << (64 - MAX_SPLIT_DEPTH)))
     }
 
     // returns all 0 and first 1 from right to left
@@ -823,9 +835,10 @@ pub struct ShardStateUnsplit {
 
 impl ShardStateUnsplit {
     pub fn with_ident(shard_id: ShardIdent) -> Self {
-        let mut shard_state = ShardStateUnsplit::default();
-        shard_state.shard_id = shard_id;
-        shard_state
+        Self {
+            shard_id,
+            ..ShardStateUnsplit::default()
+        }
     }
 
     pub fn id(&self) -> String {
@@ -1012,17 +1025,13 @@ impl ShardStateUnsplit {
     }
 
     pub fn read_cur_validator_set_and_cc_conf(&self) -> Result<(ValidatorSet, CatchainConfig)> {
-        let config = &self
+        self
             .read_custom()?
             .ok_or_else(|| error!(BlockError::InvalidArg(
                 "State doesn't contain `custom` field".to_string()
             )))?
-            .config;
-
-        Ok((
-            config.validator_set()?,
-            config.catchain_config()?
-        ))
+            .config
+            .read_cur_validator_set_and_cc_conf()
     }
 
     pub fn update_smc(&mut self, addr: &UInt256, code: Option<&Cell>, data: Option<&Cell>) -> Result<()> {
@@ -1057,8 +1066,8 @@ impl ShardStateUnsplit {
         let mut builder = BuilderData::from_slice(&data);
         let cell = config.config_params.data()
             .ok_or_else(|| error!("configs musn't be empty"))?;
-        builder.prepend_reference(BuilderData::from(cell));
-        config_smc.set_data(builder.into());
+        builder.prepend_reference_cell(cell.clone());
+        config_smc.set_data(builder.into_cell()?);
         shard_config_smc.write_account(&config_smc)?;
         accounts.set(&config.config_addr, &shard_config_smc, &config_smc.aug()?)?;
         self.write_accounts(&accounts)
@@ -1088,7 +1097,7 @@ impl Deserializable for ShardStateUnsplit {
         self.before_split = cell.get_next_bit()?;
         self.accounts.read_from_reference(cell)?;
 
-        let ref mut cell1 = cell.checked_drain_reference()?.into();
+        let cell1 = &mut cell.checked_drain_reference()?.into();
         self.overload_history.read_from(cell1)?;
         self.underload_history.read_from(cell1)?;
         self.total_balance.read_from(cell1)?;
@@ -1116,12 +1125,12 @@ impl Serializable for ShardStateUnsplit {
         self.gen_time.write_to(builder)?;
         self.gen_lt.write_to(builder)?;
         self.min_ref_mc_seqno.write_to(builder)?;
-        builder.append_reference(self.out_msg_queue_info.write_to_new_cell()?);
+        builder.append_reference_cell(self.out_msg_queue_info.serialize()?);
         builder.append_bit_bool(self.before_split)?;
 
         let mut accounts_builder = BuilderData::new();
         self.accounts.write_to(&mut accounts_builder)?;
-        builder.append_reference(accounts_builder);
+        builder.append_reference_cell(accounts_builder.into_cell()?);
 
         let mut b2 = BuilderData::new();
         self.overload_history.write_to(&mut b2)?;
@@ -1130,11 +1139,11 @@ impl Serializable for ShardStateUnsplit {
         self.total_validator_fees.write_to(&mut b2)?;
         self.libraries.write_to(&mut b2)?;
         self.master_ref.write_maybe_to(&mut b2)?;
-        builder.append_reference(b2);
+        builder.append_reference_cell(b2.into_cell()?);
 
         builder.append_bit_bool(self.custom.is_some())?;
         if let Some(ref custom) = self.custom {
-            builder.append_reference(custom.write_to_new_cell()?);
+            builder.append_reference_cell(custom.serialize()?);
         }
 
         Ok(())

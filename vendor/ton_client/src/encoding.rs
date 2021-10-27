@@ -19,6 +19,7 @@ use std::str::FromStr;
 use num_bigint::BigInt;
 use num_traits::cast::NumCast;
 use ton_block::MsgAddressInt;
+use ton_types::SliceData;
 
 //------------------------------------------------------------------------------------------------------
 
@@ -26,7 +27,7 @@ pub fn account_encode(value: &MsgAddressInt) -> String {
     value.to_string()
 }
 
-#[derive(Serialize, Deserialize, Debug, ApiType, Clone)]
+#[derive(Serialize, Deserialize, Debug, ApiType, Clone, PartialEq, Eq)]
 pub enum AccountAddressType {
     AccountId,
     Hex,
@@ -46,7 +47,7 @@ pub(crate) fn account_encode_ex(
     base64_params: Option<Base64AddressParams>,
 ) -> ClientResult<String> {
     match addr_type {
-        AccountAddressType::AccountId => Ok(value.get_address().to_hex_string()),
+        AccountAddressType::AccountId => Ok(format!("{:x}", value.get_address())),
         AccountAddressType::Hex => Ok(value.to_string()),
         AccountAddressType::Base64 => {
             let params =
@@ -66,7 +67,7 @@ pub fn account_decode(string: &str) -> ClientResult<MsgAddressInt> {
     }
 }
 
-fn decode_std_base64(data: &str) -> ClientResult<MsgAddressInt> {
+pub(crate) fn decode_std_base64(data: &str) -> ClientResult<MsgAddressInt> {
     // conversion from base64url
     let data = data.replace('_', "/").replace('-', "+");
 
@@ -80,7 +81,7 @@ fn decode_std_base64(data: &str) -> ClientResult<MsgAddressInt> {
         return Err(client::Error::invalid_address("CRC mismatch", &data).into());
     };
 
-    MsgAddressInt::with_standart(None, vec[1] as i8, vec[2..34].into())
+    MsgAddressInt::with_standart(None, vec[1] as i8, SliceData::from_raw(vec[2..34].to_vec(), 256))
         .map_err(|err| client::Error::invalid_address(err, &data).into())
 }
 

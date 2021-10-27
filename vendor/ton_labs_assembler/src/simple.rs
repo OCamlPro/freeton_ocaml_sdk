@@ -806,14 +806,14 @@ impl<T: Writer> Engine<T> {
         XLOADQ                               => 0xD7, 0x3B
         XOR                                  => 0xB2
         ZERO                                 => 0x70
-        ZEROROTRIF                           => 0x6F, 0xA2
-        ZEROROTRIF2                          => 0x6F, 0xA6
-        ZEROROTRIFNOT                        => 0x6F, 0xA3
-        ZEROROTRIFNOT2                       => 0x6F, 0xA7
-        ZEROSWAPIF                           => 0x6F, 0xA0
-        ZEROSWAPIF2                          => 0x6F, 0xA4
-        ZEROSWAPIFNOT                        => 0x6F, 0xA1
-        ZEROSWAPIFNOT2                       => 0x6F, 0xA5
+        ZEROROTRIF                           => 0x6F, 0x92
+        ZEROROTRIF2                          => 0x6F, 0x96
+        ZEROROTRIFNOT                        => 0x6F, 0x93
+        ZEROROTRIFNOT2                       => 0x6F, 0x97
+        ZEROSWAPIF                           => 0x6F, 0x90
+        ZEROSWAPIF2                          => 0x6F, 0x94
+        ZEROSWAPIFNOT                        => 0x6F, 0x91
+        ZEROSWAPIFNOT2                       => 0x6F, 0x95
     }
 
     pub fn add_simple_commands(&mut self) {

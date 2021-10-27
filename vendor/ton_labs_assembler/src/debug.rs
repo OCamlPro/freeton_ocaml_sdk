@@ -13,7 +13,7 @@
 
 use serde::{Serialize, Deserialize};
 use std::collections::BTreeMap;
-use ton_types::Cell;
+use ton_types::{Cell, UInt256};
 
 pub type Lines = Vec<Line>;
 #[derive(Debug, Clone, PartialEq)]
@@ -26,7 +26,7 @@ impl Line {
     pub fn new(text: &str, filename: &str, line: usize) -> Self {
         Line {
             text: String::from(text),
-            pos: DbgPos { filename: String::from(filename), line: line, line_code: line }
+            pos: DbgPos { filename: String::from(filename), line, line_code: line }
         }
     }
     pub fn new_extended(text: &str, filename: &str, line: usize, line_code: usize) -> Self {
@@ -38,11 +38,9 @@ impl Line {
 }
 
 pub fn lines_to_string(lines: &Lines) -> String {
-    let mut res = "".to_string();
-    for line in lines {
-        res.push_str(line.text.as_str());
-    }
-    res
+    lines
+        .iter()
+        .fold(String::new(), |result, line| result + line.text.as_str())
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -107,7 +105,7 @@ impl DbgNode {
 impl std::fmt::Display for DbgNode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         for entry in self.offsets.iter() {
-            write!(f, "{}:{}\n", entry.0, entry.1)?
+            writeln!(f, "{}:{}", entry.0, entry.1)?
         }
         write!(f, "{} children", self.children.len())
     }
@@ -126,6 +124,27 @@ impl DbgInfo {
         let mut info = DbgInfo { map: BTreeMap::new() };
         info.collect(&cell, &node);
         info
+    }
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+    pub fn append(&mut self, other: &mut Self) {
+        self.map.append(&mut other.map);
+    }
+    pub fn insert(&mut self, key: UInt256, tree: BTreeMap<usize, DbgPos>) {
+        self.map.entry(key.to_hex_string()).or_insert(tree);
+    }
+    pub fn remove(&mut self, key: &UInt256) -> Option<BTreeMap<usize, DbgPos>> {
+        self.map.remove(&key.to_hex_string())
+    }
+    pub fn get(&self, key: &UInt256) -> Option<&BTreeMap<usize, DbgPos>> {
+        self.map.get(&key.to_hex_string())
+    }
+    pub fn first_entry(&self) -> Option<&BTreeMap<usize, DbgPos>> {
+        self.map.iter().next().map(|k_v| k_v.1)
     }
     fn collect(self: &mut Self, cell: &Cell, dbg: &DbgNode) {
         let hash = cell.repr_hash().to_hex_string();

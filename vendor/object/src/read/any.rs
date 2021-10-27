@@ -13,12 +13,13 @@ use crate::read::pe;
 #[cfg(feature = "wasm")]
 use crate::read::wasm;
 use crate::read::{
-    self, Architecture, BinaryFormat, ComdatKind, CompressedData, CompressedFileRange, Error,
-    Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectMap, ObjectSection,
-    ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result, SectionFlags,
-    SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName,
-    SymbolScope, SymbolSection,
+    self, Architecture, BinaryFormat, CodeView, ComdatKind, CompressedData, CompressedFileRange,
+    Error, Export, FileFlags, FileKind, Import, Object, ObjectComdat, ObjectKind, ObjectMap,
+    ObjectSection, ObjectSegment, ObjectSymbol, ObjectSymbolTable, ReadRef, Relocation, Result,
+    SectionFlags, SectionIndex, SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap,
+    SymbolMapName, SymbolScope, SymbolSection,
 };
+#[allow(unused_imports)]
 use crate::Endianness;
 
 /// Evaluate an expression on the contents of a file format enum.
@@ -173,7 +174,6 @@ pub struct File<'data, R: ReadRef<'data> = &'data [u8]> {
     inner: FileInternal<'data, R>,
 }
 
-#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum FileInternal<'data, R: ReadRef<'data>> {
     #[cfg(feature = "coff")]
@@ -218,6 +218,25 @@ impl<'data, R: ReadRef<'data>> File<'data, R> {
             _ => return Err(Error("Unsupported file format")),
         };
         Ok(File { inner })
+    }
+
+    /// Parse the raw file data at an arbitrary offset inside the input data.
+    ///
+    /// Currently, this is only supported for Mach-O images.
+    /// This can be used for parsing Mach-O images inside the dyld shared cache,
+    /// where multiple images, located at different offsets, share the same address
+    /// space.
+    pub fn parse_at(data: R, offset: u64) -> Result<Self> {
+        let _inner = match FileKind::parse_at(data, offset)? {
+            #[cfg(feature = "macho")]
+            FileKind::MachO32 => FileInternal::MachO32(macho::MachOFile32::parse_at(data, offset)?),
+            #[cfg(feature = "macho")]
+            FileKind::MachO64 => FileInternal::MachO64(macho::MachOFile64::parse_at(data, offset)?),
+            #[allow(unreachable_patterns)]
+            _ => return Err(Error("Unsupported file format")),
+        };
+        #[allow(unreachable_code)]
+        Ok(File { inner: _inner })
     }
 
     /// Return the file format.
@@ -267,6 +286,10 @@ where
         with_inner!(self.inner, FileInternal, |x| x.is_64())
     }
 
+    fn kind(&self) -> ObjectKind {
+        with_inner!(self.inner, FileInternal, |x| x.kind())
+    }
+
     fn segments(&'file self) -> SegmentIterator<'data, 'file, R> {
         SegmentIterator {
             inner: map_inner!(self.inner, FileInternal, SegmentIteratorInternal, |x| x
@@ -274,9 +297,9 @@ where
         }
     }
 
-    fn section_by_name(&'file self, section_name: &str) -> Option<Section<'data, 'file, R>> {
+    fn section_by_name_bytes(&'file self, section_name: &[u8]) -> Option<Section<'data, 'file, R>> {
         map_inner_option!(self.inner, FileInternal, SectionInternal, |x| x
-            .section_by_name(section_name))
+            .section_by_name_bytes(section_name))
         .map(|inner| Section { inner })
     }
 
@@ -397,6 +420,15 @@ where
     #[inline]
     fn gnu_debugaltlink(&self) -> Result<Option<(&'data [u8], &'data [u8])>> {
         with_inner!(self.inner, FileInternal, |x| x.gnu_debugaltlink())
+    }
+
+    #[inline]
+    fn pdb_info(&self) -> Result<Option<CodeView>> {
+        with_inner!(self.inner, FileInternal, |x| x.pdb_info())
+    }
+
+    fn relative_address_base(&self) -> u64 {
+        with_inner!(self.inner, FileInternal, |x| x.relative_address_base())
     }
 
     fn entry(&self) -> u64 {
@@ -524,6 +556,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSegment<'data> for Segment<'data, 'f
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
         with_inner!(self.inner, SegmentInternal, |x| x.data_range(address, size))
+    }
+
+    fn name_bytes(&self) -> Result<Option<&[u8]>> {
+        with_inner!(self.inner, SegmentInternal, |x| x.name_bytes())
     }
 
     fn name(&self) -> Result<Option<&str>> {
@@ -667,8 +703,16 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectSection<'data> for Section<'data, 'f
         with_inner!(self.inner, SectionInternal, |x| x.compressed_data())
     }
 
+    fn name_bytes(&self) -> Result<&[u8]> {
+        with_inner!(self.inner, SectionInternal, |x| x.name_bytes())
+    }
+
     fn name(&self) -> Result<&str> {
         with_inner!(self.inner, SectionInternal, |x| x.name())
+    }
+
+    fn segment_name_bytes(&self) -> Result<Option<&[u8]>> {
+        with_inner!(self.inner, SectionInternal, |x| x.segment_name_bytes())
     }
 
     fn segment_name(&self) -> Result<Option<&str>> {
@@ -789,6 +833,10 @@ impl<'data, 'file, R: ReadRef<'data>> ObjectComdat<'data> for Comdat<'data, 'fil
         with_inner!(self.inner, ComdatInternal, |x| x.symbol())
     }
 
+    fn name_bytes(&self) -> Result<&[u8]> {
+        with_inner!(self.inner, ComdatInternal, |x| x.name_bytes())
+    }
+
     fn name(&self) -> Result<&str> {
         with_inner!(self.inner, ComdatInternal, |x| x.name())
     }
@@ -862,11 +910,21 @@ where
     R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
-    Coff((coff::CoffSymbolTable<'data, 'file>, PhantomData<R>)),
+    Coff((coff::CoffSymbolTable<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "elf")]
-    Elf32((elf::ElfSymbolTable32<'data, 'file>, PhantomData<R>)),
+    Elf32(
+        (
+            elf::ElfSymbolTable32<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "elf")]
-    Elf64((elf::ElfSymbolTable64<'data, 'file>, PhantomData<R>)),
+    Elf64(
+        (
+            elf::ElfSymbolTable64<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -882,9 +940,9 @@ where
         ),
     ),
     #[cfg(feature = "pe")]
-    Pe32((coff::CoffSymbolTable<'data, 'file>, PhantomData<R>)),
+    Pe32((coff::CoffSymbolTable<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "pe")]
-    Pe64((coff::CoffSymbolTable<'data, 'file>, PhantomData<R>)),
+    Pe64((coff::CoffSymbolTable<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "wasm")]
     Wasm((wasm::WasmSymbolTable<'data, 'file>, PhantomData<R>)),
 }
@@ -932,11 +990,21 @@ where
     R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
-    Coff((coff::CoffSymbolIterator<'data, 'file>, PhantomData<R>)),
+    Coff((coff::CoffSymbolIterator<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "elf")]
-    Elf32((elf::ElfSymbolIterator32<'data, 'file>, PhantomData<R>)),
+    Elf32(
+        (
+            elf::ElfSymbolIterator32<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "elf")]
-    Elf64((elf::ElfSymbolIterator64<'data, 'file>, PhantomData<R>)),
+    Elf64(
+        (
+            elf::ElfSymbolIterator64<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -952,9 +1020,9 @@ where
         ),
     ),
     #[cfg(feature = "pe")]
-    Pe32((coff::CoffSymbolIterator<'data, 'file>, PhantomData<R>)),
+    Pe32((coff::CoffSymbolIterator<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "pe")]
-    Pe64((coff::CoffSymbolIterator<'data, 'file>, PhantomData<R>)),
+    Pe64((coff::CoffSymbolIterator<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "wasm")]
     Wasm((wasm::WasmSymbolIterator<'data, 'file>, PhantomData<R>)),
 }
@@ -985,11 +1053,21 @@ where
     R: ReadRef<'data>,
 {
     #[cfg(feature = "coff")]
-    Coff((coff::CoffSymbol<'data, 'file>, PhantomData<R>)),
+    Coff((coff::CoffSymbol<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "elf")]
-    Elf32((elf::ElfSymbol32<'data, 'file>, PhantomData<R>)),
+    Elf32(
+        (
+            elf::ElfSymbol32<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "elf")]
-    Elf64((elf::ElfSymbol64<'data, 'file>, PhantomData<R>)),
+    Elf64(
+        (
+            elf::ElfSymbol64<'data, 'file, Endianness, R>,
+            PhantomData<R>,
+        ),
+    ),
     #[cfg(feature = "macho")]
     MachO32(
         (
@@ -1005,9 +1083,9 @@ where
         ),
     ),
     #[cfg(feature = "pe")]
-    Pe32((coff::CoffSymbol<'data, 'file>, PhantomData<R>)),
+    Pe32((coff::CoffSymbol<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "pe")]
-    Pe64((coff::CoffSymbol<'data, 'file>, PhantomData<R>)),
+    Pe64((coff::CoffSymbol<'data, 'file, R>, PhantomData<R>)),
     #[cfg(feature = "wasm")]
     Wasm((wasm::WasmSymbol<'data, 'file>, PhantomData<R>)),
 }
@@ -1032,6 +1110,10 @@ impl<'data, 'file, R: ReadRef<'data>> read::private::Sealed for Symbol<'data, 'f
 impl<'data, 'file, R: ReadRef<'data>> ObjectSymbol<'data> for Symbol<'data, 'file, R> {
     fn index(&self) -> SymbolIndex {
         with_inner!(self.inner, SymbolInternal, |x| x.0.index())
+    }
+
+    fn name_bytes(&self) -> Result<&'data [u8]> {
+        with_inner!(self.inner, SymbolInternal, |x| x.0.name_bytes())
     }
 
     fn name(&self) -> Result<&'data str> {

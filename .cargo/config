@@ -6,17 +6,12 @@ target-dir = "_build/target"
 # Required in OSX so that the compiler allows undefined symbols when linking dynamic libraries
 rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
 
-
 [source.crates-io]
 replace-with = "vendored-sources"
 
 [source."https://github.com/lefessan/TON-SDK.git"]
 git = "https://github.com/lefessan/TON-SDK.git"
-branch = "z-2021-05-25-pub"
-replace-with = "vendored-sources"
-
-[source."https://github.com/tonlabs/bip39-rs.git"]
-git = "https://github.com/tonlabs/bip39-rs.git"
+branch = "z-2021-10-27-pub"
 replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/lockfree.git"]
@@ -33,26 +28,32 @@ replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-assembler.git"]
 git = "https://github.com/tonlabs/ton-labs-assembler.git"
+tag = "1.2.24"
 replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-block-json.git"]
 git = "https://github.com/tonlabs/ton-labs-block-json.git"
+tag = "0.6.24"
 replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-block.git"]
 git = "https://github.com/tonlabs/ton-labs-block.git"
+tag = "1.7.28"
 replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-executor.git"]
 git = "https://github.com/tonlabs/ton-labs-executor.git"
+tag = "1.15.31"
 replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-types.git"]
 git = "https://github.com/tonlabs/ton-labs-types.git"
+tag = "1.10.11"
 replace-with = "vendored-sources"
 
 [source."https://github.com/tonlabs/ton-labs-vm.git"]
 git = "https://github.com/tonlabs/ton-labs-vm.git"
+tag = "1.8.19"
 replace-with = "vendored-sources"
 
 [source.vendored-sources]

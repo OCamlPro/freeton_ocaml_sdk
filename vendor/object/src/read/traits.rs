@@ -2,9 +2,10 @@ use alloc::borrow::Cow;
 use alloc::vec::Vec;
 
 use crate::read::{
-    self, Architecture, ComdatKind, CompressedData, CompressedFileRange, Export, FileFlags, Import,
-    ObjectMap, Relocation, Result, SectionFlags, SectionIndex, SectionKind, SymbolFlags,
-    SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope, SymbolSection,
+    self, Architecture, CodeView, ComdatKind, CompressedData, CompressedFileRange, Export,
+    FileFlags, Import, ObjectKind, ObjectMap, Relocation, Result, SectionFlags, SectionIndex,
+    SectionKind, SymbolFlags, SymbolIndex, SymbolKind, SymbolMap, SymbolMapName, SymbolScope,
+    SymbolSection,
 };
 use crate::Endianness;
 
@@ -66,11 +67,11 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Return true if the file can contain 64-bit addresses.
     fn is_64(&self) -> bool;
 
+    /// Return the kind of this object.
+    fn kind(&self) -> ObjectKind;
+
     /// Get an iterator over the segments in the file.
     fn segments(&'file self) -> Self::SegmentIterator;
-
-    /// Get the entry point address of the binary
-    fn entry(&'file self) -> u64;
 
     /// Get the section named `section_name`, if such a section exists.
     ///
@@ -86,7 +87,12 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// name. In this case, the first matching section will be used.
     ///
     /// This method skips over sections with invalid names.
-    fn section_by_name(&'file self, section_name: &str) -> Option<Self::Section>;
+    fn section_by_name(&'file self, section_name: &str) -> Option<Self::Section> {
+        self.section_by_name_bytes(section_name.as_bytes())
+    }
+
+    /// Like [`Self::section_by_name`], but allows names that are not UTF-8.
+    fn section_by_name_bytes(&'file self, section_name: &[u8]) -> Option<Self::Section>;
 
     /// Get the section at the given index.
     ///
@@ -169,7 +175,10 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     /// Get the imported symbols.
     fn imports(&self) -> Result<Vec<Import<'data>>>;
 
-    /// Get the exported symbols.
+    /// Get the exported symbols that expose both a name and an address.
+    ///
+    /// Some file formats may provide other kinds of symbols, that can be retrieved using
+    /// the lower-level API.
     fn exports(&self) -> Result<Vec<Export<'data>>>;
 
     /// Return true if the file contains debug information sections, false if not.
@@ -198,6 +207,20 @@ pub trait Object<'data: 'file, 'file>: read::private::Sealed {
     fn gnu_debugaltlink(&self) -> Result<Option<(&'data [u8], &'data [u8])>> {
         Ok(None)
     }
+
+    /// The filename and GUID from the PE CodeView section
+    #[inline]
+    fn pdb_info(&self) -> Result<Option<CodeView>> {
+        Ok(None)
+    }
+
+    /// Get the base address used for relative virtual addresses.
+    ///
+    /// Currently this is only non-zero for PE.
+    fn relative_address_base(&'file self) -> u64;
+
+    /// Get the virtual address of the entry point of the binary
+    fn entry(&'file self) -> u64;
 
     /// File flags that are specific to each file format.
     fn flags(&self) -> FileFlags;
@@ -232,6 +255,11 @@ pub trait ObjectSegment<'data>: read::private::Sealed {
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>>;
 
     /// Returns the name of the segment.
+    fn name_bytes(&self) -> Result<Option<&[u8]>>;
+
+    /// Returns the name of the segment.
+    ///
+    /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<Option<&str>>;
 }
 
@@ -293,9 +321,19 @@ pub trait ObjectSection<'data>: read::private::Sealed {
     }
 
     /// Returns the name of the section.
+    fn name_bytes(&self) -> Result<&[u8]>;
+
+    /// Returns the name of the section.
+    ///
+    /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<&str>;
 
     /// Returns the name of the segment for this section.
+    fn segment_name_bytes(&self) -> Result<Option<&[u8]>>;
+
+    /// Returns the name of the segment for this section.
+    ///
+    /// Returns an error if the name is not UTF-8.
     fn segment_name(&self) -> Result<Option<&str>>;
 
     /// Return the kind of this section.
@@ -320,6 +358,11 @@ pub trait ObjectComdat<'data>: read::private::Sealed {
     fn symbol(&self) -> SymbolIndex;
 
     /// Returns the name of the COMDAT section group.
+    fn name_bytes(&self) -> Result<&[u8]>;
+
+    /// Returns the name of the COMDAT section group.
+    ///
+    /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<&str>;
 
     /// Get the sections in this section group.
@@ -353,6 +396,11 @@ pub trait ObjectSymbol<'data>: read::private::Sealed {
     fn index(&self) -> SymbolIndex;
 
     /// The name of the symbol.
+    fn name_bytes(&self) -> Result<&'data [u8]>;
+
+    /// The name of the symbol.
+    ///
+    /// Returns an error if the name is not UTF-8.
     fn name(&self) -> Result<&'data str>;
 
     /// The address of the symbol. May be zero if the address is unknown.

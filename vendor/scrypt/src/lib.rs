@@ -1,66 +1,69 @@
 //! This crate implements the Scrypt key derivation function as specified
 //! in \[1\].
 //!
-//! If you are not using convinience functions `scrypt_check` and `scrypt_simple`
-//! it's recommended to disable `scrypt` default features in your `Cargo.toml`:
+//! If you are only using the low-level [`scrypt`] function instead of the
+//! higher-level [`Scrypt`] struct to produce/verify hash strings,
+//! it's recommended to disable default features in your `Cargo.toml`:
+//!
 //! ```toml
 //! [dependencies]
 //! scrypt = { version = "0.2", default-features = false }
 //! ```
 //!
-//! # Usage
+//! # Usage (simple with default params)
 //!
 //! ```
-//! extern crate scrypt;
+//! # #[cfg(feature = "password-hash")]
+//! # {
+//! use scrypt::{
+//!     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+//!     Scrypt
+//! };
+//! use rand_core::OsRng;
 //!
-//! # #[cfg(feature="include_simple")]
-//! # fn main() {
-//! use scrypt::{ScryptParams, scrypt_simple, scrypt_check};
+//! let password = b"hunter42"; // Bad password; don't actually use!
+//! let salt = SaltString::generate(&mut OsRng);
 //!
-//! // First setup the ScryptParams arguments with:
-//! // r = 8, p = 1, n = 32768 (log2(n) = 15)
-//! let params = ScryptParams::new(15, 8, 1).unwrap();
-//! // Hash the password for storage
-//! let hashed_password = scrypt_simple("Not so secure password", &params)
-//!     .expect("OS RNG should not fail");
-//! // Verifying a stored password
-//! assert!(scrypt_check("Not so secure password", &hashed_password).is_ok());
+//! // Hash password to PHC string ($scrypt$...)
+//! let password_hash = Scrypt.hash_password_simple(password, salt.as_ref()).unwrap().to_string();
+//!
+//! // Verify password against PHC string
+//! let parsed_hash = PasswordHash::new(&password_hash).unwrap();
+//! assert!(Scrypt.verify_password(password, &parsed_hash).is_ok());
 //! # }
-//! # #[cfg(not(feature="include_simple"))]
-//! fn main() {}
 //! ```
 //!
 //! # References
 //! \[1\] - [C. Percival. Stronger Key Derivation Via Sequential
 //! Memory-Hard Functions](http://www.tarsnap.com/scrypt/scrypt.pdf)
-#![doc(html_logo_url =
-    "https://raw.githubusercontent.com/RustCrypto/meta/master/logo_small.png")]
-extern crate sha2;
-extern crate pbkdf2;
-extern crate hmac;
-extern crate byteorder;
-extern crate byte_tools;
-#[cfg(feature="include_simple")]
-extern crate subtle;
-#[cfg(feature="include_simple")]
-extern crate base64;
-#[cfg(feature="include_simple")]
-extern crate rand;
+
+#![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![doc(html_logo_url = "https://raw.githubusercontent.com/RustCrypto/meta/master/logo_small.png")]
+
+#[macro_use]
+extern crate alloc;
+
+#[cfg(feature = "std")]
+extern crate std;
 
 use hmac::Hmac;
 use pbkdf2::pbkdf2;
 use sha2::Sha256;
 
-mod params;
-mod romix;
 /// Errors for `scrypt` operations.
 pub mod errors;
-#[cfg(feature="include_simple")]
+mod params;
+mod romix;
+#[cfg(feature = "simple")]
 mod simple;
 
-#[cfg(feature="include_simple")]
-pub use simple::{scrypt_simple, scrypt_check};
-pub use params::ScryptParams;
+#[cfg(feature = "simple")]
+pub use password_hash;
+
+pub use crate::params::Params;
+#[cfg(feature = "simple")]
+pub use crate::simple::{Scrypt, ALG_ID};
 
 /// The scrypt key derivation function.
 ///
@@ -76,12 +79,15 @@ pub use params::ScryptParams;
 /// `output` does not satisfy the following condition:
 /// `output.len() > 0 && output.len() <= (2^32 - 1) * 32`.
 pub fn scrypt(
-    password: &[u8], salt: &[u8], params: &ScryptParams, output: &mut [u8]
+    password: &[u8],
+    salt: &[u8],
+    params: &Params,
+    output: &mut [u8],
 ) -> Result<(), errors::InvalidOutputLen> {
     // This check required by Scrypt:
     // check output.len() > 0 && output.len() <= (2^32 - 1) * 32
-    if !(output.len() > 0 && output.len() / 32 <= 0xffffffff) {
-        Err(errors::InvalidOutputLen)?;
+    if output.is_empty() || output.len() / 32 > 0xffff_ffff {
+        return Err(errors::InvalidOutputLen);
     }
 
     // The checks in the ScryptParams constructor guarantee

@@ -42,20 +42,27 @@ pub struct ConfigParams {
 
 impl Default for ConfigParams {
     fn default() -> ConfigParams {
-        ConfigParams {
-            config_addr: UInt256::default(),
-            config_params: HashmapE::with_bit_len(32)
-        }
+        Self::new()
     }
 }
 
 impl ConfigParams {
     /// create new instance ConfigParams
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self {
+            config_addr: UInt256::default(),
+            config_params: HashmapE::with_bit_len(32)
+        }
     }
 
-    pub fn with_address_and_params(config_addr: UInt256, data: Option<Cell>) -> Self {
+    pub const fn with_address_and_root(config_addr: UInt256, data: Cell) -> Self {
+        Self {
+            config_addr,
+            config_params: HashmapE::with_hashmap(32, Some(data))
+        }
+    }
+
+    pub const fn with_address_and_params(config_addr: UInt256, data: Option<Cell>) -> Self {
         Self {
             config_addr,
             config_params: HashmapE::with_hashmap(32, data)
@@ -64,8 +71,8 @@ impl ConfigParams {
 
     /// get config by index
     pub fn config(&self, index: u32) -> Result<Option<ConfigParamEnum>> {
-        let key = index.write_to_new_cell().unwrap();
-        if let Ok(Some(slice)) = self.config_params.get(key.into()) {
+        let key = index.serialize().unwrap();
+        if let Some(slice) = self.config_params.get(key.into())? {
             if let Some(cell) = slice.reference_opt(0) {
                 return Ok(Some(ConfigParamEnum::construct_from_slice_and_number(&mut cell.into(), index)?));
             }
@@ -73,12 +80,23 @@ impl ConfigParams {
         Ok(None)
     }
 
+    /// get config by index
+    pub fn config_present(&self, index: u32) -> Result<bool> {
+        let key = index.serialize().unwrap();
+        if let Some(slice) = self.config_params.get(key.into())? {
+            if slice.remaining_references() != 0 {
+                return Ok(true)
+            }
+        }
+        Ok(false)
+    }
+
     /// set config
     pub fn set_config(&mut self, config: ConfigParamEnum) -> Result<()> {
 
         let mut value = BuilderData::new();
         let index = config.write_to_cell(&mut value)?;
-        let key = index.write_to_new_cell()?;
+        let key = index.serialize()?;
         self.config_params.set_builder(key.into(), &value)?;
         Ok(())
     }
@@ -187,6 +205,12 @@ impl ConfigParams {
             _ => fail!("no elector params in config")
         }
     }
+    pub fn validators_count(&self) -> Result<ConfigParam16> {
+        match self.config(16)? {
+            Some(ConfigParamEnum::ConfigParam16(param)) => Ok(param),
+            _ => fail!("no elector params in config")
+        }
+    }
     // TODO 16 validators count
     // TODO 17 stakes config
     pub fn storage_prices(&self) -> Result<ConfigParam18> {
@@ -200,10 +224,8 @@ impl ConfigParams {
             if let Some(ConfigParamEnum::ConfigParam20(param)) = self.config(20)? {
                 return Ok(param)
             }
-        } else {
-            if let Some(ConfigParamEnum::ConfigParam21(param)) = self.config(21)? {
-                return Ok(param)
-            }
+        } else if let Some(ConfigParamEnum::ConfigParam21(param)) = self.config(21)? {
+            return Ok(param)
         }
         fail!("Gas prices not found")
     }
@@ -212,10 +234,8 @@ impl ConfigParams {
             if let Some(ConfigParamEnum::ConfigParam22(param)) = self.config(22)? {
                 return Ok(param)
             }
-        } else {
-            if let Some(ConfigParamEnum::ConfigParam23(param)) = self.config(23)? {
-                return Ok(param)
-            }
+        } else if let Some(ConfigParamEnum::ConfigParam23(param)) = self.config(23)? {
+            return Ok(param)
         }
         fail!("BlockLimits not found")
     }
@@ -224,10 +244,8 @@ impl ConfigParams {
             if let Some(ConfigParamEnum::ConfigParam24(param)) = self.config(24)? {
                 return Ok(param)
             }
-        } else {
-            if let Some(ConfigParamEnum::ConfigParam25(param)) = self.config(25)? {
-                return Ok(param)
-            }
+        } else if let Some(ConfigParamEnum::ConfigParam25(param)) = self.config(25)? {
+            return Ok(param)
         }
         fail!("Forward prices not found")
     }
@@ -237,10 +255,16 @@ impl ConfigParams {
             _ => fail!("no CatchainConfig in config_params")
         }
     }
+    pub fn consensus_config(&self) -> Result<ConsensusConfig> {
+        match self.config(29)? {
+            Some(ConfigParamEnum::ConfigParam29(ConfigParam29{ consensus_config})) => Ok(consensus_config),
+            _ => fail!("no ConsensusConfig in config_params")
+        }
+    }
     // TODO 29 consensus config
     pub fn fundamental_smc_addr(&self) -> Result<FundamentalSmcAddresses> {
         match self.config(31)? {
-            Some(ConfigParamEnum::ConfigParam31(param)) => Ok(param.fundamental_smc_addr.clone()),
+            Some(ConfigParamEnum::ConfigParam31(param)) => Ok(param.fundamental_smc_addr),
             _ => fail!("fundamental_smc_addr not found in config")
         }
     }
@@ -253,6 +277,9 @@ impl ConfigParams {
             }
         };
         Ok(vset)
+    }
+    pub fn prev_validator_set_present(&self) -> Result<bool> {
+        Ok(self.config_present(33)? || self.config_present(32)?)
     }
     pub fn validator_set(&self) -> Result<ValidatorSet> {
         let vset = match self.config(35)? {
@@ -274,6 +301,15 @@ impl ConfigParams {
         };
         Ok(vset)
     }
+    pub fn next_validator_set_present(&self) -> Result<bool> {
+        Ok(self.config_present(37)? || self.config_present(36)?)
+    }
+    pub fn read_cur_validator_set_and_cc_conf(&self) -> Result<(ValidatorSet, CatchainConfig)> {
+        Ok((
+            self.validator_set()?,
+            self.catchain_config()?
+        ))
+    }
     // TODO 39 validator signed temp keys
 }
 
@@ -285,6 +321,9 @@ pub enum GlobalCapabilities {
     CapSplitMergeTransactions = 16,
     CapShortDequeue = 32,
     CapMbppEnabled = 64,
+    CapFastStorageStat = 128,
+    CapInitCodeHash = 256,
+    CapOffHypercube = 512,
 }
 
 impl ConfigParams {
@@ -325,22 +364,20 @@ impl ConfigParams {
 
 impl ConfigParams {
     pub fn compute_validator_set_cc(&self, shard: &ShardIdent, at: u32, cc_seqno: u32, cc_seqno_delta: &mut u32) -> Result<Vec<ValidatorDescr>> {
-        let vset = self.validator_set()?;
-        let ccc = self.catchain_config()?;
+        let (vset, ccc) = self.read_cur_validator_set_and_cc_conf()?;
         if (*cc_seqno_delta & 0xfffffffe) != 0 {
             fail!("seqno_delta>1 is not implemented yet");
         }
         *cc_seqno_delta += cc_seqno;
         vset.calc_subset(&ccc, shard.shard_prefix_with_tag(), shard.workchain_id(), *cc_seqno_delta, at.into())
-        .map(|(set, _hash)| {
-            set
-        })
+            .map(|(set, _hash)| {
+                set
+            })
     }
     pub fn compute_validator_set(&self, shard: &ShardIdent, _at: u32, cc_seqno: u32) -> Result<Vec<ValidatorDescr>> {
-        let vset = self.validator_set()?;
-        let ccc = self.catchain_config()?;
+        let (vset, ccc) = self.read_cur_validator_set_and_cc_conf()?;
         vset.calc_subset(&ccc, shard.shard_prefix_with_tag(), shard.workchain_id(), cc_seqno, _at.into())
-        .map(|(set, _seq_no)| set)
+            .map(|(set, _seq_no)| set)
     }
 }
 
@@ -404,7 +441,7 @@ impl ConfigParams {
 impl Deserializable for ConfigParams {
     fn read_from(&mut self, cell: &mut SliceData) -> Result<()> {
         self.config_addr.read_from(cell)?;
-        *self.config_params.data_mut() = Some(cell.checked_drain_reference()?.clone());
+        *self.config_params.data_mut() = Some(cell.checked_drain_reference()?);
         Ok(())
     }
 }
@@ -461,6 +498,7 @@ pub enum ConfigParamEnum {
     ConfigParam36(ConfigParam36),
     ConfigParam37(ConfigParam37),
     ConfigParam39(ConfigParam39),
+    ConfigParam40(ConfigParam40),
     ConfigParamAny(u32, SliceData),
 }
 
@@ -476,6 +514,10 @@ macro_rules! read_config {
 
 impl ConfigParamEnum {
     
+    pub fn construct_from_cell_and_number(cell: Cell, index: u32) -> Result<ConfigParamEnum> {
+        Self::construct_from_slice_and_number(&mut cell.into(), index)
+    }
+
     /// read config from cell
     pub fn construct_from_slice_and_number(slice: &mut SliceData, index: u32) -> Result<ConfigParamEnum> {
         match index {
@@ -513,48 +555,50 @@ impl ConfigParamEnum {
             36 => { read_config!(ConfigParam36, ConfigParam36, slice) },
             37 => { read_config!(ConfigParam37, ConfigParam37, slice) },
             39 => { read_config!(ConfigParam39, ConfigParam39, slice) },
-            index @ _ => Ok(ConfigParamEnum::ConfigParamAny(index, slice.clone())),
+            40 => { read_config!(ConfigParam40, ConfigParam40, slice) },
+            index => Ok(ConfigParamEnum::ConfigParamAny(index, slice.clone())),
         }
     }
 
     /// Save config to cell
     pub fn write_to_cell(&self, cell: &mut BuilderData) -> Result<u32> {
         match self {
-            ConfigParamEnum::ConfigParam0(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(0)},
-            ConfigParamEnum::ConfigParam1(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(1)},
-            ConfigParamEnum::ConfigParam2(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(2)},
-            ConfigParamEnum::ConfigParam3(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(3)},
-            ConfigParamEnum::ConfigParam4(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(4)},
-            ConfigParamEnum::ConfigParam6(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(6)},
-            ConfigParamEnum::ConfigParam7(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(7)},
-            ConfigParamEnum::ConfigParam8(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(8)},
-            ConfigParamEnum::ConfigParam9(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(9)},
-            ConfigParamEnum::ConfigParam10(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(10)},
-            ConfigParamEnum::ConfigParam11(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(11)},
-            ConfigParamEnum::ConfigParam12(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(12)},
-            ConfigParamEnum::ConfigParam13(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(13)},
-            ConfigParamEnum::ConfigParam14(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(14)},
-            ConfigParamEnum::ConfigParam15(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(15)},
-            ConfigParamEnum::ConfigParam16(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(16)},
-            ConfigParamEnum::ConfigParam17(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(17)},
-            ConfigParamEnum::ConfigParam18(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(18)},
-            ConfigParamEnum::ConfigParam20(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(20)},
-            ConfigParamEnum::ConfigParam21(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(21)},
-            ConfigParamEnum::ConfigParam22(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(22)},
-            ConfigParamEnum::ConfigParam23(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(23)},
-            ConfigParamEnum::ConfigParam24(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(24)},
-            ConfigParamEnum::ConfigParam25(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(25)},
-            ConfigParamEnum::ConfigParam28(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(28)},
-            ConfigParamEnum::ConfigParam29(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(29)},
-            ConfigParamEnum::ConfigParam31(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(31)},
-            ConfigParamEnum::ConfigParam32(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(32)},
-            ConfigParamEnum::ConfigParam33(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(33)},
-            ConfigParamEnum::ConfigParam34(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(34)},
-            ConfigParamEnum::ConfigParam35(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(35)},
-            ConfigParamEnum::ConfigParam36(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(36)},
-            ConfigParamEnum::ConfigParam37(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(37)},
-            ConfigParamEnum::ConfigParam39(ref c) => { cell.append_reference(c.write_to_new_cell()?); Ok(39)},
-            ConfigParamEnum::ConfigParamAny(index, slice) => { cell.append_reference_cell(slice.into_cell()); Ok(*index)},
+            ConfigParamEnum::ConfigParam0(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(0)},
+            ConfigParamEnum::ConfigParam1(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(1)},
+            ConfigParamEnum::ConfigParam2(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(2)},
+            ConfigParamEnum::ConfigParam3(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(3)},
+            ConfigParamEnum::ConfigParam4(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(4)},
+            ConfigParamEnum::ConfigParam6(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(6)},
+            ConfigParamEnum::ConfigParam7(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(7)},
+            ConfigParamEnum::ConfigParam8(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(8)},
+            ConfigParamEnum::ConfigParam9(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(9)},
+            ConfigParamEnum::ConfigParam10(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(10)},
+            ConfigParamEnum::ConfigParam11(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(11)},
+            ConfigParamEnum::ConfigParam12(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(12)},
+            ConfigParamEnum::ConfigParam13(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(13)},
+            ConfigParamEnum::ConfigParam14(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(14)},
+            ConfigParamEnum::ConfigParam15(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(15)},
+            ConfigParamEnum::ConfigParam16(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(16)},
+            ConfigParamEnum::ConfigParam17(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(17)},
+            ConfigParamEnum::ConfigParam18(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(18)},
+            ConfigParamEnum::ConfigParam20(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(20)},
+            ConfigParamEnum::ConfigParam21(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(21)},
+            ConfigParamEnum::ConfigParam22(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(22)},
+            ConfigParamEnum::ConfigParam23(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(23)},
+            ConfigParamEnum::ConfigParam24(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(24)},
+            ConfigParamEnum::ConfigParam25(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(25)},
+            ConfigParamEnum::ConfigParam28(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(28)},
+            ConfigParamEnum::ConfigParam29(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(29)},
+            ConfigParamEnum::ConfigParam31(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(31)},
+            ConfigParamEnum::ConfigParam32(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(32)},
+            ConfigParamEnum::ConfigParam33(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(33)},
+            ConfigParamEnum::ConfigParam34(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(34)},
+            ConfigParamEnum::ConfigParam35(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(35)},
+            ConfigParamEnum::ConfigParam36(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(36)},
+            ConfigParamEnum::ConfigParam37(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(37)},
+            ConfigParamEnum::ConfigParam39(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(39)},
+            ConfigParamEnum::ConfigParam40(ref c) => { cell.append_reference_cell(c.serialize()?); Ok(40)},
+            ConfigParamEnum::ConfigParamAny(index, slice) => { cell.append_reference_cell(slice.clone().into_cell()); Ok(*index)},
         }
     }
 }
@@ -1174,6 +1218,11 @@ impl ConfigParam18 {
         self.map.len()
     } 
 
+    /// determine is empty
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    } 
+
     /// get value by index
     pub fn get(&self, index: u32) -> Result<StoragePrices> {
         self.map.get(&index)?.ok_or_else(|| error!(BlockError::InvalidIndex(index as usize)))
@@ -1182,7 +1231,7 @@ impl ConfigParam18 {
     /// insert value
     pub fn insert(&mut self, sp: &StoragePrices) -> Result<()> {
         let index = match self.map.0.get_max(false, &mut 0)? {
-            Some((key, _value)) => SliceData::from(key).get_next_u32()? + 1,
+            Some((key, _value)) => SliceData::from(key.into_cell()?).get_next_u32()? + 1,
             None => 0
         };
         self.map.set(&index, sp)
@@ -1292,7 +1341,7 @@ impl GasLimitsPrices {
     pub fn calc_max_gas_threshold(&self) -> u128 {
         let mut result = self.flat_gas_price as u128;
         if self.gas_limit > self.flat_gas_limit {
-            result += (self.gas_price as u128) * ((self.gas_limit - self.flat_gas_limit) as u128) >> 16;
+            result += ((self.gas_price as u128) * ((self.gas_limit - self.flat_gas_limit) as u128)) >> 16;
         }
         result
     }
@@ -1939,7 +1988,7 @@ impl WorkchainFormat0 {
     /// Setter for min_addr_len
     /// 
     pub fn set_min_addr_len(&mut self, min_addr_len: u16) -> Result<()> {
-        if min_addr_len >= 64 && min_addr_len <= 1023 {
+        if (64..=1023).contains(&min_addr_len) {
             self.min_addr_len.0 = min_addr_len as u32;
             Ok(())
         } else {
@@ -1962,7 +2011,7 @@ impl WorkchainFormat0 {
     /// Setter for max_addr_len
     /// 
     pub fn set_max_addr_len(&mut self, max_addr_len: u16) -> Result<()> {
-        if max_addr_len >= 64 && max_addr_len <= 1024 && self.min_addr_len.0 <= max_addr_len as u32 {
+        if (64..=1024).contains(&max_addr_len) && self.min_addr_len.0 <= max_addr_len as u32 {
             self.max_addr_len.0 = max_addr_len as u32;
             Ok(())
         } else {
@@ -2169,10 +2218,7 @@ impl WorkchainDescr {
     }
 
     pub fn basic(&self) -> bool {
-        match self.format {
-            WorkchainFormat::Basic(_) => true,
-            _ => false
-        }
+        matches!(self.format, WorkchainFormat::Basic(_))
     }
 
 }
@@ -2401,8 +2447,8 @@ impl Deserializable for ConfigVotingSetup {
 impl Serializable for ConfigVotingSetup {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
         cell.append_u8(CONFIG_VOTING_SETUP_TAG)?;
-        cell.append_reference(self.normal_params.write_to_new_cell()?);
-        cell.append_reference(self.critical_params.write_to_new_cell()?);
+        cell.append_reference_cell(self.normal_params.serialize()?);
+        cell.append_reference_cell(self.critical_params.serialize()?);
         Ok(())
     }
 }
@@ -2433,7 +2479,12 @@ impl ConfigParam12 {
 
     /// get length
     pub fn len(&self) -> Result<usize> {
-        Ok(self.workchains.len()?)
+        self.workchains.len()
+    } 
+
+    /// determine is empty
+    pub fn is_empty(&self) -> bool {
+        self.workchains.is_empty()
     } 
 
     /// get value by index
@@ -2472,14 +2523,14 @@ pub struct ConfigParam13 {
 
 impl Deserializable for ConfigParam13 {
     fn read_from(&mut self, slice: &mut SliceData) -> Result<()> {
-        self.cell = slice.into_cell();
+        self.cell = slice.clone().into_cell();
         Ok(())
     }
 }
 
 impl Serializable for ConfigParam13 {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
-        cell.append_builder(&BuilderData::from(&self.cell))?;
+        cell.checked_append_references_and_data(&self.cell.clone().into())?;
         Ok(())
     }
 }
@@ -2631,7 +2682,7 @@ impl Serializable for ValidatorSignedTempKey {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
         cell.append_u8(VALIDATOR_SIGNED_TEMP_KEY_TAG)?; // TODO what is tag length in bits???
         self.signature.write_to(cell)?;
-        cell.append_reference(self.key.write_to_new_cell()?);
+        cell.append_reference_cell(self.key.serialize()?);
         Ok(())
     }
 }
@@ -2656,17 +2707,22 @@ impl ConfigParam39 {
         self.validator_keys.len()
     } 
 
+    /// determine is empty
+    pub fn is_empty(&self) -> bool {
+        self.validator_keys.is_empty()
+    } 
+
     /// get value by key
     pub fn get(&self, key: &UInt256) -> Result<ValidatorSignedTempKey> {
         self
             .validator_keys
-            .get(key)
-            .and_then(|vtk| vtk.ok_or_else(|| error!(BlockError::InvalidArg(key.to_hex_string()))))
+            .get(key)?
+            .ok_or_else(|| error!(BlockError::InvalidArg(format!("{:x}", key))))
     }
 
     /// insert value
     pub fn insert(&mut self, key: &UInt256, validator_key: &ValidatorSignedTempKey) -> Result<()> {
-        self.validator_keys.set(key, &validator_key)
+        self.validator_keys.set(key, validator_key)
     }
 }
 
@@ -2680,6 +2736,111 @@ impl Deserializable for ConfigParam39 {
 impl Serializable for ConfigParam39 {
     fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
         self.validator_keys.write_to(cell)?;
+        Ok(())
+    }
+}
+
+///
+/// ConfigParam 40 struct
+///
+
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
+pub struct ConfigParam40 {
+    pub slashing_config: SlashingConfig,
+}
+
+impl ConfigParam40 {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Deserializable for ConfigParam40 {
+    fn read_from(&mut self, cell: &mut SliceData) -> Result<()> {
+        self.slashing_config.read_from(cell)?;
+        Ok(())
+    }
+}
+
+impl Serializable for ConfigParam40 {
+    fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
+        self.slashing_config.write_to(cell)?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SlashingConfig {
+    pub slashing_period_mc_blocks_count : u32, //number of MC blocks for one slashing iteration
+    pub resend_mc_blocks_count : u32, //number of MC blocks to resend slashing messages in case they have not been delivered
+    pub min_samples_count : u32, //minimal number of samples to compute statistics parameters
+    pub collations_score_weight : u32, //weight for collations score in total score
+    pub signing_score_weight : u32, //weight for signing score in total score
+    pub min_slashing_protection_score : u32, //minimal score to protect from any slashing [0..100]
+    pub z_param_numerator : u32, //numerator for Z param of confidence interval
+    pub z_param_denominator : u32, //numerator for Z param of confidence interval
+}
+
+impl SlashingConfig {
+    pub fn new() -> Self {
+        Self {
+            slashing_period_mc_blocks_count : 100,
+            resend_mc_blocks_count : 4,
+            min_samples_count : 30,
+            collations_score_weight : 0,
+            signing_score_weight : 1,
+            min_slashing_protection_score : 70,
+            z_param_numerator : 2326, //98% confidence
+            z_param_denominator : 1000,
+        }
+    }
+}
+
+impl Default for SlashingConfig {
+    fn default() -> SlashingConfig {
+        Self::new()
+    }
+}
+
+const SLASHING_VERSION1_TAG: u8 = 1;
+
+impl Deserializable for SlashingConfig {
+    fn read_from(&mut self, cell: &mut SliceData) -> Result<()> {
+        match cell.get_next_byte()? {
+            SLASHING_VERSION1_TAG => {
+                self.slashing_period_mc_blocks_count.read_from(cell)?;
+                self.resend_mc_blocks_count.read_from(cell)?;
+                self.min_samples_count.read_from(cell)?;
+                self.collations_score_weight.read_from(cell)?;
+                self.signing_score_weight.read_from(cell)?;
+                self.min_slashing_protection_score.read_from(cell)?;
+                self.z_param_numerator.read_from(cell)?;
+                self.z_param_denominator.read_from(cell)?;
+            }
+            tag => {
+                fail!(
+                    BlockError::InvalidConstructorTag {
+                        t: tag as u32,
+                        s: "SlashingConfig".to_string()
+                    }
+                )
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Serializable for SlashingConfig {
+    fn write_to(&self, cell: &mut BuilderData) -> Result<()> {
+        cell.append_u8(SLASHING_VERSION1_TAG)?;
+        self.slashing_period_mc_blocks_count.write_to(cell)?;
+        self.resend_mc_blocks_count.write_to(cell)?;
+        self.min_samples_count.write_to(cell)?;
+        self.collations_score_weight.write_to(cell)?;
+        self.signing_score_weight.write_to(cell)?;
+        self.min_slashing_protection_score.write_to(cell)?;
+        self.z_param_numerator.write_to(cell)?;
+        self.z_param_denominator.write_to(cell)?;
         Ok(())
     }
 }

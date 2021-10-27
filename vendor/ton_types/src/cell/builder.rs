@@ -14,7 +14,9 @@
 use std::convert::From;
 use std::fmt;
 
-use crate::{error, fail};
+use smallvec::SmallVec;
+
+use crate::{MAX_DATA_BITS, error, fail};
 use crate::cell::{append_tag, Cell, CellType, DataCell, find_tag, LevelMask, SliceData};
 use crate::types::{ExceptionCode, Result};
 
@@ -22,9 +24,9 @@ const EXACT_CAPACITY: usize = 128;
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct BuilderData {
-    data: Vec<u8>,
+    data: SmallVec<[u8; 128]>,
     length_in_bits: usize,
-    references: Vec<Cell>,
+    references: SmallVec<[Cell; 4]>,
     cell_type: CellType,
     level_mask: LevelMask,
 }
@@ -67,7 +69,7 @@ impl From<&mut BuilderData> for SliceData {
 
 impl From<&&Cell> for BuilderData {
     fn from(cell: &&Cell) -> Self {
-        let mut builder = BuilderData::with_bitstring(cell.data().to_vec()).unwrap();
+        let mut builder = BuilderData::with_bitstring(SmallVec::from_slice(cell.data())).unwrap();
         builder.references = cell.clone_references();
         builder.cell_type = cell.cell_type();
         builder.level_mask = cell.level_mask();
@@ -77,7 +79,7 @@ impl From<&&Cell> for BuilderData {
 
 impl From<&Cell> for BuilderData {
     fn from(cell: &Cell) -> Self {
-        let mut builder = BuilderData::with_bitstring(cell.data().to_vec()).unwrap();
+        let mut builder = BuilderData::with_bitstring(SmallVec::from_slice(cell.data())).unwrap();
         builder.references = cell.clone_references();
         builder.cell_type = cell.cell_type();
         builder.level_mask = cell.level_mask();
@@ -87,7 +89,7 @@ impl From<&Cell> for BuilderData {
 
 impl From<Cell> for BuilderData {
     fn from(cell: Cell) -> Self {
-        let mut builder = BuilderData::with_bitstring(cell.data().to_vec()).unwrap();
+        let mut builder = BuilderData::with_bitstring(SmallVec::from_slice(cell.data())).unwrap();
         builder.references = cell.clone_references();
         builder.cell_type = cell.cell_type();
         builder.level_mask = cell.level_mask();
@@ -102,18 +104,19 @@ impl Default for BuilderData {
 }
 
 impl BuilderData {
-    pub const fn default() -> Self { Self::new() }
-    pub const fn new() -> Self {
+    pub fn default() -> Self { Self::new() }
+    pub fn new() -> Self {
         BuilderData {
-            data: Vec::new(),
+            data: SmallVec::new(),
             length_in_bits: 0,
-            references: vec![],
+            references:SmallVec::new(),
             cell_type: CellType::Ordinary,
             level_mask: LevelMask(0),
         }
     }
 
-    pub fn with_raw(mut data: Vec<u8>, length_in_bits: usize) -> Result<BuilderData> {
+    pub fn with_raw(data: impl Into<SmallVec<[u8; 128]>>, length_in_bits: usize) -> Result<BuilderData> {
+        let mut data = data.into();
         if length_in_bits > data.len() * 8 {
             fail!(ExceptionCode::FatalError)
         } else if length_in_bits > BuilderData::bits_capacity() {
@@ -124,31 +127,33 @@ impl BuilderData {
             data.truncate(length_in_bits / 8);
         } else {
             data.truncate(1 + length_in_bits / 8);
-            data.last_mut().map(|last_byte| *last_byte = (*last_byte >> (8 - data_shift)) << (8 - data_shift));
+            if let Some(last_byte) = data.last_mut() {
+                *last_byte = (*last_byte >> (8 - data_shift)) << (8 - data_shift);
+            }
         }
         data.reserve_exact(EXACT_CAPACITY - data.len());
         Ok(BuilderData {
             data,
             length_in_bits,
-            references: vec![],
+            references: SmallVec::new(),
             cell_type: CellType::Ordinary,
             level_mask: LevelMask::with_mask(0),
         })
     }
 
-    pub fn with_raw_and_refs<TRefs>(data: Vec<u8>, length_in_bits: usize, refs: TRefs) -> Result<BuilderData>
+    pub fn with_raw_and_refs<TRefs>(data: impl Into<SmallVec<[u8; 128]>>, length_in_bits: usize, refs: TRefs) -> Result<BuilderData>
     where
         TRefs: IntoIterator<Item = Cell>
     {
         let mut builder = BuilderData::with_raw(data, length_in_bits)?;
-        let mut iter = refs.into_iter();
-        while let Some(value) = iter.next() {
+        for value in refs.into_iter() {
             builder.checked_append_reference(value)?;
         }
         Ok(builder)
     }
 
-    pub fn with_bitstring(data: Vec<u8>) -> Result<BuilderData> {
+    pub fn with_bitstring(data: impl Into<SmallVec<[u8; 128]>>) -> Result<BuilderData> {
+        let data = data.into();
         let length_in_bits = find_tag(data.as_slice());
         if length_in_bits == 0 {
             Ok(BuilderData::new())
@@ -161,7 +166,11 @@ impl BuilderData {
         }
     }
 
-    pub fn into_cell(mut self) -> Result<Cell> {
+    /// finalize cell allowing maximal depth
+    pub fn into_cell(self) -> Result<Cell> { self.finalize(0) }
+
+    /// use max_depth to limit depth
+    pub fn finalize(mut self, max_depth: u16) -> Result<Cell> {
         if self.cell_type == CellType::Ordinary {
             // For Ordinary cells - level is set automatically,
             // for other types - it must be set manually by set_level_mask()
@@ -172,13 +181,12 @@ impl BuilderData {
         append_tag(&mut self.data, self.length_in_bits);
 
         Ok(Cell::with_cell_impl(
-            DataCell::with_params(
+            DataCell::with_max_depth(
                 self.references,
                 self.data,
                 self.cell_type,
                 self.level_mask.mask(),
-                None,
-                None,
+                max_depth,
             )?
         ))
     }
@@ -192,53 +200,31 @@ impl BuilderData {
     }
 
     // TODO: refactor it compare directly in BuilderData
-    pub fn compare_data(&self, other: &Self) -> (Option<usize>, Option<usize>) {
+    pub fn compare_data(&self, other: &Self) -> Result<(Option<usize>, Option<usize>)> {
         if self == other {
-            return (None, None)
+            return Ok((None, None))
         }
-        let label1 = SliceData::from(self);
-        let label2 = SliceData::from(other);
+        let label1 = SliceData::from(self.clone().into_cell()?);
+        let label2 = SliceData::from(other.clone().into_cell()?);
         let (_prefix, rem1, rem2) = SliceData::common_prefix(&label1, &label2);
         // unwraps are safe because common_prefix returns None if slice is empty
-        (
-            rem1.map(|rem| rem.get_bits(0, 1).expect("check common_prefix function") as usize),
-            rem2.map(|rem| rem.get_bits(0, 1).expect("check common_prefix function") as usize)
-        )
+        Ok((
+            rem1.map(|rem| rem.get_bit(0).expect("check common_prefix function") as usize),
+            rem2.map(|rem| rem.get_bit(0).expect("check common_prefix function") as usize)
+        ))
     }
 
     pub fn from_slice(slice: &SliceData) -> BuilderData {
         let refs_count = slice.remaining_references();
         let references = (0..refs_count)
-            .map(|i| slice.reference(i).unwrap().clone())
-            .collect::<Vec<_>>();
+            .map(|i| slice.reference(i).unwrap())
+            .collect::<SmallVec<_>>();
         
         let mut builder = slice.remaining_data();
         builder.references = references;
         builder.cell_type = slice.cell_type();
         builder.level_mask = slice.level_mask();
         builder
-    }
-
-    pub fn update_cell<T, P, R>(&mut self, mutate: T, args: P) -> R
-    where
-        T: Fn(&mut Vec<u8>, &mut usize, &mut Vec<Cell>, P)  -> R
-    {
-        let result = mutate(&mut self.data, &mut self.length_in_bits, &mut self.references, args);
-
-        debug_assert!(self.length_in_bits <= BuilderData::bits_capacity());
-        debug_assert!(self.data.len() * 8 <= BuilderData::bits_capacity() + 1);
-        result
-    }
-
-    /// returns data of cell
-    pub fn cell_data(&mut self, data: &mut Vec<u8>, bits: &mut usize, children: &mut Vec<Cell>) {
-        *data = self.data.clone();
-        *bits = self.length_in_bits;
-        children.clear();
-        let n = self.references.len();
-        for i in 0..n {
-            children.push(self.references[i].clone())
-        }
     }
 
     pub fn length_in_bits(&self) -> usize {
@@ -251,7 +237,7 @@ impl BuilderData {
 
     pub fn prepend_raw(&mut self, slice: &[u8], bits: usize) -> Result<&mut Self> {
         if bits != 0 {
-            let mut buffer = BuilderData::with_raw(slice.to_vec(), bits)?;
+            let mut buffer = BuilderData::with_raw(SmallVec::from_slice(slice), bits)?;
             buffer.append_raw(self.data(), self.length_in_bits())?;
             self.length_in_bits = buffer.length_in_bits;
             self.data = buffer.data;
@@ -285,7 +271,7 @@ impl BuilderData {
         assert_eq!(self.length_in_bits() % 8, 0);
 
         self.data.truncate(self.length_in_bits / 8);
-        self.data.extend(slice);
+        self.data.extend(slice.iter().copied());
         self.length_in_bits += bits;
         self.data.truncate(self.length_in_bits / 8);
     }
@@ -295,7 +281,7 @@ impl BuilderData {
         assert_eq!(self.length_in_bits() % 8, 0);
 
         self.data.truncate(self.length_in_bits / 8);
-        self.data.extend(slice);
+        self.data.extend(slice.iter().copied());
         self.length_in_bits += bits;
         self.data.truncate(1 + self.length_in_bits / 8);
 
@@ -343,16 +329,27 @@ impl BuilderData {
         &mut self.level_mask
     }
 
-    pub fn append_reference(&mut self, child: BuilderData) {
-        self.references.push(Cell::from(child));
-    }
-
     pub fn append_reference_cell(&mut self, child: Cell) {
         self.references.push(child);
     }
 
-    pub fn prepend_reference(&mut self, child: BuilderData) {
-        self.references.insert(0, Cell::from(child));
+    pub fn prepend_reference_cell(&mut self, child: Cell) {
+        self.references.insert(0, child);
+    }
+
+    pub fn replace_data(&mut self, data: impl Into<SmallVec<[u8; 128]>>, length_in_bits: usize) {
+        let data = data.into();
+        self.length_in_bits = std::cmp::min(std::cmp::min(length_in_bits, MAX_DATA_BITS), data.len() * 8);
+        self.data = data;
+    }
+
+    pub fn replace_reference_cell(&mut self, index: usize, child: Cell) {
+        match self.references.get_mut(index) {
+            None => {
+                log::error!("replacing not existed cell by index {} with cell hash {:x}", index, child.repr_hash());
+            }
+            Some(old) => *old = child
+        }
     }
 
     pub fn set_type(&mut self, cell_type: CellType) {
@@ -378,10 +375,19 @@ impl BuilderData {
     }
 }
 
+// use only for test purposes
+impl BuilderData {
+    pub fn append_reference(&mut self, child: BuilderData) {
+        self.references.push(child.into_cell().unwrap());
+    }
+    pub fn prepend_reference(&mut self, child: BuilderData) {
+        self.references.insert(0, child.into_cell().unwrap());
+    }
+}
+
 impl fmt::Display for BuilderData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let cell: Cell = self.into();
-        write!(f, "{}", cell)
+        write!(f, "data: {} len: {} reference count: {}", hex::encode(&self.data), self.length_in_bits, self.references.len())
     }
 }
 

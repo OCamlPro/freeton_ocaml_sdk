@@ -54,6 +54,15 @@ impl BuilderData {
         }  
     }
 
+    pub fn checked_prepend_reference(&mut self, cell: Cell) -> Result<&mut Self> {
+        if self.references().len() >= MAX_REFERENCES_COUNT {
+            fail!(ExceptionCode::CellOverflow)
+        } else {
+            self.prepend_reference_cell(cell);
+            Ok(self)
+        }
+    }
+
     pub fn check_enough_space(&self, size: usize) -> bool {
         self.length_in_bits() + size <= MAX_DATA_BITS 
     }
@@ -104,7 +113,7 @@ impl IBitstring for BuilderData {
         if self.can_append(data) {
             self.append_raw(data.data(), data.length_in_bits())?;
             for i in 0..data.references().len() {
-                self.append_reference(BuilderData::from(&data.references()[i]));
+                self.checked_append_reference(data.references()[i].clone())?;
             }
             Ok(self)
         } else {
@@ -138,7 +147,7 @@ impl IBitstring for BuilderData {
             8..=15 => self.append_raw(&((value as u16) << (16 - bits)).to_be_bytes(), bits),
             16..=31 => self.append_raw(&((value as u32) << (32 - bits)).to_be_bytes(), bits),
             32..=63 => self.append_raw(&((value as u64) << (64 - bits)).to_be_bytes(), bits),
-            bits @ _ => unimplemented!("bits: {}", bits)
+            bits => unimplemented!("bits: {}", bits)
         }
     }
     fn append_u8(&mut self, value: u8) -> Result<&mut Self> {

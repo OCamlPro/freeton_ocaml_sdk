@@ -11,11 +11,11 @@
 * limitations under the License.
 */
 
-use crate::cell::SliceData;
+use crate::cell::{BuilderData, SliceData};
 use num::FromPrimitive;
 use sha2::Digest;
-use std::{fmt, fmt::{LowerHex, UpperHex}, cmp, str, convert::TryInto};
-
+use std::{cmp, convert::TryInto, fmt, fmt::{LowerHex, UpperHex}, str::{self, FromStr}};
+use smallvec::SmallVec;
 
 pub type Result<T> = std::result::Result<T, failure::Error>;
 pub type Failure = Option<failure::Error>;
@@ -51,45 +51,25 @@ macro_rules! fail {
     };
 }
 
+// TBD: Copy
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct UInt256([u8; 32]);
 
 impl PartialEq<SliceData> for UInt256 {
     fn eq(&self, other: &SliceData) -> bool {
         if other.remaining_bits() == 256 {
-            return &self.0 == other.get_bytestring(0).as_slice()
+            return self.0 == other.get_bytestring(0).as_slice()
         }
-        return false
+        false
     }
 }
 
 impl PartialEq<SliceData> for &UInt256 {
     fn eq(&self, other: &SliceData) -> bool {
         if other.remaining_bits() == 256 {
-            return &self.0 == other.get_bytestring(0).as_slice()
+            return self.0 == other.get_bytestring(0).as_slice()
         }
-        return false
-    }
-}
-
-impl PartialEq<Vec<u8>> for UInt256 {
-    fn eq(&self, other: &Vec<u8>) -> bool {
-        if other.len() == 32 {
-            return &self.0 == other.as_slice()
-        }
-        return false
-    }
-}
-
-impl PartialEq<UInt256> for &UInt256 {
-    fn eq(&self, other: &UInt256) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl PartialEq<&UInt256> for UInt256 {
-    fn eq(&self, other: &&UInt256) -> bool {
-        self.0 == other.0
+        false
     }
 }
 
@@ -112,27 +92,33 @@ impl UInt256 {
         true
     }
 
+    pub const fn as_array(&self) -> &[u8; 32] {
+        &self.0
+    }
+
     pub const fn as_slice(&self) -> &[u8; 32] {
         &self.0
     }
 
     // Returns solid string like this: a80b23bfe4d301497f3ce11e753f23e8dec32368945ee279d044dbc1f91ace2a
-    pub fn to_hex_string(&self) -> String {
+    pub fn as_hex_string(&self) -> String {
         hex::encode(self.0)
     }
 
-    pub fn from_str(value: &str) -> Result<Self> {
-        let bytes = match value.len() {
-            64 => hex::decode(value)?,
-            44 => base64::decode(value)?,
-            _ => fail!("invalid account ID string length (64 expected)")
-        };
-        Ok(Self(bytes.try_into().unwrap()))
-    }
+    // TODO: usage should be changed to as_hex_string
+    #[allow(clippy::wrong_self_convention)]
+    pub fn to_hex_string(&self) -> String { self.as_hex_string() }
 
-    pub fn calc_file_hash(bytes: &[u8]) -> Self {
-        let hash: [u8; 32] = sha2::Sha256::digest(bytes).into();
-        Self(hash)
+    // TODO: usage should be changed to str::FromStr
+    // #[deprecated]
+    #[allow(clippy::should_implement_trait)]
+    #[cfg(not(test))]
+    pub fn from_str(value: &str) -> Result<Self> { FromStr::from_str(value) }
+
+    pub fn calc_file_hash(bytes: &[u8]) -> Self { Self::calc_sha256(bytes) }
+
+    pub fn calc_sha256(bytes: &[u8]) -> Self {
+        Self(sha2::Sha256::digest(bytes).into())
     }
 
     pub fn first_u64(&self) -> u64 {
@@ -175,6 +161,14 @@ impl UInt256 {
         Self((0..32).map(|_| { rand::random::<u8>() }).collect::<Vec<u8>>().try_into().unwrap())
     }
 
+    pub fn inner(self) -> [u8; 32] {
+        self.0
+    }
+
+    pub fn into_vec(self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+
     pub const ZERO: UInt256 = UInt256([0; 32]);
     pub const MIN: UInt256 = UInt256([0; 32]);
     pub const MAX: UInt256 = UInt256([0xFF; 32]);
@@ -189,41 +183,44 @@ impl From<[u8; 32]> for UInt256 {
     }
 }
 
-impl Into<SliceData> for &UInt256 {
-    fn into(self) -> SliceData {
-        SliceData::from_raw(self.0.to_vec(), 256)
+// TBD: use inner
+impl From<UInt256> for [u8; 32] {
+    fn from(data: UInt256) -> Self {
+        data.0
     }
 }
 
-impl Into<[u8; 32]> for UInt256 {
-    fn into(self) -> [u8; 32] {
-        self.0
-    }
-}
-
-impl<'a> Into<&'a [u8; 32]> for &'a UInt256 {
-    fn into(self) -> &'a [u8; 32] {
-        &self.0
-    }
-}
-
-impl<'a> From<&'a [u8; 32]> for UInt256 {
+impl From<&[u8; 32]> for UInt256 {
     fn from(data: &[u8; 32]) -> Self {
-        UInt256(data.clone())
+        UInt256(*data)
     }
 }
 
-// to be deleted
 impl From<&[u8]> for UInt256 {
     fn from(value: &[u8]) -> Self { Self::from_le_bytes(value) }
 }
 
-// to be deleted
 impl From<Vec<u8>> for UInt256 {
     fn from(value: Vec<u8>) -> Self {
         match value.try_into() {
             Ok(hash) => Self(hash),
             Err(value) => UInt256::from_le_bytes(value.as_slice())
+        }
+    }
+}
+
+impl FromStr for UInt256 {
+    type Err = failure::Error;
+    fn from_str(value: &str) -> Result<Self> {
+        let bytes = match value.len() {
+            64 => hex::decode(value)?,
+            66 => hex::decode(&value[2..])?,
+            44 => base64::decode(value)?,
+            len => fail!("invalid account ID string length (64 expected), but got {} for string {}", len, value)
+        };
+        match bytes.try_into() {
+            Ok(bytes) => Ok(Self(bytes)),
+            Err(bytes) => fail!("array length is {} for {}", bytes.len(), value)
         }
     }
 }
@@ -246,9 +243,11 @@ impl fmt::Display for UInt256 {
 impl LowerHex for UInt256 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if f.alternate() {
-            write!(f, "0x")?;
+            write!(f, "0x{}", hex::encode(&self.0))
+        } else {
+            write!(f, "{}", hex::encode(&self.0))
+            // write!(f, "{}...{}", hex::encode(&self.0[..2]), hex::encode(&self.0[30..32]))
         }
-        write!(f, "{}", hex::encode(&self.0))
     }
 }
 
@@ -261,9 +260,15 @@ impl UpperHex for UInt256 {
     }
 }
 
-impl std::convert::AsRef<[u8]> for &UInt256 {
+impl AsRef<[u8; 32]> for UInt256 {
+    fn as_ref(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
+impl AsRef<[u8]> for UInt256 {
     fn as_ref(&self) -> &[u8] {
-        self.as_slice()
+        &self.0
     }
 }
 
@@ -271,22 +276,26 @@ pub type AccountId = SliceData;
 
 impl From<[u8; 32]> for AccountId {
     fn from(data: [u8; 32]) -> AccountId {
-        let data = data.to_vec();
-        SliceData::from_raw(data, 256)
+        BuilderData::with_raw(SmallVec::from_slice(&data), 256).unwrap().into_cell().unwrap().into()
     }
 }
 
 impl From<UInt256> for AccountId {
     fn from(data: UInt256) -> AccountId {
-        let data = data.0.to_vec();
-        SliceData::from_raw(data, 256)
+        BuilderData::with_raw(SmallVec::from_slice(&data.0), 256).unwrap().into_cell().unwrap().into()
     }
 }
 
-impl str::FromStr for AccountId {
+impl From<&UInt256> for AccountId {
+    fn from(data: &UInt256) -> AccountId {
+        BuilderData::with_raw(SmallVec::from_slice(&data.0), 256).unwrap().into_cell().unwrap().into()
+    }
+}
+
+impl FromStr for AccountId {
     type Err = failure::Error;
-    fn from_str(value: &str) -> Result<Self> {
-        let uint = UInt256::from_str(value)?;
+    fn from_str(s: &str) -> Result<Self> {
+        let uint: UInt256 = FromStr::from_str(s)?;
         Ok(AccountId::from(uint.0))
     }
 }
@@ -333,7 +342,7 @@ impl fmt::Display for ExceptionCode {
 }
 */
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 impl ExceptionCode {
 /*
     pub fn message(&self) -> &'static str {
@@ -441,3 +450,4 @@ impl<T: std::io::Read> ByteOrderRead for T {
 }
 
 pub type Bitmask = u8;
+

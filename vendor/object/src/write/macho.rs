@@ -1,12 +1,11 @@
 use std::mem;
-use std::vec::Vec;
 
 use crate::endian::*;
 use crate::macho;
-use crate::pod::{bytes_of, WritableBuffer};
 use crate::write::string::*;
 use crate::write::util::*;
 use crate::write::*;
+use crate::AddressSize;
 
 #[derive(Default, Clone, Copy)]
 struct SectionOffsets {
@@ -23,7 +22,7 @@ struct SymbolOffsets {
     str_id: Option<StringId>,
 }
 
-impl Object {
+impl<'a> Object<'a> {
     pub(crate) fn macho_set_subsections_via_symbols(&mut self) {
         let flags = match self.flags {
             FileFlags::MachO { flags } => flags,
@@ -116,7 +115,7 @@ impl Object {
 
         // Create the initializer symbol.
         let mut name = symbol.name.clone();
-        name.extend(b"$tlv$init");
+        name.extend_from_slice(b"$tlv$init");
         let init_symbol_id = self.add_raw_symbol(Symbol {
             name,
             value: 0,
@@ -191,7 +190,7 @@ impl Object {
         let macho32 = MachO32 { endian };
         let macho64 = MachO64 { endian };
         let macho: &dyn MachO = match address_size {
-            AddressSize::U32 => &macho32,
+            AddressSize::U8 | AddressSize::U16 | AddressSize::U32 => &macho32,
             AddressSize::U64 => &macho64,
         };
         let pointer_align = address_size.bytes() as usize;
@@ -300,9 +299,8 @@ impl Object {
 
         // Calculate size of strtab.
         let strtab_offset = offset;
-        let mut strtab_data = Vec::new();
-        // Null name.
-        strtab_data.push(0);
+        // Start with null name.
+        let mut strtab_data = vec![0];
         strtab.write(1, &mut strtab_data);
         offset += strtab_data.len();
 
@@ -444,7 +442,7 @@ impl Object {
             stroff: U32::new(endian, strtab_offset as u32),
             strsize: U32::new(endian, strtab_data.len() as u32),
         };
-        buffer.extend(bytes_of(&symtab_command));
+        buffer.write(&symtab_command);
 
         // Write section data.
         for (index, section) in self.sections.iter().enumerate() {
@@ -452,7 +450,7 @@ impl Object {
             if len != 0 {
                 write_align(buffer, section.align as usize);
                 debug_assert_eq!(section_offsets[index].offset, buffer.len());
-                buffer.extend(section.data.as_slice());
+                buffer.write_bytes(&section.data);
             }
         }
         debug_assert_eq!(segment_file_offset + segment_file_size, buffer.len());
@@ -525,7 +523,7 @@ impl Object {
 
         // Write strtab.
         debug_assert_eq!(strtab_offset, buffer.len());
-        buffer.extend(&strtab_data);
+        buffer.write_bytes(&strtab_data);
 
         // Write relocations.
         for (index, section) in self.sections.iter().enumerate() {
@@ -601,7 +599,7 @@ impl Object {
                         r_extern,
                         r_type,
                     };
-                    buffer.extend(bytes_of(&reloc_info.relocation(endian)));
+                    buffer.write(&reloc_info.relocation(endian));
                 }
             }
         }
@@ -702,7 +700,7 @@ impl<E: Endian> MachO for MachO32<E> {
             sizeofcmds: U32::new(endian, header.sizeofcmds),
             flags: U32::new(endian, header.flags),
         };
-        buffer.extend(bytes_of(&header));
+        buffer.write(&header);
     }
 
     fn write_segment_command(&self, buffer: &mut dyn WritableBuffer, segment: SegmentCommand) {
@@ -720,7 +718,7 @@ impl<E: Endian> MachO for MachO32<E> {
             nsects: U32::new(endian, segment.nsects),
             flags: U32::new(endian, segment.flags),
         };
-        buffer.extend(bytes_of(&segment));
+        buffer.write(&segment);
     }
 
     fn write_section(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader) {
@@ -738,7 +736,7 @@ impl<E: Endian> MachO for MachO32<E> {
             reserved1: U32::default(),
             reserved2: U32::default(),
         };
-        buffer.extend(bytes_of(&section));
+        buffer.write(&section);
     }
 
     fn write_nlist(&self, buffer: &mut dyn WritableBuffer, nlist: Nlist) {
@@ -750,7 +748,7 @@ impl<E: Endian> MachO for MachO32<E> {
             n_desc: U16::new(endian, nlist.n_desc),
             n_value: U32::new(endian, nlist.n_value as u32),
         };
-        buffer.extend(bytes_of(&nlist));
+        buffer.write(&nlist);
     }
 }
 
@@ -792,7 +790,7 @@ impl<E: Endian> MachO for MachO64<E> {
             flags: U32::new(endian, header.flags),
             reserved: U32::default(),
         };
-        buffer.extend(bytes_of(&header));
+        buffer.write(&header);
     }
 
     fn write_segment_command(&self, buffer: &mut dyn WritableBuffer, segment: SegmentCommand) {
@@ -810,7 +808,7 @@ impl<E: Endian> MachO for MachO64<E> {
             nsects: U32::new(endian, segment.nsects),
             flags: U32::new(endian, segment.flags),
         };
-        buffer.extend(bytes_of(&segment));
+        buffer.write(&segment);
     }
 
     fn write_section(&self, buffer: &mut dyn WritableBuffer, section: SectionHeader) {
@@ -829,7 +827,7 @@ impl<E: Endian> MachO for MachO64<E> {
             reserved2: U32::default(),
             reserved3: U32::default(),
         };
-        buffer.extend(bytes_of(&section));
+        buffer.write(&section);
     }
 
     fn write_nlist(&self, buffer: &mut dyn WritableBuffer, nlist: Nlist) {
@@ -841,6 +839,6 @@ impl<E: Endian> MachO for MachO64<E> {
             n_desc: U16::new(endian, nlist.n_desc),
             n_value: U64Bytes::new(endian, nlist.n_value),
         };
-        buffer.extend(bytes_of(&nlist));
+        buffer.write(&nlist);
     }
 }

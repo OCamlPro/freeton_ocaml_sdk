@@ -57,6 +57,12 @@ fn register_crypto(handlers: &mut RuntimeHandlers) {
 
     module.register_error_code::<crate::crypto::ErrorCode>();
     module.register_type::<crate::crypto::SigningBoxHandle>();
+    module.register_type::<crate::crypto::EncryptionBoxHandle>();
+    module.register_type::<crate::crypto::EncryptionBoxInfo>();
+    module.register_type::<crate::crypto::EncryptionAlgorithm>();
+    module.register_type::<crate::crypto::CipherMode>();
+    module.register_type::<crate::crypto::AesParams>();
+    module.register_type::<crate::crypto::AesInfo>();
 
     // Math
 
@@ -197,25 +203,52 @@ fn register_crypto(handlers: &mut RuntimeHandlers) {
 
     // Boxes
 
+    // Signing box
     module.register_async_fn_with_app_object_no_args(
         super::crypto::register_signing_box,
         super::crypto::register_signing_box_api,
     );
     module.register_async_fn(
         crate::crypto::get_signing_box,
-        crate::crypto::boxes::get_signing_box_api,
+        crate::crypto::boxes::signing_box::get_signing_box_api,
     );
     module.register_async_fn(
         crate::crypto::signing_box_get_public_key,
-        crate::crypto::boxes::signing_box_get_public_key_api,
+        crate::crypto::boxes::signing_box::signing_box_get_public_key_api,
     );
     module.register_async_fn(
         crate::crypto::signing_box_sign,
-        crate::crypto::boxes::signing_box_sign_api,
+        crate::crypto::boxes::signing_box::signing_box_sign_api,
     );
     module.register_sync_fn(
         crate::crypto::remove_signing_box,
-        crate::crypto::boxes::remove_signing_box_api,
+        crate::crypto::boxes::signing_box::remove_signing_box_api,
+    );
+
+    // Encryption box
+    module.register_async_fn_with_app_object_no_args(
+        super::crypto::register_encryption_box,
+        super::crypto::register_encryption_box_api,
+    );
+    module.register_sync_fn(
+        crate::crypto::remove_encryption_box,
+        crate::crypto::boxes::encryption_box::remove_encryption_box_api,
+    );
+    module.register_async_fn(
+        crate::crypto::encryption_box_get_info,
+        crate::crypto::boxes::encryption_box::encryption_box_get_info_api,
+    );
+    module.register_async_fn(
+        crate::crypto::encryption_box_encrypt,
+        crate::crypto::boxes::encryption_box::encryption_box_encrypt_api,
+    );
+    module.register_async_fn(
+        crate::crypto::encryption_box_decrypt,
+        crate::crypto::boxes::encryption_box::encryption_box_decrypt_api,
+    );
+    module.register_async_fn(
+        crate::crypto::create_encryption_box,
+        crate::crypto::boxes::encryption_box::create_encryption_box_api,
     );
 
     module.register();
@@ -278,6 +311,18 @@ fn register_abi(handlers: &mut RuntimeHandlers) {
         crate::abi::encode_account,
         crate::abi::encode_account::encode_account_api,
     );
+    module.register_async_fn(
+        crate::abi::decode_account_data,
+        crate::abi::decode_data::decode_account_data_api,
+    );
+    module.register_async_fn(
+        crate::abi::update_initial_data,
+        crate::abi::init_data::update_initial_data_api,
+    );
+    module.register_async_fn(
+        crate::abi::decode_initial_data,
+        crate::abi::init_data::decode_initial_data_api,
+    );
     module.register();
 }
 
@@ -311,28 +356,22 @@ fn register_boc(handlers: &mut RuntimeHandlers) {
         crate::boc::get_blockchain_config,
         crate::boc::blockchain_config::get_blockchain_config_api,
     );
-    module.register_async_fn(crate::boc::get_boc_hash, crate::boc::hash::get_boc_hash_api);
+    module.register_async_fn(crate::boc::get_boc_hash, crate::boc::common::get_boc_hash_api);
+    module.register_async_fn(crate::boc::get_boc_depth, crate::boc::common::get_boc_depth_api);
     module.register_async_fn(
         crate::boc::get_code_from_tvc,
         crate::boc::tvc::get_code_from_tvc_api,
     );
-    module.register_async_fn(
-        crate::boc::cache_get,
-        crate::boc::cache::cache_get_api,
-    );
-    module.register_async_fn(
-        crate::boc::cache_set,
-        crate::boc::cache::cache_set_api,
-    );
-    module.register_async_fn(
-        crate::boc::cache_unpin,
-        crate::boc::cache::cache_unpin_api,
-    );
+    module.register_async_fn(crate::boc::cache_get, crate::boc::cache::cache_get_api);
+    module.register_async_fn(crate::boc::cache_set, crate::boc::cache::cache_set_api);
+    module.register_async_fn(crate::boc::cache_unpin, crate::boc::cache::cache_unpin_api);
     module.register_type::<BuilderOp>();
-    module.register_async_fn(
-        crate::boc::encode_boc,
-        crate::boc::encode::encode_boc_api,
-    );
+    module.register_async_fn(crate::boc::encode_boc, crate::boc::encode::encode_boc_api);
+    module.register_async_fn(crate::boc::get_code_salt, crate::boc::tvc::get_code_salt_api);
+    module.register_async_fn(crate::boc::set_code_salt, crate::boc::tvc::set_code_salt_api);
+    module.register_async_fn(crate::boc::decode_tvc, crate::boc::tvc::decode_tvc_api);
+    module.register_async_fn(crate::boc::encode_tvc, crate::boc::tvc::encode_tvc_api);
+    module.register_async_fn(crate::boc::get_compiler_version, crate::boc::tvc::get_compiler_version_api);
     module.register();
 }
 
@@ -354,10 +393,7 @@ fn register_net(handlers: &mut RuntimeHandlers) {
     module.register_type::<crate::net::MessageNode>();
 
     module.register_async_fn(crate::net::query, crate::net::queries::query_api);
-    module.register_async_fn(
-        crate::net::batch_query,
-        crate::net::batch::batch_query_api,
-    );
+    module.register_async_fn(crate::net::batch_query, crate::net::batch::batch_query_api);
     module.register_async_fn(
         crate::net::query_collection,
         crate::net::queries::query_collection_api,
@@ -389,11 +425,36 @@ fn register_net(handlers: &mut RuntimeHandlers) {
     module.register_async_fn_no_args(crate::net::get_endpoints, crate::net::get_endpoints_api);
     module.register_async_fn(
         crate::net::query_counterparties,
-        crate::net::queries::query_counterparties_api
+        crate::net::queries::query_counterparties_api,
     );
     module.register_async_fn(
         crate::net::transaction_tree::query_transaction_tree,
-        crate::net::transaction_tree::query_transaction_tree_api
+        crate::net::transaction_tree::query_transaction_tree_api,
+    );
+
+    module.register_async_fn(
+        crate::net::iterators::block_iterator::create_block_iterator,
+        crate::net::iterators::block_iterator::create_block_iterator_api,
+    );
+    module.register_async_fn(
+        crate::net::iterators::block_iterator::resume_block_iterator,
+        crate::net::iterators::block_iterator::resume_block_iterator_api,
+    );
+    module.register_async_fn(
+        crate::net::iterators::transaction_iterator::create_transaction_iterator,
+        crate::net::iterators::transaction_iterator::create_transaction_iterator_api,
+    );
+    module.register_async_fn(
+        crate::net::iterators::transaction_iterator::resume_transaction_iterator,
+        crate::net::iterators::transaction_iterator::resume_transaction_iterator_api,
+    );
+    module.register_async_fn(
+        crate::net::iterators::iterator_next,
+        crate::net::iterators::iterator_next_api,
+    );
+    module.register_async_fn(
+        crate::net::iterators::remove_iterator,
+        crate::net::iterators::remove_iterator_api,
     );
     module.register();
 }
@@ -457,21 +518,23 @@ pub struct UtilsModule;
 fn register_utils(handlers: &mut RuntimeHandlers) {
     let mut module = ModuleReg::new::<UtilsModule>(handlers);
     module.register_type::<crate::utils::AddressStringFormat>();
+    module.register_type::<crate::utils::AccountAddressType>();
     module.register_sync_fn(
         crate::utils::convert_address,
         crate::utils::conversion::convert_address_api,
+    );
+    module.register_sync_fn(
+        crate::utils::get_address_type,
+        crate::utils::conversion::get_address_type_api,
     );
     module.register_async_fn(
         crate::utils::calc_storage_fee,
         crate::utils::calc_storage_fee::calc_storage_fee_api,
     );
-    module.register_sync_fn(
-        super::utils::compress_zstd,
-        super::utils::compress_zstd_api
-    );
+    module.register_sync_fn(super::utils::compress_zstd, super::utils::compress_zstd_api);
     module.register_sync_fn(
         super::utils::decompress_zstd,
-        super::utils::decompress_zstd_api
+        super::utils::decompress_zstd_api,
     );
     module.register();
 }

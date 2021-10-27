@@ -1,8 +1,10 @@
-extern crate rustc_version;
-use rustc_version::{version, Version};
-
+// Automatically detect tsan in a way that's compatible with both stable (which
+// doesn't support sanitizers) and nightly (which does). Works because build
+// scripts gets `cfg` info, even if the cfg is unstable.
 fn main() {
-    if version().unwrap() >= Version::parse("1.26.0").unwrap() {
-        println!("cargo:rustc-cfg=has_localkey_try_with");
+    println!("cargo:rerun-if-changed=build.rs");
+    let santizer_list = std::env::var("CARGO_CFG_SANITIZE").unwrap_or_default();
+    if santizer_list.contains("thread") {
+        println!("cargo:rustc-cfg=tsan_enabled");
     }
 }

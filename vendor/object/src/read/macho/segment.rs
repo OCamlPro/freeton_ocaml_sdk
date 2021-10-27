@@ -112,7 +112,7 @@ where
     }
 
     fn data(&self) -> Result<&'data [u8]> {
-        Ok(self.bytes()?)
+        self.bytes()
     }
 
     fn data_range(&self, address: u64, size: u64) -> Result<Option<&'data [u8]>> {
@@ -122,6 +122,11 @@ where
             address,
             size,
         ))
+    }
+
+    #[inline]
+    fn name_bytes(&self) -> Result<Option<&[u8]>> {
+        Ok(Some(self.segment.name()))
     }
 
     #[inline]
@@ -158,7 +163,7 @@ pub trait Segment: Debug + Pod {
     /// Return the `segname` bytes up until the null terminator.
     fn name(&self) -> &[u8] {
         let segname = &self.segname()[..];
-        match segname.iter().position(|&x| x == 0) {
+        match memchr::memchr(b'\0', segname) {
             Some(end) => &segname[..end],
             None => segname,
         }

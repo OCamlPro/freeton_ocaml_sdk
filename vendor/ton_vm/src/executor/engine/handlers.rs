@@ -12,54 +12,48 @@
 */
 
 use crate::{
-    error::TvmError, 
+    error::TvmError,
     executor::{
-        engine::{Engine, core::ExecuteHandler, storage::fetch_stack}, 
-        blockchain::*, config::*, continuation::*, crypto::*, currency::*, deserialization::*, 
-        dictionary::*, dump::*, exceptions::*, gas::*, globals::*, math::*, null::*, 
-        rand::*, serialization::*, slice_comparison::*, stack::*, tuple::*, 
+        engine::{Engine, core::ExecuteHandler, storage::fetch_stack},
+        blockchain::*, config::*, continuation::*, crypto::*, currency::*, deserialization::*,
+        dictionary::*, dump::*, exceptions::*, gas::*, globals::*, math::*, null::*,
+        rand::*, serialization::*, slice_comparison::*, stack::*, tuple::*,
         types::{InstructionOptions, Instruction}
     },
     stack::{continuation::ContinuationData, integer::behavior::{Signaling, Quiet}},
-    types::{Exception, Failure}
+    types::{Exception, Status}
 };
 use std::{fmt, ops::Range};
 use ton_types::{error, Result, types::ExceptionCode};
 
 // ( - )
-fn execute_nop(engine: &mut Engine) -> Failure {
-    engine.load_instruction(Instruction::new("NOP")).err()
+fn execute_nop(engine: &mut Engine) -> Status {
+    engine.load_instruction(Instruction::new("NOP"))
 }
 
-fn execute_setcp(engine: &mut Engine) -> Failure {
+fn execute_setcp(engine: &mut Engine) -> Status {
     engine.load_instruction(
         Instruction::new("SETCP").set_opts(InstructionOptions::Integer(-15..240))
-    )
-    .and_then(|ctx| {
-        let code_page = ctx.engine.cmd.integer();
-        *ctx.engine.code_page_mut() = code_page;
-        Ok(ctx)
-    })
-    .err()
+    )?;
+    let code_page = engine.cmd.integer();
+    *engine.code_page_mut() = code_page;
+    Ok(())
 }
 
-fn execute_setcpx(engine: &mut Engine) -> Failure {
+fn execute_setcpx(engine: &mut Engine) -> Status {
     engine.load_instruction(
         Instruction::new("SETCPX")
-    )
-    .and_then(|ctx| fetch_stack(ctx, 1))
-    .and_then(|ctx| {
-        let code_page = ctx.engine.cmd.var(0).as_integer()?.into(-1<<15..=1<<15 - 1)?;
-        *ctx.engine.code_page_mut() = code_page;
-        Ok(ctx)
-    })
-    .err()
+    )?;
+    fetch_stack(engine, 1)?;
+    let code_page = engine.cmd.var(0).as_integer()?.into(-1<<15..=1<<(15 - 1))?;
+    *engine.code_page_mut() = code_page;
+    Ok(())
 }
 
-fn execute_unknown(engine: &mut Engine) -> Failure {
+fn execute_unknown(engine: &mut Engine) -> Status {
     let code = engine.cc.last_cmd();
     log::trace!(target: "tvm", "Invalid code: {} ({:#X})\n", code, code);
-    err_opt!(ExceptionCode::InvalidOpcode)
+    err!(ExceptionCode::InvalidOpcode)
 }
 
 #[derive(Clone, Copy)]
@@ -68,6 +62,7 @@ enum Handler {
     Subset(usize),
 }
 
+#[derive(Clone)]
 pub struct Handlers {
     directs: [Option<Handler>; 256],
     subsets: Vec<Handlers>,
@@ -115,18 +110,14 @@ impl Handlers {
             .set(0x10, execute_xchg_std)
             .set(0x11, execute_xchg_long)
             .set_range(0x12..0x20, execute_xchg_simple)
-            .set(0x20, execute_dup)
-            .set(0x21, execute_over)
-            .set_range(0x22..0x30, execute_push)
-            .set(0x30, execute_drop)
-            .set(0x31, execute_nip)
-            .set_range(0x32..0x40, execute_pop)
+            .set_range(0x20..0x30, execute_push)
+            .set_range(0x30..0x40, execute_pop)
             .set_range(0x40..0x50, execute_xchg3)
             .set(0x50, execute_xchg2)
             .set(0x51, execute_xcpu)
             .set(0x52, execute_puxc)
             .set(0x53, execute_push2)
-            .add_subset(0x54, Handlers::new() 
+            .add_subset(0x54, Handlers::new()
                 .set_range(0x00..0x10, execute_xchg3)
                 .set_range(0x10..0x20, execute_xc2pu)
                 .set_range(0x20..0x30, execute_xcpuxc)
@@ -196,6 +187,14 @@ impl Handlers {
                 .set(0x8B, execute_tuple_last)
                 .set(0x8C, execute_tuple_push)
                 .set(0x8D, execute_tuple_pop)
+                .set(0x90, execute_zeroswapif)
+                .set(0x91, execute_zeroswapifnot)
+                .set(0x92, execute_zerorotrif)
+                .set(0x93, execute_zerorotrifnot)
+                .set(0x94, execute_zeroswapif2)
+                .set(0x95, execute_zeroswapifnot2)
+                .set(0x96, execute_zerorotrif2)
+                .set(0x97, execute_zerorotrifnot2)
                 .set(0xA0, execute_nullswapif)
                 .set(0xA1, execute_nullswapifnot)
                 .set(0xA2, execute_nullrotrif)
@@ -418,6 +417,7 @@ impl Handlers {
                 .set(0x40, execute_stzeroes)
                 .set(0x41, execute_stones)
                 .set(0x42, execute_stsame)
+                .set(0x43, execute_stcont)
                 .set_range(0x80..0xFF, execute_stsliceconst)
                 .set(0xFF, execute_stsliceconst)
             )
@@ -486,18 +486,18 @@ impl Handlers {
                 .set(0x4B, execute_sbitrefs)
                 .set(0x4C, execute_pldref)
                 .set_range(0x4D..0x50, execute_pldrefidx)
-                .set(0x50, execute_ldile4) 
-                .set(0x51, execute_ldule4) 
-                .set(0x52, execute_ldile8) 
-                .set(0x53, execute_ldule8) 
+                .set(0x50, execute_ldile4)
+                .set(0x51, execute_ldule4)
+                .set(0x52, execute_ldile8)
+                .set(0x53, execute_ldule8)
                 .set(0x54, execute_pldile4)
                 .set(0x55, execute_pldule4)
                 .set(0x56, execute_pldile8)
                 .set(0x57, execute_pldule8)
-                .set(0x58, execute_ldile4q) 
-                .set(0x59, execute_ldule4q) 
-                .set(0x5A, execute_ldile8q) 
-                .set(0x5B, execute_ldule8q) 
+                .set(0x58, execute_ldile4q)
+                .set(0x59, execute_ldule4q)
+                .set(0x5A, execute_ldile8q)
+                .set(0x5B, execute_ldule8q)
                 .set(0x5C, execute_pldile4q)
                 .set(0x5D, execute_pldule4q)
                 .set(0x5E, execute_pldile8q)
@@ -507,6 +507,7 @@ impl Handlers {
                 .set(0x62, execute_ldsame)
                 .set(0x64, execute_sdepth)
                 .set(0x65, execute_cdepth)
+                .set(0x66, execute_ldcont)
             )
     }
 
@@ -821,7 +822,7 @@ impl Handlers {
                 .set(0xBF, execute_dictugetexecz)
             )
     }
-    
+
     /// Gas and configuration primitives handlers
     fn add_code_page_0_gas_rand_config(&mut self) -> &mut Handlers {
         self
@@ -847,6 +848,7 @@ impl Handlers {
                 .set(0x28, execute_my_addr)
                 .set(0x29, execute_config_root)
                 .set(0x2A, execute_my_code)
+                .set(0x2B, execute_init_code_hash)
                 .set(0x30, execute_config_dict)
                 .set(0x32, execute_config_ref_param)
                 .set(0x33, execute_config_opt_param)
@@ -858,7 +860,7 @@ impl Handlers {
                 .set(0x7F, execute_setglob)
             )
     }
-    
+
     /// Hashing and cryptography primitives handlers
     fn add_code_page_0_crypto(&mut self) -> &mut Handlers {
         self

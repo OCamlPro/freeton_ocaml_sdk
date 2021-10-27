@@ -70,7 +70,7 @@ impl Writer for CodePage0 {
             let offset = last.bits_used();
             if last.references_free() > 1 // one cell remains reserved for finalization
                 && last.append_raw(command, command.len() * 8).is_ok()
-                && last.checked_append_reference(reference.clone().into()).is_ok() {
+                && last.checked_append_reference(reference.clone().into_cell().map_err(|_| OperationError::NotFitInSlice)?).is_ok() {
 
                 *self.cells.last_mut().unwrap() = last;
 
@@ -81,7 +81,7 @@ impl Writer for CodePage0 {
             }
         }
         let mut code = BuilderData::new();
-        let cell = reference.into();
+        let cell = reference.into_cell().map_err(|_| OperationError::NotFitInSlice)?;
         if code.append_raw(command, command.len() * 8).is_ok()
             && code.checked_append_reference(cell).is_ok() {
             self.cells.push(code);
@@ -103,7 +103,7 @@ impl Writer for CodePage0 {
             let mut destination = self.cells.pop()
                 .expect("vector is not empty");
             let offset = destination.bits_used();
-            let slice = SliceData::from(cursor.clone());
+            let slice = SliceData::from(cursor.clone().into_cell().expect("failure while convert BuilderData to cell"));
             let mut next = self.dbg.pop().expect("dbg vector is not empty");
             // try to inline cursor into destination
             if destination.references_free() >= cursor.references_used()
@@ -111,7 +111,7 @@ impl Writer for CodePage0 {
                 next.inline_node(offset, dbg);
             // otherwise just attach cursor to destination as a reference
             } else {
-                destination.append_reference(cursor);
+                destination.append_reference_cell(cursor.into_cell().expect("failure while convert BuilderData to cell"));
                 next.append_node(dbg);
             }
             cursor = destination;

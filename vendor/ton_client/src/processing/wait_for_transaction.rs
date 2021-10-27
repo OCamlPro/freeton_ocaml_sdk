@@ -33,7 +33,9 @@ pub struct ParamsOfWaitForTransaction {
 
     /// The list of endpoints to which the message was sent.
     ///
-    /// You must provide the same value as the `send_message` has returned.
+    /// Use this field to get more informative errors. 
+    /// Provide the same value as the `send_message` has returned.
+    /// If the message was not delivered (expired), SDK will log the endpoint URLs, used for its sending.
     pub sending_endpoints: Option<Vec<String>>,
 }
 
@@ -48,7 +50,7 @@ pub async fn wait_for_transaction<F: futures::Future<Output = ()> + Send>(
     let message =
         deserialize_object_from_boc::<ton_block::Message>(&context, &params.message, "message")
             .await?;
-    let message_id = message.cell.repr_hash().to_hex_string();
+    let message_id = message.cell.repr_hash().as_hex_string();
     let address = message
         .object
         .dst_ref().cloned()
@@ -92,6 +94,7 @@ pub async fn wait_for_transaction<F: futures::Future<Output = ()> + Send>(
                 &context,
                 &shard_block_id,
                 &message_id,
+                &params.message,
                 &transaction_id,
                 &params.abi,
                 address.clone(),
@@ -143,6 +146,7 @@ pub async fn wait_for_transaction<F: futures::Future<Output = ()> + Send>(
                 params.message.clone(),
                 error,
                 waiting_expiration_time - 1,
+                true,
             )
             .await
             .add_network_url_from_context(&context)
