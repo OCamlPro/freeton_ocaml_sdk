@@ -3,7 +3,7 @@ drom-version = "0.1"
 
 [project]
 authors = ["Fabrice Le Fessant <fabrice.le_fessant@ocamlpro.com>"]
-ci-systems = ["ubuntu-latest"]
+ci-systems = ["ubuntu-latest", "macos-latest"]
 copyright = "OCamlPro SAS"
 edition = "4.10.0"
 github-organization = "ocamlpro"
@@ -66,6 +66,7 @@ share-dirs = ["share"]
 [fields]
 dot-gitignore-trailer = """# commit Cargo.lock in the repository to force same versions
 # Cargo.lock
+/src/freeton_ocaml_sdk/dune.include
 """
 
 [[package]]

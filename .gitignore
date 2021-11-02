@@ -9,5 +9,6 @@ _build
 
 # commit Cargo.lock in the repository to force same versions
 # Cargo.lock
+/src/freeton_ocaml_sdk/dune.include
 
 

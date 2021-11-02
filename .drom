@@ -2,7 +2,7 @@
 
 # hash of toml configuration files
 # used for generation of all files
-ef16f6464d9630fc7ed480de7e5474d3:.
+c90068fe43cd70cbb420d426e4152bf2:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -17,7 +17,7 @@ ef16f6464d9630fc7ed480de7e5474d3:.
 
 # begin context for .gitignore
 # file .gitignore
-cb2e5d7d1a6c49582d61e0c1767ee2a5:.gitignore
+0109cb247cd1240f5e42862fed11f246:.gitignore
 # end context for .gitignore
 
 # begin context for .ocamlformat-ignore
@@ -42,7 +42,7 @@ f0dad6632363c733c0ade2263132e1e2:CHANGES.md
 
 # begin context for README.md
 # file README.md
-982ceb276757cc723692aabfbe751aa6:README.md
+fef13f288aeb675e4289982e7c5175de:README.md
 # end context for README.md
 
 # begin context for docs/README.txt
@@ -142,7 +142,7 @@ e5e327474d77ac197193161785d1bafe:src/freeton_client_lib/index.mld
 
 # begin context for src/freeton_ocaml_sdk/dune
 # file src/freeton_ocaml_sdk/dune
-da30d8cb05ec8b0b35dfe04784d3b8b2:src/freeton_ocaml_sdk/dune
+a522366bf8b84da0f13997281108ed6e:src/freeton_ocaml_sdk/dune
 # end context for src/freeton_ocaml_sdk/dune
 
 # begin context for src/freeton_ocaml_sdk/package.toml
