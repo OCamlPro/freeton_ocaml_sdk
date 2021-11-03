@@ -15,6 +15,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
+          - macos-latest
         ocaml-compiler:
           - 4.10.0
         skip_test:
@@ -42,7 +43,8 @@ jobs:
 #            v2-${{ runner.os }}-opam-${{ matrix.ocaml-compiler }}-
 
       - run: sudo apt-get update
-      
+        if: matrix.os == 'ubuntu-latest'
+
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: avsm/setup-ocaml@v2
         with:
@@ -70,6 +72,12 @@ jobs:
         if: matrix.os == 'windows-latest'
 
       - run: make build
+        if: matrix.os == 'ubuntu-latest'
+
+      - run: |
+          export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/Cellar/openssl@3/3.0.0_1/lib
+          make build
+        if: matrix.os == 'macos-latest'
 
       - name: run test suite
         run: |

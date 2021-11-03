@@ -18,7 +18,7 @@
  (libraries zarith freeton_client_lib ezjsonm ez_file ez_api.encoding ez_api.cohttp_lwt cohttp-lwt-unix )
  (foreign_archives freeton_ocaml_sdk)
  (c_library_flags
-  (-lpthread -lc -lm -lssl -lcrypto))
+  (-lpthread -lc -lm -lssl -lcrypto (:include dune.include)))
   
   (preprocess (pps ppx_deriving_encoding))
   )

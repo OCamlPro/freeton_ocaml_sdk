@@ -85,7 +85,7 @@ ssl = "0.5.9"
 #  no-opam-doc = "yes" 
 #  gen-opam = "some" | "all" 
 [fields]
-c-libraries = "-lssl -lcrypto"
+c-libraries = "-lssl -lcrypto (:include dune.include)"
 dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
 no-opam-test = ""
 opam-trailer = '''
