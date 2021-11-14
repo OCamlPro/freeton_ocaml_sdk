@@ -1,7 +1,7 @@
 
 # name of package
-name = "freeton_client_lib"
-skeleton = "c_binding"
+name = "freeton_client_lwt"
+skeleton = "library"
 
 # version if different from project version
 # version = "0.1.0"
@@ -32,23 +32,22 @@ pack-modules = true
 # optional = true
 
 # module name used to pack modules (if pack-modules is true)
-pack = "Ton_client"
+pack = "Ton_client_lwt"
 
 # preprocessing options
 #  preprocess = "per-module (((action (run ./toto.sh %{input-file})) mod))" 
-preprocess = "pps ppx_deriving_encoding"
+# preprocess = "pps ppx_deriving_encoding"
 
 # files to skip while updating at package level
-skip = ["main.ml"]
+# skip = []
 
 # package library dependencies
 #   [dependencies]
 #   ez_file = ">=0.1 <1.3"
 #   base-unix = { libname = "unix", version = ">=base" } 
-[dependencies.base-threads]
-libname = "threads"
-[dependencies.ez_api]
-libname = "ez_api.encoding"
+[dependencies]
+freeton_client_lib = "version"
+lwt = { libname = "lwt.unix", version = "1" }
 
 # package tools dependencies
 [tools]
@@ -64,4 +63,4 @@ libname = "ez_api.encoding"
 #  no-opam-doc = "yes" 
 #  gen-opam = "some" | "all" 
 [fields]
-c-names = "ton_client_ocaml_stubs"
+# ...

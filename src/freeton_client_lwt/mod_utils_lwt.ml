@@ -10,24 +10,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+include Ton_client.UTILS
 
-module CALL = Ton_call
-
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
-
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+let convert_address = Tc_lwt.request ConvertAddress.f
+let calc_storage_fee = Tc_lwt.request CalcStorageFee.f
+let compress_zstd = Tc_lwt.request CompressZstd.f
+let decompress_zstd = Tc_lwt.request DecompressZstd.f

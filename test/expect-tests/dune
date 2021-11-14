@@ -6,5 +6,5 @@
   (pps ppx_expect))
  (inline_tests
   (modes best)) ; add js for testing with nodejs
- (libraries freeton_ocaml_sdk freeton_client_lib) ; add your project libraries here
+ (libraries freeton_ocaml_sdk freeton_ocaml_rust freeton_client_lib freeton_base_lib freeton_client_lwt) ; add your project libraries here
  )

@@ -528,7 +528,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "freeton_ocaml_sdk"
+name = "freeton_ocaml_rust"
 version = "0.2.0"
 dependencies = [
  "base64 0.13.0",

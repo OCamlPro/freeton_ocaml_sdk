@@ -10,24 +10,17 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+include Ton_client.BOC
 
-module CALL = Ton_call
-
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
-
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+let parse_message = Tc_lwt.request ParseMessage.f
+let parse_transaction = Tc_lwt.request ParseTransaction.f
+let parse_account = Tc_lwt.request ParseAccount.f
+let parse_block = Tc_lwt.request ParseBlock.f
+let parse_shardstate = Tc_lwt.request ParseShardstate.f
+let get_blockchain_config = Tc_lwt.request GetBlockchainConfig.f
+let get_boc_hash = Tc_lwt.request GetBocHash.f
+let get_code_from_tvc = Tc_lwt.request GetCodeFromTvc.f
+let cache_get = Tc_lwt.request BocCacheGet.f
+let cache_set = Tc_lwt.request BocCacheSet.f
+let cache_unpin = Tc_lwt.request BocCacheUnpin.f
+let encode_boc = Tc_lwt.request EncodeBoc.f

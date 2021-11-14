@@ -10,24 +10,18 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+val generate_mnemonic : unit -> string
 
-module CALL = Ton_call
+val generate_keypair_from_mnemonic : ?path:string -> string ->
+  Sdk_types.keypair
 
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
+val generate_address :
+  tvc_file:string -> abi:string ->
+  ?keypair:Sdk_types.keypair ->
+  ?pubkey:string ->
+  ?wc:int ->
+  ?initial_data:string ->
+  ?initial_pubkey:string ->
+  unit -> string
 
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+val std_path : int list -> string

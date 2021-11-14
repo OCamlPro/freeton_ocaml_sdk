@@ -10,24 +10,12 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+let read filename =
+  let json = EzFile.read_file filename in
+  EzEncoding.destruct  Ton_types.AbiContract.t_enc json
 
-module CALL = Ton_call
-
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
-
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+let write file abi =
+  let json = EzEncoding.construct
+      ~compact:false Ton_types.AbiContract.t_enc  abi in
+  EzFile.make_dir ~p:true (Filename.dirname file);
+  EzFile.write_file file json

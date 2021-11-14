@@ -10,24 +10,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
-
-module CALL = Ton_call
-
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
-
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+module TYPES = Ton_types
+module ABI = Ton_abi
+module REQUEST = Ton_request
+module ENCODING = Ton_encoding

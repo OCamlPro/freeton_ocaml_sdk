@@ -10,24 +10,15 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+include Ton_client.ABI
 
-module CALL = Ton_call
-
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
-
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+let encode_message_body = Tc_lwt.request EncodeMessageBody.f
+let attach_signature_to_message_body =
+  Tc_lwt.request AttachSignatureToMessageBody.f
+let encode_message = Tc_lwt.request EncodeMessage.f
+let encode_internal_message = Tc_lwt.request EncodeInternalMessage.f
+let attach_signature =
+  Tc_lwt.request AttachSignature.f
+let decode_message = Tc_lwt.request DecodeMessage.f
+let decode_message_body = Tc_lwt.request DecodeMessageBody.f
+let encode_account = Tc_lwt.request EncodeAccount.f
