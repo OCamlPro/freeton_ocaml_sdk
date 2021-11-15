@@ -60,6 +60,7 @@
  (description "This project implements an OCaml-Rust binding to the TON-SDK, and a\nGraphql client to interact with the node.\n")
  (depends
    (ocaml (>= 4.08.0))
+   ppx_deriving_encoding
    ez_api
    base-threads
    ppx_inline_test

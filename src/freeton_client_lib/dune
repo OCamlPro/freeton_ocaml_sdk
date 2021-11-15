@@ -4,7 +4,7 @@
   (name ton_client)
   (public_name freeton_client_lib)
   (wrapped true)
-  (libraries ez_api.encoding threads )
+  (libraries ppx_deriving_encoding ez_api.encoding threads )
   (foreign_stubs
     (language c)
     (names ton_client_ocaml_stubs)

@@ -39,6 +39,7 @@ install: [
 depends: [
   "ocaml" {>= "4.08.0"}
   "dune" {>= "2.6.0"}
+  "ppx_deriving_encoding" {}
   "ez_api" {}
   "base-threads" {}
   "ppx_inline_test" {with-test}
