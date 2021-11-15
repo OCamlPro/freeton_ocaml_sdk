@@ -10,24 +10,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+external encode_body_ml :
+  string array ->
+  string Sdk_types.reply = "encode_body_ml"
 
-module CALL = Ton_call
 
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
-
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+let encode_body ~abi ~meth ~params =
+  Sdk_types.reply
+    (
+      encode_body_ml [| abi ; meth ; params |]
+    )

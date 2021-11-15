@@ -10,24 +10,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+include Ton_client.CLIENT
 
-module CALL = Ton_call
-
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
-
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+let get_api_reference = Tc_lwt.request GetApiReference.f
+let version = Tc_lwt.request Version.f
+let build_info = Tc_lwt.request BuildInfo.f
+let resolve_app_request = Tc_lwt.request ResolveAppRequest.f

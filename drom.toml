@@ -3,7 +3,7 @@ drom-version = "0.1"
 
 [project]
 authors = ["Fabrice Le Fessant <fabrice.le_fessant@ocamlpro.com>"]
-ci-systems = ["ubuntu-latest", "macos-latest"]
+ci-systems = ["ubuntu-latest"]
 copyright = "OCamlPro SAS"
 edition = "4.10.0"
 github-organization = "ocamlpro"
@@ -11,7 +11,7 @@ license = "LGPL2"
 min-edition = "4.08.0"
 name = "freeton_ocaml_sdk"
 synopsis = "The freeton_ocaml_sdk library is a binding over TON-SDK for Free TON"
-version = "0.4.5"
+version = "0.5.0"
 
 # keys that you could also define:
 # odoc-target = "...odoc-target..."
@@ -74,6 +74,18 @@ dir = "src/freeton_ocaml_sdk"
 # edit 'src/freeton_ocaml_sdk/package.toml' for package-specific options
 
 [[package]]
+dir = "src/freeton_ocaml_rust"
+# edit 'src/freeton_ocaml_sdk/package.toml' for package-specific options
+
+[[package]]
 dir = "src/freeton_client_lib"
-# edit 'src/ton_client_ocaml/package.toml' for package-specific options
+# edit 'src/freeton_client_lib/package.toml' for package-specific options
+
+[[package]]
+dir = "src/freeton_base_lib"
+# edit 'src/freeton_base_lib/package.toml' for package-specific options
+
+[[package]]
+dir = "src/freeton_client_lwt"
+# edit 'src/freeton_client_lwt/package.toml' for package-specific options
 

@@ -10,24 +10,21 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+val call_lwt :
+  ?client:Sdk_types.client ->
+  server_url:string ->
+  address:string ->
+  abi:string ->
+  meth:string ->
+  params:string ->
+  ?keypair:Sdk_types.keypair -> local:bool -> unit ->
+  ( string, exn ) result Lwt.t
 
-module CALL = Ton_call
-
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
-
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+val call :
+  ?client:Sdk_types.client ->
+  server_url:string ->
+  address:string ->
+  abi:string ->
+  meth:string ->
+  params:string ->
+  ?keypair:Sdk_types.keypair -> local:bool -> unit -> string

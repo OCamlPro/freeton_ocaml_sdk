@@ -1,5 +1,5 @@
 
-[![Actions Status](https://github.com/ocamlpro/freeton_ocaml_sdk/workflows/Main%20Workflow/badge.svg)](https://github.com/ocamlpro/freeton_ocaml_sdk/actions)[![Actions Status](https://github.com/ocamlpro/freeton_ocaml_sdk/workflows/doc-deploy/badge.svg)](https://github.com/ocamlpro/freeton_ocaml_sdk/actions)
+[![Actions Status](https://github.com/ocamlpro/freeton_ocaml_sdk/workflows/Main%20Workflow/badge.svg)](https://github.com/ocamlpro/freeton_ocaml_sdk/actions)
 [![Release](https://img.shields.io/github/release/ocamlpro/freeton_ocaml_sdk.svg)](https://github.com/ocamlpro/freeton_ocaml_sdk/releases)
 
 # freeton_ocaml_sdk

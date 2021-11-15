@@ -10,24 +10,39 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+external find_last_shard_block_ml :
+  Sdk_types.client->
+  string ->
+  string Sdk_types.reply = "find_last_shard_block_ml"
 
-module CALL = Ton_call
+let find_last_shard_block ~client ~address =
+  Sdk_types.reply
+    (
+      find_last_shard_block_ml client address
+    )
 
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
+external wait_next_block_ml :
+  Sdk_types.client->
+  string ->
+  string ->
+  int64 option ->
+  Sdk_types.block Sdk_types.reply = "wait_next_block_ml"
 
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+(* timeout is in ms *)
+let wait_next_block ~client ~block_id ~address ?timeout () =
+  Sdk_types.reply
+    (
+      wait_next_block_ml client block_id address timeout
+    )
+
+external decode_message_boc_ml :
+  Sdk_types.client->
+  string ->
+  string ->
+  Sdk_types.decoded_message_body Sdk_types.reply = "decode_message_boc_ml"
+
+let decode_message_boc ~client ~boc ~abi =
+  Sdk_types.reply
+    (
+      decode_message_boc_ml client boc abi
+    )

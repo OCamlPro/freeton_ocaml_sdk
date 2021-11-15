@@ -1,7 +1,7 @@
 
 # name of package
-name = "freeton_ocaml_sdk"
-skeleton = "library"
+name = "freeton_ocaml_rust"
+skeleton = "rust_binding_lib"
 
 # version if different from project version
 # version = "0.1.0"
@@ -38,13 +38,13 @@ kind = "library"
 # generators = [ "ocamllex", "menhir" ]
 
 # whether all modules should be packed/wrapped (default is true)
-pack-modules = true
+pack-modules = false
 
 # whether the package can be silently skipped if missing deps (default is false)
 # optional = true
 
 # module name used to pack modules (if pack-modules is true)
-pack = "Ton_sdk"
+# pack = "Mylib"
 
 # preprocessing options
 #  preprocess = "per-module (((action (run ./toto.sh %{input-file})) mod))" 
@@ -62,8 +62,6 @@ cohttp-lwt-unix = ""
 ez_file = ">=0.2"
 ezjsonm = ""
 zarith = ">1"
-freeton_ocaml_rust = "version"
-freeton_base_lib = "version"
 [dependencies.ez_api]
 libname = "ez_api.encoding ez_api.cohttp_lwt"
 
@@ -85,6 +83,7 @@ ssl = "0.5.9"
 #  no-opam-doc = "yes" 
 #  gen-opam = "some" | "all" 
 [fields]
+c-libraries = "-lssl -lcrypto (:include dune.include)"
 dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
 no-opam-test = ""
 opam-trailer = '''

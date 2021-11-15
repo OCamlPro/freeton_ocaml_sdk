@@ -3,7 +3,7 @@
 (name freeton_ocaml_sdk)
 (allow_approximate_merlin)
 (generate_opam_files false)
-(version 0.4.5)
+(version 0.5.0)
 (formatting (enabled_for ocaml reason))
 
 (package
@@ -13,7 +13,31 @@
  (depends
    (ocaml (>= 4.08.0))
    (zarith ( > 1 ))
-   (freeton_client_lib (= version))
+   (freeton_ocaml_rust (= version))
+   (freeton_base_lib (= version))
+   ezjsonm
+   (ez_file ( >= 0.2 ))
+   ez_api
+   cohttp-lwt-unix
+   (ssl (and (>= 0.5.9) (< 1.0.0)))
+   ppx_deriving_encoding
+   (lwt_ssl ( >= 1.1 ))
+   conf-rust-2018
+   conf-libssl
+   ppx_inline_test
+   ppx_expect
+   odoc
+   ocamlformat
+  )
+ )
+
+(package
+ (name freeton_ocaml_rust)
+ (synopsis "OCaml binding to the TON-SDK and the Graphql API for Free TON blockchain")
+ (description "The freeton_ocaml_sdk library is a binding to the TON-SDK Rust library\nand the GraphQL API of the FreeTON blockchain. It can be used to build\napplication to query the account states, transactions and other blockchain\ndata. to deploy and call smart contracts.\n\nThe FreeTON blockchain is the open-source version of the Telegram Open\nNetwork. FreeTON is one of the only blockchains with dynamic sharding\nfor unlimited scalability and immediate finality for real-time\napplications. It also uses Proof-of-Stake with delegation through\nsmart contracts. Smart contracts are written in dialects of Solidity\nand C++ with asynchonous external calls.\n\n")
+ (depends
+   (ocaml (>= 4.08.0))
+   (zarith ( > 1 ))
    ezjsonm
    (ez_file ( >= 0.2 ))
    ez_api
@@ -36,8 +60,46 @@
  (description "This project implements an OCaml-Rust binding to the TON-SDK, and a\nGraphql client to interact with the node.\n")
  (depends
    (ocaml (>= 4.08.0))
+   ppx_deriving_encoding
    ez_api
    base-threads
+   ppx_inline_test
+   ppx_expect
+   odoc
+   ocamlformat
+  )
+ )
+
+(package
+ (name freeton_base_lib)
+ (synopsis "The freeton_ocaml_sdk library is a binding over TON-SDK for Free TON")
+ (description "This project implements an OCaml-Rust binding to the TON-SDK, and a\nGraphql client to interact with the node.\n")
+ (depends
+   (ocaml (>= 4.08.0))
+   (zarith ( > 1 ))
+   ezjsonm
+   (ez_file ( >= 0.2 ))
+   ez_api
+   cohttp-lwt-unix
+   (ssl (and (>= 0.5.9) (< 1.0.0)))
+   ppx_deriving_encoding
+   (lwt_ssl ( >= 1.1 ))
+   conf-libssl
+   ppx_inline_test
+   ppx_expect
+   odoc
+   ocamlformat
+  )
+ )
+
+(package
+ (name freeton_client_lwt)
+ (synopsis "The freeton_ocaml_sdk library is a binding over TON-SDK for Free TON")
+ (description "This project implements an OCaml-Rust binding to the TON-SDK, and a\nGraphql client to interact with the node.\n")
+ (depends
+   (ocaml (>= 4.08.0))
+   (lwt ( >= 1 ))
+   (freeton_client_lib (= version))
    ppx_inline_test
    ppx_expect
    odoc

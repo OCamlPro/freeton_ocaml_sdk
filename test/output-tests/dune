@@ -19,7 +19,7 @@
 
 (executable
  (name test2)
- (libraries freeton_ocaml_sdk freeton_client_lib) ; add your own library here
+ (libraries freeton_ocaml_sdk freeton_ocaml_rust freeton_client_lib freeton_base_lib freeton_client_lwt) ; add your own library here
  )
 
 (alias

@@ -10,24 +10,35 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+module Message : sig
 
-module CALL = Ton_call
+  type t = {
+    id : string ; (* hex-encoded string *)
+    serialized_message : string ; (* base64-encoded string *)
+    address : string ;
+  }
 
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
 end
 
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
+module EncodeFunctionCall : sig
+
+  type t = {
+    abi : string ;
+    meth : string ;
+    header : string option ;
+    parameters : string ;
+    internal : bool ;
+    key_pair : Sdk_types.keypair option ;
+  }
+
+  (*    external encode_function_call : t ->  *)
+
 end
+
+val encode_internal_message :
+  address:string ->
+  ?src_address:string ->
+  ?ihr_disabled:bool ->
+  ?bounce:bool ->
+  ?value:int64 ->
+  ?payload:string -> ?call:EncodeFunctionCall.t -> unit -> Message.t

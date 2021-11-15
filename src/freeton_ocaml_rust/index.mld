@@ -1,0 +1,10 @@
+{1 Library freeton_ocaml_rust}
+
+This project implements an OCaml-Rust binding to the TON-SDK, and a
+Graphql client to interact with the node.
+
+
+
+This library exposes the following toplevel modules:
+{!modules:Sdk_abi Sdk_action Sdk_block Sdk_client Sdk_crypto Sdk_encode Sdk_rpc Sdk_tvc Sdk_types}
+

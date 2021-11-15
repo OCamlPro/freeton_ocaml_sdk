@@ -1,28 +1,16 @@
 
 # name of package
-name = "freeton_ocaml_sdk"
+name = "freeton_client_lwt"
 skeleton = "library"
 
 # version if different from project version
 # version = "0.1.0"
 
 # synopsis if different from project synopsis
-synopsis = "OCaml binding to the TON-SDK and the Graphql API for Free TON blockchain"
+# synopsis = ...
 
 # description if different from project description
-description = """The freeton_ocaml_sdk library is a binding to the TON-SDK Rust library
-and the GraphQL API of the FreeTON blockchain. It can be used to build
-application to query the account states, transactions and other blockchain
-data. to deploy and call smart contracts.
-
-The FreeTON blockchain is the open-source version of the Telegram Open
-Network. FreeTON is one of the only blockchains with dynamic sharding
-for unlimited scalability and immediate finality for real-time
-applications. It also uses Proof-of-Stake with delegation through
-smart contracts. Smart contracts are written in dialects of Solidity
-and C++ with asynchonous external calls.
-
-"""
+# description = ...
 
 # kind is either "library", "program" or "virtual"
 kind = "library"
@@ -31,7 +19,7 @@ kind = "library"
 # authors = [ "Me <me@metoo.org>" ]
 
 # name of a file to generate with the current version
-# gen-version = "version.ml"
+gen-version = "version.ml"
 
 # supported file generators are "ocamllex", "ocamlyacc" and "menhir" 
 # default is [ "ocamllex", "ocamlyacc" ] 
@@ -44,36 +32,26 @@ pack-modules = true
 # optional = true
 
 # module name used to pack modules (if pack-modules is true)
-pack = "Ton_sdk"
+pack = "Ton_client_lwt"
 
 # preprocessing options
 #  preprocess = "per-module (((action (run ./toto.sh %{input-file})) mod))" 
 # preprocess = "pps ppx_deriving_encoding"
 
 # files to skip while updating at package level
-skip = ["main.ml"]
+# skip = []
 
 # package library dependencies
 #   [dependencies]
 #   ez_file = ">=0.1 <1.3"
 #   base-unix = { libname = "unix", version = ">=base" } 
 [dependencies]
-cohttp-lwt-unix = ""
-ez_file = ">=0.2"
-ezjsonm = ""
-zarith = ">1"
-freeton_ocaml_rust = "version"
-freeton_base_lib = "version"
-[dependencies.ez_api]
-libname = "ez_api.encoding ez_api.cohttp_lwt"
+freeton_client_lib = "version"
+lwt = { libname = "lwt.unix", version = "1" }
 
 # package tools dependencies
 [tools]
-conf-libssl = ""
-conf-rust-2018 = ""
-lwt_ssl = ">=1.1"
-ppx_deriving_encoding = ""
-ssl = "0.5.9"
+# ...
 
 # package fields (depends on package skeleton)
 #Examples:
@@ -85,12 +63,4 @@ ssl = "0.5.9"
 #  no-opam-doc = "yes" 
 #  gen-opam = "some" | "all" 
 [fields]
-dune-stanzas = "(preprocess (pps ppx_deriving_encoding))"
-no-opam-test = ""
-opam-trailer = '''
-conflicts: [ "ocplib-json-typed" ]
-#pin-depends: [
-#  [ "websocket-httpaf-lwt.~dev" "git+https://github.com/anmonteiro/websocket-httpaf.git" ]
-#]
-
-'''
+# ...

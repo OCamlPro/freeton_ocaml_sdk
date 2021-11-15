@@ -10,24 +10,15 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
 
-module CALL = Ton_call
+module ABI = Mod_abi_lwt
+module BOC = Mod_boc_lwt
+module CLIENT = Mod_client_lwt
+module CRYPTO = Mod_crypto_lwt
+module DEBOT = Mod_debot_lwt
+module NET = Mod_net_lwt
+module PROCESSING = Mod_processing_lwt
+module TVM = Mod_tvm_lwt
+module UTILS = Mod_utils_lwt
 
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
-
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+module TC = Tc_lwt

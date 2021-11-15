@@ -10,24 +10,22 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module CLIENT = Sdk_client
-module CRYPTO = Sdk_crypto
-module RPC = Sdk_rpc
-module BLOCK = Sdk_block
-module ACTION = Sdk_action
-module TVC = Sdk_tvc
-module ENCODE = Sdk_encode
+val read : string -> Sdk_types.state_init
 
-module CALL = Ton_call
+(* returns "None" or base64 encoding of data *)
+val data : Sdk_types.state_init -> string
 
-module TYPES = struct
-  include Sdk_types
-  include TON.TYPES
-end
+(* returns hex encoding of data hash *)
+val data_hash : Sdk_types.state_init -> string
 
-module REQUEST = TON.REQUEST
-module ENCODING = TON.ENCODING
-module ABI = struct
-  include Sdk_abi
-  include TON.ABI
-end
+(* returns depth of data cell *)
+val data_depth : Sdk_types.state_init -> int64
+
+(* returns "None" or base64 encoding of code *)
+val code : Sdk_types.state_init -> string
+
+(* returns hex encoding of code hash *)
+val code_hash : Sdk_types.state_init -> string
+
+(* returns depth of code cell *)
+val code_depth : Sdk_types.state_init -> int64
