@@ -15,7 +15,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-#          - macos-latest
+          - macos-latest
         ocaml-compiler:
           - 4.10.0
         skip_test:
@@ -61,6 +61,14 @@ jobs:
 
       - run: opam depext -y freeton_ocaml_sdk freeton_client_lib
 #        if: steps.cache-opam.outputs.cache-hit != 'true'
+
+      - name: Configure openssl
+        run : | 
+          brew install openssl
+          export LDFLAGS="-L/usr/local/opt/openssl@3/lib"
+          export CPPFLAGS="-I/usr/local/opt/openssl@3/include"
+          export PKG_CONFIG_PATH=/usr/local/opt/openssl@3/lib/pkgconfig
+        if: matrix.os == 'macos-latest'
 
       - run: opam install -y ./*.opam --deps-only --with-test
 #        if: steps.cache-opam.outputs.cache-hit != 'true'
