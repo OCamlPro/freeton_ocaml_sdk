@@ -52,7 +52,7 @@ let post_lwt url ( req : 'a t ) =
     match res with
     | Error e ->
         let s =
-          EzRequest_lwt.string_of_error
+          EzCohttp_lwt.string_of_error
             (fun exn -> Some (Printexc.to_string exn)) e
         in
         if debug_graphql then
@@ -528,7 +528,8 @@ let iter_past_transactions ~address ~url
           if Hashtbl.mem known_transactions tr.Ton_encoding.tr_id then
             Lwt.return_unit
           else begin
-            Printf.eprintf "Adding former transaction %s\n%!" tr.tr_id;
+            if level > 1 then
+              Printf.eprintf "Adding former transaction %s\n%!" tr.tr_id;
             f tr
           end
         in

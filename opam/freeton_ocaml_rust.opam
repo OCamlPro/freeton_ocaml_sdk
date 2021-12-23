@@ -38,7 +38,7 @@ install: [
 ]
 depends: [
   "ocaml" {>= "4.08.0"}
-  "dune" {>= "2.6.0"}
+  "dune" {>= "2.7.0"}
   "zarith" {> "1"}
   "ezjsonm" {}
   "ez_file" {>= "0.2"}

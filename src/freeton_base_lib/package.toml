@@ -51,6 +51,7 @@ ez_file = ">=0.2"
 ezjsonm = ""
 zarith = ">1"
 [dependencies.ez_api]
+version = "1.0"
 libname = "ez_api.encoding ez_api.cohttp_lwt"
 
 # package tools dependencies
