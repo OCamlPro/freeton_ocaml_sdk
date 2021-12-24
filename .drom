@@ -1,8 +1,11 @@
 # Keep this file in your GIT repo to help drom track generated files
+# begin version
+version:0.6.0~dev
+# end version
 
 # hash of toml configuration files
 # used for generation of all files
-45f43b7a64257621ff1c6bf1f3afdfd2:.
+86ab973c17545070f7c12f4a6cce12b9:.
 # end context for .
 
 # begin context for .github/workflows/doc-deploy.yml
@@ -17,7 +20,7 @@
 
 # begin context for .gitignore
 # file .gitignore
-0109cb247cd1240f5e42862fed11f246:.gitignore
+17116c78eb82c44f2922c6a5d4c81acd:.gitignore
 # end context for .gitignore
 
 # begin context for .ocamlformat-ignore
@@ -77,33 +80,33 @@ c8281f46ba9a11d0b61bc8ef67eaa357:docs/style.css
 
 # begin context for dune-project
 # file dune-project
-e1ab08b8a217e37066711c09c10cce94:dune-project
+0797f179f552d6960f15f75c71f49da3:dune-project
 # end context for dune-project
 
-# begin context for freeton_base_lib.opam
-# file freeton_base_lib.opam
-8bf888577ea9730c7b16b9e24d821e31:freeton_base_lib.opam
-# end context for freeton_base_lib.opam
+# begin context for opam/freeton_base_lib.opam
+# file opam/freeton_base_lib.opam
+19e414f3ac7f1ab2340a589cec7ed786:opam/freeton_base_lib.opam
+# end context for opam/freeton_base_lib.opam
 
-# begin context for freeton_client_lib.opam
-# file freeton_client_lib.opam
-cd24680afdd72bdc9016cc9f6da6f928:freeton_client_lib.opam
-# end context for freeton_client_lib.opam
+# begin context for opam/freeton_client_lib.opam
+# file opam/freeton_client_lib.opam
+3fc7d97c0840189ccc574e5ec225cd02:opam/freeton_client_lib.opam
+# end context for opam/freeton_client_lib.opam
 
-# begin context for freeton_client_lwt.opam
-# file freeton_client_lwt.opam
-b56fde17452b969f54b090e905444867:freeton_client_lwt.opam
-# end context for freeton_client_lwt.opam
+# begin context for opam/freeton_client_lwt.opam
+# file opam/freeton_client_lwt.opam
+67ac9e37e01ed8e8937c95bd9ce8bb75:opam/freeton_client_lwt.opam
+# end context for opam/freeton_client_lwt.opam
 
-# begin context for freeton_ocaml_rust.opam
-# file freeton_ocaml_rust.opam
-39606804bb1ee079d347147abab47f6e:freeton_ocaml_rust.opam
-# end context for freeton_ocaml_rust.opam
+# begin context for opam/freeton_ocaml_rust.opam
+# file opam/freeton_ocaml_rust.opam
+731996a37ad4e0e8acaff155c38f2bb4:opam/freeton_ocaml_rust.opam
+# end context for opam/freeton_ocaml_rust.opam
 
-# begin context for freeton_ocaml_sdk.opam
-# file freeton_ocaml_sdk.opam
-a744b135e81518d7778c33309820b144:freeton_ocaml_sdk.opam
-# end context for freeton_ocaml_sdk.opam
+# begin context for opam/freeton_ocaml_sdk.opam
+# file opam/freeton_ocaml_sdk.opam
+7ec66d7bd9e99965b434f91215f28290:opam/freeton_ocaml_sdk.opam
+# end context for opam/freeton_ocaml_sdk.opam
 
 # begin context for scripts/after.sh
 # file scripts/after.sh
@@ -157,7 +160,7 @@ cd2340ea2e77875dc08c668639accb5a:src/freeton_base_lib/main.ml
 
 # begin context for src/freeton_base_lib/version.mlt
 # file src/freeton_base_lib/version.mlt
-69e7ed09c0de1448e6e2e0e8deba6a48:src/freeton_base_lib/version.mlt
+e021f862f6ff646fd887b2ed9b22ce9e:src/freeton_base_lib/version.mlt
 # end context for src/freeton_base_lib/version.mlt
 
 # begin context for src/freeton_client_lib/dune
@@ -182,7 +185,7 @@ e5e327474d77ac197193161785d1bafe:src/freeton_client_lib/index.mld
 
 # begin context for src/freeton_client_lib/version.mlt
 # file src/freeton_client_lib/version.mlt
-69e7ed09c0de1448e6e2e0e8deba6a48:src/freeton_client_lib/version.mlt
+e021f862f6ff646fd887b2ed9b22ce9e:src/freeton_client_lib/version.mlt
 # end context for src/freeton_client_lib/version.mlt
 
 # begin context for src/freeton_client_lwt/dune
@@ -207,7 +210,7 @@ ec98e55e034210538ce67b7ee633f825:src/freeton_client_lwt/package.toml
 
 # begin context for src/freeton_client_lwt/version.mlt
 # file src/freeton_client_lwt/version.mlt
-69e7ed09c0de1448e6e2e0e8deba6a48:src/freeton_client_lwt/version.mlt
+e021f862f6ff646fd887b2ed9b22ce9e:src/freeton_client_lwt/version.mlt
 # end context for src/freeton_client_lwt/version.mlt
 
 # begin context for src/freeton_ocaml_rust/dune
