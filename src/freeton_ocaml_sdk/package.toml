@@ -59,7 +59,7 @@ skip = ["main.ml"]
 #   base-unix = { libname = "unix", version = ">=base" } 
 [dependencies]
 cohttp-lwt-unix = ""
-ez_file = ">=0.2"
+ez_file = "0.3"
 ezjsonm = ""
 zarith = ">1"
 freeton_ocaml_rust = "version"
