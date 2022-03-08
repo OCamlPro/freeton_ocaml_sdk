@@ -288,7 +288,7 @@ async fn send_message_and_wait(
     local: bool,
 ) -> Result<serde_json::Value, ocp::Error> {
     if local {
-        eprintln!("Running get-method...");
+//        eprintln!("Running get-method...");
 //        let acc_boc = query_account_boc(ton.clone(), addr).await?;
 
         let result = ton_client::tvm::run_tvm(
@@ -468,8 +468,9 @@ pub async fn call_contract_with_result(
         keys,
     ).await?;
 
-    print_encoded_message(&msg);
-
+    if !local {
+        print_encoded_message(&msg);
+    }
     send_message_and_wait(ton.clone(), abi,
                           msg.message, acc_boc, local).await
 }

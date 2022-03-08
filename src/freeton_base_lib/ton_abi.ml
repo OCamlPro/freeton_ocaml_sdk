@@ -10,6 +10,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Ez_file.V1
+
 let read filename =
   let json = EzFile.read_file filename in
   EzEncoding.destruct  Ton_types.AbiContract.t_enc json
